@@ -347,14 +347,14 @@ export class RaceScene extends Phaser.Scene {
     if(Math.abs(this.carState.speed)>25){
       this.dustEmitter.emitting=true;
       this.dustEmitter.setPosition(this.carState.x,this.carState.y);
-      // Extra dust when drifting
-      if(this.carState.drifting){
-        this.dustEmitter.setFrequency(15);
-        this.dustEmitter.setSpeed({min:30,max:80});
-      } else {
-        this.dustEmitter.setFrequency(40);
-        this.dustEmitter.setSpeed({min:15,max:50});
-      }
+      // Extra dust when drifting — use try/catch for particle API compat
+      try {
+        if(this.carState.drifting){
+          this.dustEmitter.frequency=15;
+        } else {
+          this.dustEmitter.frequency=40;
+        }
+      } catch(e){}
     } else this.dustEmitter.emitting=false;
 
     this.obstacles.forEach(o=>{if(o.type==='obs_tokamak')o.sprite.angle+=2;});

@@ -229,7 +229,7 @@ export const TRACK_CONFIG = {
     canyon:   { types: ['obs_tokamak'], density: 0.2 },
     riverbed: { types: ['obs_tokamak'], density: 0.18 },
     mountain: { types: ['obs_tokamak'], density: 0.24 },
-    sprint:   { types: ['obs_tokamak'], density: 0.10 },
+    sprint:   { types: ['obs_tokamak'], density: 0.12 },
   },
 };
 
