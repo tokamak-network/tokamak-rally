@@ -217,11 +217,11 @@ export const TRACK_CONFIG = {
   initialTime: 35000,
 
   roadPhysics: {
-    paved:   { accel: 440, friction: 0.990, turn: 110, label: 'PAVED' },
-    dirt:    { accel: 340, friction: 0.978, turn: 130, label: 'DIRT' },
-    sand:    { accel: 255, friction: 0.965, turn: 115, label: 'SAND' },
-    rocky:   { accel: 220, friction: 0.960, turn: 140, label: 'ROCKY' },
-    offroad: { accel: 150, friction: 0.945, turn: 85,  label: 'OFF-ROAD' },
+    paved:   { accel: 304, friction: 0.990, turn: 110, label: 'PAVED' },
+    dirt:    { accel: 235, friction: 0.978, turn: 130, label: 'DIRT' },
+    sand:    { accel: 176, friction: 0.965, turn: 115, label: 'SAND' },
+    rocky:   { accel: 152, friction: 0.960, turn: 140, label: 'ROCKY' },
+    offroad: { accel: 104, friction: 0.945, turn: 85,  label: 'OFF-ROAD' },
   },
 
   obstacleConfig: {

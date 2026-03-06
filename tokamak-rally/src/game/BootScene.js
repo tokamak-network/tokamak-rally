@@ -179,14 +179,23 @@ export class BootScene extends Phaser.Scene {
     ], 2);
     g.generateTexture('skull', 16, 14); g.destroy();
 
-    // === CANYON WALL — tall, layered red rock ===
+    // === CANYON SPIRE — jagged rock spire ===
     g = this.add.graphics();
-    g.fillStyle(0x8b3520); g.fillRect(2,0,28,44);
-    g.fillStyle(0x9b4530,0.7); g.fillRect(6,0,18,44);
-    g.fillStyle(0xa05535,0.4); g.fillRect(10,0,10,44);
-    g.fillStyle(0x6b2510,0.5);
-    g.fillRect(2,10,28,2); g.fillRect(2,22,28,2); g.fillRect(2,34,28,2);
-    g.generateTexture('canyon_wall', 32, 44); g.destroy();
+    const CS1=0x8b3520, CS2=0x9b4530, CS3=0x6b2510, CS4=0xa05535;
+    this.px(g, [
+      [_,_,_,_,CS1,_,_,_,_,_],
+      [_,_,_,CS1,CS2,CS1,_,_,_,_],
+      [_,_,CS3,CS1,CS4,CS2,CS1,_,_,_],
+      [_,_,CS3,CS2,CS4,CS2,CS1,_,_,_],
+      [_,CS3,CS1,CS2,CS4,CS2,CS1,CS3,_,_],
+      [_,CS3,CS1,CS4,CS2,CS4,CS2,CS3,_,_],
+      [CS3,CS1,CS2,CS4,CS2,CS4,CS1,CS3,CS1,_],
+      [CS3,CS1,CS2,CS2,CS4,CS2,CS1,CS3,CS1,_],
+      [CS3,CS1,CS1,CS2,CS2,CS1,CS1,CS3,CS1,CS3],
+      [_,CS3,CS1,CS1,CS1,CS1,CS3,CS3,CS3,_],
+      [_,_,CS3,CS3,CS3,CS3,CS3,_,_,_],
+    ], 3);
+    g.generateTexture('canyon_wall', 30, 33); g.destroy();
 
     // === BOULDER RED (canyon) — irregular rocky shape ===
     g = this.add.graphics();

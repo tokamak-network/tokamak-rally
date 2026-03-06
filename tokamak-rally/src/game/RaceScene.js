@@ -127,17 +127,9 @@ export class RaceScene extends Phaser.Scene {
 
       // Road details by type
       if (zone.roadType === 'paved') {
-        // Lane markings
-        g.lineStyle(2, 0xffffff, 0.2);
-        for (const off of [-w/4, w/4]) {
-          g.beginPath(); g.moveTo(wp[s][0]+off,wp[s][1]);
-          for (let i=s+1;i<e;i++) g.lineTo(wp[i][0]+off,wp[i][1]);
-          g.strokePath();
-        }
-        // Center dashes — cumulative distance based for uniform spacing
-        g.lineStyle(2, 0xf4d35e, 0.3);
-        const DASH_LEN = 12, GAP_LEN = 13; // 25px cycle
-        let cumDist = 0;
+        // Center yellow dashes only — cumulative distance based for uniform spacing
+        g.lineStyle(2, 0xf4d35e, 0.4);
+        const DASH_LEN = 12, GAP_LEN = 13;
         let drawing = true;
         let segRemain = 0;
         for (let i = s; i < e - 1; i++) {
@@ -161,20 +153,6 @@ export class RaceScene extends Phaser.Scene {
               segRemain = 0;
               drawing = !drawing;
             }
-          }
-        }
-        // Red-white curbs
-        for (let i=s;i<e-1;i++) {
-          const dx=wp[i+1][0]-wp[i][0],dy=wp[i+1][1]-wp[i][1];
-          const len=Math.sqrt(dx*dx+dy*dy);
-          const nx=-dy/len,ny=dx/len;
-          const steps=Math.floor(len/14);
-          for (let j=0;j<steps;j++) {
-            const t=j/steps;
-            const cx=wp[i][0]+dx*t,cy=wp[i][1]+dy*t;
-            g.fillStyle(j%2===0?0xe63946:0xffffff, 0.4);
-            for (const side of [-1,1])
-              g.fillRect(cx+nx*side*(w/2+2)-2,cy+ny*side*(w/2+2)-2,5,5);
           }
         }
       } else if (zone.roadType === 'sand') {
@@ -384,7 +362,9 @@ export class RaceScene extends Phaser.Scene {
     }
     this._currentRoadType = roadType;
 
-    const effectiveAccel = phys.accel * cp.accelMul;
+    // Recovery boost: higher recovery stat = faster accel after obstacle hit
+    const recoveryBoost = (car.hitCooldown > 0) ? (1 + (this.selectedCar.stats.recovery / 10) * 0.6) : 1;
+    const effectiveAccel = phys.accel * cp.accelMul * recoveryBoost;
     const effectiveMax = cp.roadMaxSpeed[roadType] || 400;
     const effectiveTurn = phys.turn * cp.turnMul;
     const effectiveBrake = 400 * cp.brakeMul;
