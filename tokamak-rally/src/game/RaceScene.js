@@ -264,16 +264,8 @@ export class RaceScene extends Phaser.Scene {
   placeRoadObstacles() {
     this.obstacles = [];
     const wp = this.track.waypoints;
-    const penaltyMap = {
-      obs_sand_pile:0.7, obs_tumbleweed:0.85, obs_small_rock:0.55,
-      obs_fallen_rock:0.45, obs_rock_debris:0.5,
-      obs_puddle:0.6, obs_mud_patch:0.55, obs_log:0.65,
-      obs_rock_slide:0.4, obs_pothole:0.5,
-    };
-    const radiusMap = {
-      obs_rock_slide:16, obs_rock_debris:12, obs_fallen_rock:10,
-      obs_puddle:12, obs_mud_patch:12,
-    };
+    const penaltyMap = { obs_tokamak: 0.6 };
+    const radiusMap = { obs_tokamak: 11 };
 
     for (const zone of this.track.zones) {
       const cfg = this.track.obstacleConfig[zone.name];
@@ -291,10 +283,7 @@ export class RaceScene extends Phaser.Scene {
         const ox=bx+nx*off, oy=by+ny*off;
         const type=cfg.types[Math.floor(Math.random()*cfg.types.length)];
         const sprite=this.add.sprite(ox,oy,type).setDepth(5);
-        if (penaltyMap[type]<0.55 && Math.random()<0.4) {
-          this.add.sprite(bx-dx/len*90+nx*off*0.5, by-dy/len*90+ny*off*0.5,'warning_sign').setDepth(4).setScale(1.2);
-        }
-        this.obstacles.push({x:ox,y:oy,radius:radiusMap[type]||9,type,penalty:penaltyMap[type]||0.7,sprite});
+        this.obstacles.push({x:ox,y:oy,radius:radiusMap[type]||9,type,penalty:penaltyMap[type]||0.6,sprite});
       }
     }
   }
@@ -342,7 +331,7 @@ export class RaceScene extends Phaser.Scene {
       this.dustEmitter.setPosition(this.carState.x,this.carState.y);
     } else this.dustEmitter.emitting=false;
 
-    this.obstacles.forEach(o=>{if(o.type==='obs_tumbleweed')o.sprite.angle+=3;});
+    this.obstacles.forEach(o=>{if(o.type==='obs_tokamak')o.sprite.angle+=2;});
     this.emitUI();
   }
 

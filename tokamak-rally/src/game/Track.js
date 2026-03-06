@@ -172,8 +172,8 @@ export const TRACK_CONFIG = {
       roadType: 'sand',
       roadColor: 0xc4a060, roadBorder: 0xa88040,
       trackWidth: 110,
-      scenery: ['cactus', 'bush_dry', 'rock_desert', 'skull'],
-      sceneryDensity: 4,
+      scenery: ['cactus', 'bush_dry', 'rock_desert'],
+      sceneryDensity: 2,
     },
     {
       name: 'canyon', fromWP: 28, toWP: 53,
@@ -181,8 +181,8 @@ export const TRACK_CONFIG = {
       roadType: 'dirt',
       roadColor: 0x7a5535, roadBorder: 0x5a3520,
       trackWidth: 75,
-      scenery: ['canyon_wall', 'boulder_red', 'rock_red'],
-      sceneryDensity: 7,
+      scenery: ['canyon_wall', 'rock_red'],
+      sceneryDensity: 3,
     },
     {
       name: 'riverbed', fromWP: 53, toWP: 71,
@@ -191,7 +191,7 @@ export const TRACK_CONFIG = {
       roadColor: 0x8a7555, roadBorder: 0x6a5a40,
       trackWidth: 100,
       scenery: ['dead_tree', 'bush_green', 'rock_grey'],
-      sceneryDensity: 4,
+      sceneryDensity: 2,
     },
     {
       name: 'mountain', fromWP: 71, toWP: 92,
@@ -199,8 +199,8 @@ export const TRACK_CONFIG = {
       roadType: 'rocky',
       roadColor: 0x5a5a55, roadBorder: 0x4a4a45,
       trackWidth: 80,
-      scenery: ['pine_tree', 'mountain_rock', 'rock_grey', 'snow_patch'],
-      sceneryDensity: 5,
+      scenery: ['pine_tree', 'mountain_rock', 'snow_patch'],
+      sceneryDensity: 2,
     },
     {
       name: 'sprint', fromWP: 92, toWP: 112,
@@ -208,8 +208,8 @@ export const TRACK_CONFIG = {
       roadType: 'paved',
       roadColor: 0x3a3a42, roadBorder: 0x5a5a62,
       trackWidth: 120,
-      scenery: ['cactus', 'bush_dry', 'rock_desert'],
-      sceneryDensity: 3,
+      scenery: ['cactus', 'bush_dry'],
+      sceneryDensity: 1,
     },
   ],
 
@@ -217,19 +217,19 @@ export const TRACK_CONFIG = {
   initialTime: 35000,
 
   roadPhysics: {
-    paved:   { accel: 304, friction: 0.990, turn: 110, label: 'PAVED' },
-    dirt:    { accel: 235, friction: 0.978, turn: 130, label: 'DIRT' },
-    sand:    { accel: 176, friction: 0.965, turn: 115, label: 'SAND' },
-    rocky:   { accel: 152, friction: 0.960, turn: 140, label: 'ROCKY' },
-    offroad: { accel: 104, friction: 0.945, turn: 85,  label: 'OFF-ROAD' },
+    paved:   { accel: 243, friction: 0.990, turn: 110, label: 'PAVED' },
+    dirt:    { accel: 188, friction: 0.978, turn: 130, label: 'DIRT' },
+    sand:    { accel: 141, friction: 0.965, turn: 115, label: 'SAND' },
+    rocky:   { accel: 122, friction: 0.960, turn: 140, label: 'ROCKY' },
+    offroad: { accel: 83,  friction: 0.945, turn: 85,  label: 'OFF-ROAD' },
   },
 
   obstacleConfig: {
-    desert:   { types: ['obs_sand_pile', 'obs_tumbleweed', 'obs_small_rock'], density: 0.3 },
-    canyon:   { types: ['obs_fallen_rock', 'obs_rock_debris'], density: 0.45 },
-    riverbed: { types: ['obs_puddle', 'obs_mud_patch', 'obs_log'], density: 0.35 },
-    mountain: { types: ['obs_rock_slide', 'obs_pothole'], density: 0.45 },
-    sprint:   { types: ['obs_tumbleweed'], density: 0.15 },
+    desert:   { types: ['obs_tokamak'], density: 0.15 },
+    canyon:   { types: ['obs_tokamak'], density: 0.2 },
+    riverbed: { types: ['obs_tokamak'], density: 0.15 },
+    mountain: { types: ['obs_tokamak'], density: 0.2 },
+    sprint:   { types: ['obs_tokamak'], density: 0.08 },
   },
 };
 

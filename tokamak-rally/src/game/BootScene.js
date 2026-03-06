@@ -399,6 +399,22 @@ export class BootScene extends Phaser.Scene {
     g.lineStyle(1, 0x4a4a45, 0.4); g.strokeCircle(10,8,9);
     g.generateTexture('obs_pothole', 20, 18); g.destroy();
 
+    // === TOKAMAK LOGO — blue striped torus obstacle ===
+    g = this.add.graphics();
+    const B1=0x4a90e2, B2=0x3b82f6, B3=0x2563eb, BW=0xffffff, BD=0x1d4ed8;
+    this.px(g, [
+      [_,_,_,_,B1,B2,B1,B2,B1,_,_,_,_],
+      [_,_,B1,B2,BW,B1,BW,B2,BW,B1,_,_,_],
+      [_,B2,BW,B1,B2,BW,B1,BW,B2,BW,B1,_,_],
+      [B1,BW,B2,_,_,_,_,_,B1,BW,B2,B1,_],
+      [B2,B1,_,_,_,_,_,_,_,B2,BW,B2,_],
+      [B1,B2,_,_,_,_,_,_,_,B1,B2,B1,_],
+      [_,B1,B2,_,_,_,_,_,B2,BW,B1,_,_],
+      [_,_,B2,B1,BW,B2,BW,B1,BW,B2,_,_,_],
+      [_,_,_,B2,B1,BW,B2,B1,B2,_,_,_,_],
+    ], 2);
+    g.generateTexture('obs_tokamak', 26, 18); g.destroy();
+
     // Dust particle
     g = this.add.graphics();
     g.fillStyle(0xd4b880,0.6); g.fillCircle(3,3,3);
