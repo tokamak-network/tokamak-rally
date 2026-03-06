@@ -36,8 +36,10 @@ export class RaceScene extends Phaser.Scene {
     this.carState = {
       x: this.track.startX, y: this.track.startY,
       angle: this.track.startAngle, speed: 0,
+      moveAngle: this.track.startAngle, // actual movement direction
       prevX: this.track.startX, prevY: this.track.startY,
-      drifting: false, hitCooldown: 0,
+      drifting: false, driftAngle: 0, driftBoost: 0,
+      hitCooldown: 0,
     };
 
     this.raceState = {
@@ -345,6 +347,14 @@ export class RaceScene extends Phaser.Scene {
     if(Math.abs(this.carState.speed)>25){
       this.dustEmitter.emitting=true;
       this.dustEmitter.setPosition(this.carState.x,this.carState.y);
+      // Extra dust when drifting
+      if(this.carState.drifting){
+        this.dustEmitter.setFrequency(15);
+        this.dustEmitter.setSpeed({min:30,max:80});
+      } else {
+        this.dustEmitter.setFrequency(40);
+        this.dustEmitter.setSpeed({min:15,max:50});
+      }
     } else this.dustEmitter.emitting=false;
 
     this.obstacles.forEach(o=>{if(o.type==='obs_tokamak')o.sprite.angle+=2;});
@@ -375,29 +385,72 @@ export class RaceScene extends Phaser.Scene {
     const effectiveBrake = 400 * cp.brakeMul;
     const effectiveFriction = result.onTrack ? phys.friction : phys.friction * cp.offroadMul;
 
+    // Accel / Brake
     if(this.cursors.up.isDown) car.speed+=effectiveAccel*dt;
     else if(this.cursors.down.isDown) car.speed-=effectiveBrake*dt;
     else car.speed*=effectiveFriction;
 
-    if(this.spaceKey.isDown&&Math.abs(car.speed)>60){car.speed*=0.96;car.drifting=true;}
-    else car.drifting=false;
+    // Drift boost on release
+    if(car.driftBoost>0){
+      car.speed+=car.driftBoost;
+      car.driftBoost=0;
+    }
 
     car.speed=Phaser.Math.Clamp(car.speed,-80,effectiveMax);
     if(Math.abs(car.speed)<3&&!this.cursors.up.isDown)car.speed=0;
 
-    if(Math.abs(car.speed)>8){
-      const sr=Math.min(Math.abs(car.speed)/150,1);
-      const turn=effectiveTurn*(car.drifting?1.6:1)*sr;
-      if(this.cursors.left.isDown)car.angle-=turn*dt;
-      if(this.cursors.right.isDown)car.angle+=turn*dt;
+    // Steering
+    const spd=Math.abs(car.speed);
+    if(spd>8){
+      const sr=Math.min(spd/150,1);
+      let steerDir=0;
+      if(this.cursors.left.isDown) steerDir=-1;
+      if(this.cursors.right.isDown) steerDir=1;
+
+      if(this.spaceKey.isDown && spd>50 && steerDir!==0){
+        // === DRIFT MODE ===
+        if(!car.drifting){
+          // Initiate drift — lock slide direction
+          car.drifting=true;
+          car.driftAngle=0;
+        }
+        // Car body rotates faster (2x turn rate)
+        const driftTurn=effectiveTurn*2.0*sr;
+        car.angle+=steerDir*driftTurn*dt;
+        // Slide angle grows — difference between body and movement direction
+        car.driftAngle+=steerDir*effectiveTurn*0.8*dt;
+        car.driftAngle=Phaser.Math.Clamp(car.driftAngle,-45,45);
+        // Minimal speed loss during drift (was 0.96, now 0.993)
+        car.speed*=0.993;
+        // Movement direction lags behind body angle (slide!)
+        car.moveAngle+=(car.angle-car.moveAngle)*0.04;
+      } else {
+        // === NORMAL MODE ===
+        if(car.drifting){
+          // Drift release — award boost based on accumulated drift angle
+          const driftIntensity=Math.abs(car.driftAngle)/45;
+          car.driftBoost=driftIntensity*spd*0.15; // up to 15% speed boost
+          car.drifting=false;
+          car.driftAngle=0;
+        }
+        const turn=effectiveTurn*sr;
+        car.angle+=steerDir*turn*dt;
+        // Movement direction snaps toward body angle
+        car.moveAngle+=(car.angle-car.moveAngle)*0.15;
+      }
+    } else {
+      if(car.drifting){car.drifting=false;car.driftAngle=0;}
+      car.moveAngle=car.angle;
     }
   }
 
   updateCar(dt){
-    const car=this.carState,rad=Phaser.Math.DegToRad(car.angle);
+    const car=this.carState;
+    // Move along moveAngle (not body angle) — creates slide effect
+    const moveRad=Phaser.Math.DegToRad(car.moveAngle);
     car.prevX=car.x;car.prevY=car.y;
-    car.x+=Math.cos(rad)*car.speed*dt;
-    car.y+=Math.sin(rad)*car.speed*dt;
+    car.x+=Math.cos(moveRad)*car.speed*dt;
+    car.y+=Math.sin(moveRad)*car.speed*dt;
   }
 
   checkObstacles(){
@@ -502,7 +555,7 @@ export class RaceScene extends Phaser.Scene {
         timeRemaining:rs.timeRemaining,elapsedTime:rs.elapsedTime,
         checkpointsPassed:rs.checkpointsPassed,totalCheckpoints:rs.totalCheckpoints,
         roadType:this._currentRoadLabel||'SAND',zoneName:this.currentZoneName,
-        progress:p.progress,drifting:car.drifting,finished:rs.finished,timedOut:rs.timedOut,
+        progress:p.progress,drifting:car.drifting,driftAngle:car.driftAngle||0,finished:rs.finished,timedOut:rs.timedOut,
       });
     }
   }

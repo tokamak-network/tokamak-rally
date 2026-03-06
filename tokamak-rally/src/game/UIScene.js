@@ -172,7 +172,11 @@ export class UIScene extends Phaser.Scene {
     this.progressPct.setText(`${Math.floor(d.progress * 100)}%`);
 
     // Drift
-    this.driftText.setAlpha(d.drifting ? 0.9 : 0);
+    if(d.drifting){
+      const angle=Math.abs(Math.floor(d.driftAngle||0));
+      this.driftText.setText(`◉ DRIFT ${angle}°`).setAlpha(0.9);
+      this.driftText.setColor(angle>30?'#f4d35e':angle>15?'#ff8c42':'#e63946');
+    } else this.driftText.setAlpha(0);
 
     // Elapsed
     this.elapsedText.setText(`ELAPSED: ${this.fmtShort(d.elapsedTime)}`);

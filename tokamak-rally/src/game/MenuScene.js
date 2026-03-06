@@ -37,8 +37,8 @@ export class MenuScene extends Phaser.Scene {
       fontSize:'16px',fontFamily:'monospace',color:'#f4d35e',fontStyle:'bold',
     }).setOrigin(0.5);
 
-    // Car preview sprite (2.5x scale, clear of text)
-    this.carPreview = this.add.sprite(cx, 230, `car_${CARS[0].id}`).setScale(2.5).setDepth(5);
+    // Car preview sprite (1.75x scale, clear of text)
+    this.carPreview = this.add.sprite(cx, 230, `car_${CARS[0].id}`).setScale(1.75).setDepth(5);
 
     // Car name (below sprite with gap)
     this.carNameText = this.add.text(cx, 290, '', {
