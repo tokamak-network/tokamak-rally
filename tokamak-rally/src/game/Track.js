@@ -225,11 +225,11 @@ export const TRACK_CONFIG = {
   },
 
   obstacleConfig: {
-    desert:   { types: ['obs_tokamak'], density: 0.15 },
+    desert:   { types: ['obs_tokamak'], density: 0.18 },
     canyon:   { types: ['obs_tokamak'], density: 0.2 },
-    riverbed: { types: ['obs_tokamak'], density: 0.15 },
-    mountain: { types: ['obs_tokamak'], density: 0.2 },
-    sprint:   { types: ['obs_tokamak'], density: 0.08 },
+    riverbed: { types: ['obs_tokamak'], density: 0.18 },
+    mountain: { types: ['obs_tokamak'], density: 0.24 },
+    sprint:   { types: ['obs_tokamak'], density: 0.10 },
   },
 };
 

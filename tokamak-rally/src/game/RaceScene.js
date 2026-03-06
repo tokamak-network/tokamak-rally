@@ -178,15 +178,18 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // START/FINISH
-    this.add.sprite(this.track.startX, this.track.startY-25, 'finish_banner').setDepth(3);
-    this.add.text(this.track.startX, this.track.startY-48, '▶ START', {
+    // START/FINISH — rotate banners perpendicular to road direction
+    const wp0 = wp[0], wp1 = wp[1];
+    const startAngle = Math.atan2(wp1[1]-wp0[1], wp1[0]-wp0[0]) * 180 / Math.PI + 90;
+    this.add.sprite(wp0[0], wp0[1], 'finish_banner').setDepth(3).setAngle(startAngle);
+    this.add.text(wp0[0], wp0[1]-40, '▶ START', {
       fontSize:'16px',fontFamily:'monospace',color:'#f4d35e',fontStyle:'bold',stroke:'#000',strokeThickness:2,
     }).setOrigin(0.5).setDepth(3);
 
-    const f = this.track.waypoints[this.track.waypoints.length-1];
-    this.add.sprite(f[0], f[1]-25, 'finish_banner').setDepth(3);
-    this.add.text(f[0], f[1]-48, '🏁 FINISH', {
+    const wLast = wp[wp.length-1], wPrev = wp[wp.length-2];
+    const finAngle = Math.atan2(wLast[1]-wPrev[1], wLast[0]-wPrev[0]) * 180 / Math.PI + 90;
+    this.add.sprite(wLast[0], wLast[1], 'finish_banner').setDepth(3).setAngle(finAngle);
+    this.add.text(wLast[0], wLast[1]-40, '🏁 FINISH', {
       fontSize:'16px',fontFamily:'monospace',color:'#e63946',fontStyle:'bold',stroke:'#000',strokeThickness:2,
     }).setOrigin(0.5).setDepth(3);
   }
@@ -194,11 +197,24 @@ export class RaceScene extends Phaser.Scene {
   placeCheckpoints() {
     const wp = this.track.waypoints;
     for (const cp of this.track.checkpoints) {
-      const p = wp[cp.waypointIndex];
-      this.add.sprite(p[0]-50,p[1],'cp_flag').setDepth(3);
-      this.add.sprite(p[0]+50,p[1],'cp_flag').setDepth(3);
+      const idx = cp.waypointIndex;
+      const p = wp[idx];
+      // Get road direction at checkpoint
+      const pPrev = wp[Math.max(0, idx-1)];
+      const pNext = wp[Math.min(wp.length-1, idx+1)];
+      const dx = pNext[0]-pPrev[0], dy = pNext[1]-pPrev[1];
+      const len = Math.sqrt(dx*dx+dy*dy) || 1;
+      const nx = -dy/len, ny = dx/len; // perpendicular
+      // Place flags on road edges
+      this.add.sprite(p[0]+nx*55, p[1]+ny*55, 'cp_flag').setDepth(3);
+      this.add.sprite(p[0]-nx*55, p[1]-ny*55, 'cp_flag').setDepth(3);
+      // Draw bar across road
       const bar = this.add.graphics().setDepth(3);
-      bar.fillStyle(0xe63946,0.6); bar.fillRect(p[0]-50,p[1]-2,100,4);
+      bar.lineStyle(4, 0xe63946, 0.6);
+      bar.beginPath();
+      bar.moveTo(p[0]+nx*55, p[1]+ny*55);
+      bar.lineTo(p[0]-nx*55, p[1]-ny*55);
+      bar.strokePath();
       this.add.text(p[0],p[1]-30,cp.name,{
         fontSize:'12px',fontFamily:'monospace',color:'#fff',stroke:'#000',strokeThickness:3,fontStyle:'bold',
       }).setOrigin(0.5).setDepth(3);
