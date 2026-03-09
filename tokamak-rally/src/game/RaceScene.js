@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import { TRACK_CONFIG, isOnTrack, getTrackProgress, getZoneByIndex, checkCheckpoint, checkFinish } from './Track.js';
 import { CARS } from './Cars.js';
 import { wallet } from '../web3/wallet.js';
+import { soundEngine } from './SoundEngine.js';
 
 export class RaceScene extends Phaser.Scene {
   constructor() { super('Race'); }
@@ -25,7 +26,7 @@ export class RaceScene extends Phaser.Scene {
     this.placeRoadObstacles();
 
     this.player = this.add.sprite(this.track.startX, this.track.startY, `car_${this.selectedCarId}`)
-      .setOrigin(0.5).setDepth(10).setScale(0.7);
+      .setOrigin(0.5).setDepth(10).setScale(0.49);
 
     this.dustEmitter = this.add.particles(0, 0, 'dust_particle', {
       speed: { min: 20, max: 70 },
@@ -75,8 +76,9 @@ export class RaceScene extends Phaser.Scene {
       checkpointTimes: [],
     };
 
-    this.cameras.main.startFollow(this.player, true, 0.08, 0.08);
+    this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
     this.cameras.main.setZoom(1.5);
+    this.cameras.main.setFollowOffset(0, 0); // will be updated dynamically
 
     this.cursors = this.input.keyboard.createCursorKeys();
     this.spaceKey = this.input.keyboard.addKey(Phaser.Input.Keyboard.KeyCodes.SPACE);
@@ -115,9 +117,14 @@ export class RaceScene extends Phaser.Scene {
     }
     this.scene.launch('UI');
 
+    // Initialize sound engine
+    soundEngine.init();
+    soundEngine.resume();
+
     // ESC during gameplay → back to menu
     this.input.keyboard.on('keydown-ESC', () => {
       if (!this.raceState.finished && !this.raceState.timedOut) {
+        soundEngine.stopAll(); soundEngine.stopBGM();
         this.scene.stop('UI');
         this.scene.stop('Race');
         this.scene.start('Menu');
@@ -160,41 +167,61 @@ export class RaceScene extends Phaser.Scene {
       for (let i=s+1;i<e;i++) g.lineTo(wp[i][0],wp[i][1]);
       g.strokePath();
 
-      // Road edge markings — zone-specific style
+      // Compute smoothed normals at each waypoint (averaged from adjacent segments)
+      const normals = [];
+      for (let i = s; i < e; i++) {
+        let nx = 0, ny = 0;
+        if (i > s) {
+          const dx = wp[i][0]-wp[i-1][0], dy = wp[i][1]-wp[i-1][1];
+          const l = Math.sqrt(dx*dx+dy*dy) || 1;
+          nx += -dy/l; ny += dx/l;
+        }
+        if (i < e-1) {
+          const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1];
+          const l = Math.sqrt(dx*dx+dy*dy) || 1;
+          nx += -dy/l; ny += dx/l;
+        }
+        const l = Math.sqrt(nx*nx+ny*ny) || 1;
+        normals.push([nx/l, ny/l]);
+      }
+
+      // Road edge markings — smooth lines using averaged normals
       if (zone.roadType === 'paved') {
-        // Sprint: solid white edge lines (paved road style)
+        // Sprint: solid white edge lines
         for (const side of [-1, 1]) {
           g.lineStyle(3, 0xdddddd, 0.6);
           g.beginPath();
-          const nx0 = -(wp[s+1>e-1?s:s+1][1]-wp[s][1]), ny0 = (wp[s+1>e-1?s:s+1][0]-wp[s][0]);
-          const len0 = Math.sqrt(nx0*nx0+ny0*ny0)||1;
-          g.moveTo(wp[s][0]+(-ny0/len0)*0*side*(w/2+1)+nx0/len0*0, wp[s][1]);
-          for (let i = s; i < e - 1; i++) {
-            const dx=wp[i+1][0]-wp[i][0], dy=wp[i+1][1]-wp[i][1];
-            const segLen=Math.sqrt(dx*dx+dy*dy); if(segLen<1) continue;
-            const nx=-dy/segLen*side*(w/2+1), ny=dx/segLen*side*(w/2+1);
-            g.lineTo(wp[i+1][0]+nx, wp[i+1][1]+ny);
+          const n0 = normals[0];
+          g.moveTo(wp[s][0]+n0[0]*side*(w/2+1), wp[s][1]+n0[1]*side*(w/2+1));
+          for (let i = s+1; i < e; i++) {
+            const ni = normals[i-s];
+            g.lineTo(wp[i][0]+ni[0]*side*(w/2+1), wp[i][1]+ni[1]*side*(w/2+1));
           }
           g.strokePath();
         }
       } else {
-        // Non-paved: red-white curb dashes
+        // Non-paved: red-white curb dashes along smoothed edge path
         const CURB_DASH = 10, CURB_W = 4;
         for (const side of [-1, 1]) {
+          // Build edge polyline from smoothed normals
+          const edgePts = [];
+          for (let i = s; i < e; i++) {
+            const ni = normals[i-s];
+            edgePts.push([wp[i][0]+ni[0]*side*(w/2+2), wp[i][1]+ni[1]*side*(w/2+2)]);
+          }
           let curbDist = 0;
-          for (let i = s; i < e - 1; i++) {
-            const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1];
+          for (let i = 0; i < edgePts.length - 1; i++) {
+            const dx = edgePts[i+1][0]-edgePts[i][0], dy = edgePts[i+1][1]-edgePts[i][1];
             const segLen = Math.sqrt(dx*dx+dy*dy);
             if (segLen < 1) continue;
             const ux = dx/segLen, uy = dy/segLen;
-            const nx = -uy*side*(w/2+2), ny = ux*side*(w/2+2);
             let pos = 0;
             while (pos < segLen) {
               const step = Math.min(CURB_DASH, segLen - pos);
               const isRed = (Math.floor(curbDist / CURB_DASH) % 2 === 0);
               g.lineStyle(CURB_W, isRed ? 0xcc3333 : 0xeeeeee, 0.7);
-              const x1 = wp[i][0]+ux*pos+nx, y1 = wp[i][1]+uy*pos+ny;
-              const x2 = wp[i][0]+ux*(pos+step)+nx, y2 = wp[i][1]+uy*(pos+step)+ny;
+              const x1 = edgePts[i][0]+ux*pos, y1 = edgePts[i][1]+uy*pos;
+              const x2 = edgePts[i][0]+ux*(pos+step), y2 = edgePts[i][1]+uy*(pos+step);
               g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.strokePath();
               pos += step;
               curbDist += step;
@@ -247,11 +274,33 @@ export class RaceScene extends Phaser.Scene {
           }
         }
       } else if (zone.roadType === 'dirt') {
-        g.lineStyle(2, 0x5a4525, 0.2);
-        for (const off of [-12,12]) {
-          g.beginPath(); g.moveTo(wp[s][0]+off,wp[s][1]);
-          for (let i=s+1;i<e;i++) g.lineTo(wp[i][0]+off,wp[i][1]);
-          g.strokePath();
+        // Subtle rut marks — dashed, not solid lines
+        g.lineStyle(1, 0x5a4525, 0.15);
+        const RUT_DASH = 15, RUT_GAP = 20;
+        for (const off of [-12, 12]) {
+          let rutDist = 0;
+          let drawing = true;
+          for (let i = s; i < e-1; i++) {
+            const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1];
+            const segLen = Math.sqrt(dx*dx+dy*dy);
+            if (segLen < 1) continue;
+            const ux = dx/segLen, uy = dy/segLen;
+            const ni = normals[i-s];
+            let pos = 0;
+            while (pos < segLen) {
+              const phase = drawing ? RUT_DASH : RUT_GAP;
+              const left = phase - (rutDist % phase);
+              const step = Math.min(left, segLen - pos);
+              if (drawing) {
+                g.beginPath();
+                g.moveTo(wp[i][0]+ux*pos+ni[0]*off, wp[i][1]+uy*pos+ni[1]*off);
+                g.lineTo(wp[i][0]+ux*(pos+step)+ni[0]*off, wp[i][1]+uy*(pos+step)+ni[1]*off);
+                g.strokePath();
+              }
+              pos += step; rutDist += step;
+              if (rutDist % phase < 0.01) drawing = !drawing;
+            }
+          }
         }
       }
     }
@@ -270,6 +319,146 @@ export class RaceScene extends Phaser.Scene {
     this.add.text(wLast[0], wLast[1]-40, '🏁 FINISH', {
       fontSize:'16px',fontFamily:'monospace',color:'#e63946',fontStyle:'bold',stroke:'#000',strokeThickness:2,
     }).setOrigin(0.5).setDepth(3);
+
+    // Finish line direction vectors
+    const fdx = wLast[0]-wPrev[0], fdy = wLast[1]-wPrev[1];
+    const flen = Math.sqrt(fdx*fdx+fdy*fdy) || 1;
+    const fnx = -fdy/flen, fny = fdx/flen; // perpendicular to road
+    const fux = fdx/flen, fuy = fdy/flen; // along road direction
+
+    // Sprint zone: banner wall + dense crowd on both sides (same style as finish)
+    // Banners act as physical barriers — car cannot pass through
+    const sprintZone = this.track.zones.find(z => z.name === 'sprint');
+    this._sprintBarrierSegments = []; // for wall collision
+    if (sprintZone) {
+      const BW = 50, BH = 14;
+      const BDIST = 75; // banner distance from track center (halfW~60 + 15px gap)
+      const CROWD_START = BDIST + BH/2 + 6;
+
+      const sWps = [];
+      const sNorms = [];
+      for (let i = sprintZone.fromWP; i <= Math.min(sprintZone.toWP, wp.length-1); i++) {
+        sWps.push(wp[i]);
+        let nx = 0, ny = 0;
+        if (i > sprintZone.fromWP && i < wp.length) {
+          const dx1 = wp[i][0]-wp[i-1][0], dy1 = wp[i][1]-wp[i-1][1];
+          const l1 = Math.sqrt(dx1*dx1+dy1*dy1) || 1;
+          nx -= dy1/l1; ny += dx1/l1;
+        }
+        if (i < Math.min(sprintZone.toWP, wp.length-1)) {
+          const dx2 = wp[i+1][0]-wp[i][0], dy2 = wp[i+1][1]-wp[i][1];
+          const l2 = Math.sqrt(dx2*dx2+dy2*dy2) || 1;
+          nx -= dy2/l2; ny += dx2/l2;
+        }
+        const l = Math.sqrt(nx*nx+ny*ny) || 1;
+        sNorms.push([nx/l, ny/l]);
+      }
+
+      // Store barrier wall positions for each waypoint (both sides)
+      for (let si = 0; si < sWps.length; si++) {
+        const [px, py] = sWps[si];
+        const [nnx, nny] = sNorms[si];
+        this._sprintBarrierSegments.push({
+          x: px, y: py, nx: nnx, ny: nny, dist: BDIST
+        });
+      }
+
+      // Walk along path placing banners seamlessly
+      let bannerIdx = 0;
+      for (let si = 0; si < sWps.length-1; si++) {
+        const [x1,y1] = sWps[si], [x2,y2] = sWps[si+1];
+        const dx = x2-x1, dy = y2-y1;
+        const segLen = Math.sqrt(dx*dx+dy*dy);
+        if (segLen < 1) continue;
+        const segAngle = Math.atan2(dy, dx);
+
+        for (let d = 0; d < segLen; d += BW) {
+          const t = d / segLen;
+          const px = x1+dx*t, py = y1+dy*t;
+          const n1 = sNorms[si], n2 = sNorms[si+1];
+          const nxi = n1[0]*(1-t) + n2[0]*t;
+          const nyi = n1[1]*(1-t) + n2[1]*t;
+          const nl = Math.sqrt(nxi*nxi+nyi*nyi) || 1;
+          const nnx = nxi/nl, nny = nyi/nl;
+
+          const isBlue = bannerIdx % 2 === 0;
+          for (const side of [-1, 1]) {
+            const bx = px + nnx*side*BDIST;
+            const by = py + nny*side*BDIST;
+            // Banner background (graphics rect — always works)
+            const bg = this.add.graphics().setDepth(5);
+            bg.fillStyle(isBlue ? 0x2a6ddb : 0xffffff, 0.95);
+            bg.fillRect(-BW/2, -BH/2, BW, BH);
+            bg.x = bx; bg.y = by; bg.rotation = segAngle;
+            // Logo overlay (safe — skip if texture missing)
+            try {
+              const logoTex = isBlue ? 'tokamak_logo_white' : 'tokamak_logo';
+              if (this.textures.exists(logoTex)) {
+                this.add.image(bx, by, logoTex)
+                  .setDepth(5.5).setDisplaySize(BW*0.88, BH*0.68)
+                  .setOrigin(0.5).setRotation(segAngle);
+              }
+            } catch(e) {}
+
+            // Dense crowd behind banners — 5 rows deep
+            for (let row = 0; row < 5; row++) {
+              const crowdD = CROWD_START + row * 11;
+              for (let j = 0; j < 3; j++) {
+                const along = (j - 1) * 12 + (Math.random()-0.5)*6;
+                const cx = px + nnx*side*crowdD + Math.cos(segAngle)*along;
+                const cy = py + nny*side*crowdD + Math.sin(segAngle)*along;
+                const ci = Math.floor(Math.random()*7);
+                const tex = Math.random()>0.4 ? `crowd_cheer_${ci}` : `crowd_${ci}`;
+                this.add.sprite(cx, cy, tex).setDepth(4).setScale(1.4+Math.random()*0.3);
+              }
+            }
+          }
+          bannerIdx++;
+        }
+      }
+    }
+
+    // Finish line: banners on both sides of track (parallel to road, NOT crossing it)
+    // Placed along the road direction at the finish area, outside track boundaries
+    const FBW = 50, FBH = 14;
+    const finRoadAngle = Math.atan2(fuy, fux); // along-road angle for banner rotation
+    for (const side of [-1, 1]) {
+      const bDist = 75; // perpendicular distance from track center
+      for (let j = -3; j <= 3; j++) {
+        // Place banners along road direction (fux/fuy), offset perpendicular (fnx/fny)
+        const bx = wLast[0] + fnx*side*bDist + fux*j*FBW;
+        const by = wLast[1] + fny*side*bDist + fuy*j*FBW;
+        const isBlue = (j + 4) % 2 === 0;
+        const bg = this.add.graphics().setDepth(5);
+        bg.fillStyle(isBlue ? 0x2a6ddb : 0xffffff, 0.95);
+        bg.fillRect(-FBW/2, -FBH/2, FBW, FBH);
+        bg.x = bx; bg.y = by; bg.rotation = finRoadAngle;
+        try {
+          const logoTex = isBlue ? 'tokamak_logo_white' : 'tokamak_logo';
+          if (this.textures.exists(logoTex)) {
+            this.add.image(bx, by, logoTex)
+              .setDepth(5.5).setDisplaySize(FBW*0.88, FBH*0.68)
+              .setOrigin(0.5).setRotation(finRoadAngle);
+          }
+        } catch(e) {}
+      }
+    }
+
+    // Finish crowd behind banners (further out than banners)
+    for (let side of [-1, 1]) {
+      for (let row = 0; row < 4; row++) {
+        const baseDist = 92 + row * 14; // start behind banners (75 + 17)
+        for (let j = 0; j < 12; j++) {
+          const along = (j - 5.5) * 16 + (Math.random()-0.5)*6;
+          const cx = wLast[0] + fnx*side*baseDist + fux*along;
+          const cy = wLast[1] + fny*side*baseDist + fuy*along;
+          const isCheer = Math.random() > 0.35;
+          const ci = Math.floor(Math.random()*7);
+          const tex = isCheer ? `crowd_cheer_${ci}` : `crowd_${ci}`;
+          this.add.sprite(cx, cy, tex).setDepth(4).setScale(1.8+Math.random()*0.6);
+        }
+      }
+    }
   }
 
   placeCheckpoints() {
@@ -316,46 +505,28 @@ export class RaceScene extends Phaser.Scene {
         const bx=x1+dx*t, by=y1+dy*t;
         // Place on left or right side of road, guaranteed outside
         const side = Math.random() > 0.5 ? 1 : -1;
-        const dist = halfW + 50 + Math.random()*150;
+        const dist = halfW + 70 + Math.random()*150;
         const ox = bx + nx*side*dist, oy = by + ny*side*dist;
         this.add.sprite(ox, oy, items[Math.floor(Math.random()*items.length)]).setDepth(2);
       }
     }
 
-    // Canyon walls — dense, layered cliff walls on both sides forming slot canyon
+    // Canyon walls — sparse, well off-road, smaller scale
     const canyonZone = this.track.zones.find(z => z.name === 'canyon');
     if (canyonZone) {
-      for (let i = canyonZone.fromWP; i < Math.min(canyonZone.toWP, wp.length-1); i++) {
+      for (let i = canyonZone.fromWP; i < Math.min(canyonZone.toWP, wp.length-1); i += 2) {
         const [x1,y1]=wp[i],[x2,y2]=wp[i+1];
         const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
         if (len<1) continue;
         const nx=-dy/len, ny=dx/len;
         const halfW = 75/2;
-        // Multiple layers of walls on each side — creates depth
         for (let side of [-1, 1]) {
-          // Row 1: immediate road edge walls (tall, close)
-          for (let j = 0; j < 3; j++) {
-            const t = j / 3 + Math.random() * 0.3;
-            if (t > 1) continue;
-            const d = halfW + 15 + Math.random()*15;
-            const sx = x1+dx*t + nx*side*d;
-            const sy = y1+dy*t + ny*side*d;
-            this.add.sprite(sx, sy, 'canyon_wall').setDepth(2).setScale(1.0+Math.random()*0.5);
-          }
-          // Row 2: taller background walls
-          for (let j = 0; j < 2; j++) {
-            const t = j / 2 + Math.random() * 0.4;
-            if (t > 1) continue;
-            const d = halfW + 50 + Math.random()*40;
-            const sx = x1+dx*t + nx*side*d;
-            const sy = y1+dy*t + ny*side*d;
-            this.add.sprite(sx, sy, 'canyon_wall').setDepth(2).setScale(1.3+Math.random()*0.7);
-          }
-          // Row 3: distant massive walls
-          const t3 = Math.random();
-          const d3 = halfW + 100 + Math.random()*60;
-          this.add.sprite(x1+dx*t3+nx*side*d3, y1+dy*t3+ny*side*d3, 'canyon_wall')
-            .setDepth(1).setScale(1.8+Math.random()*0.8).setAlpha(0.7);
+          // Single row of walls — far from road
+          const t = Math.random();
+          const d = halfW + 80 + Math.random()*60;
+          const sx = x1+dx*t + nx*side*d;
+          const sy = y1+dy*t + ny*side*d;
+          this.add.sprite(sx, sy, 'canyon_wall').setDepth(1).setScale(0.6+Math.random()*0.3).setAlpha(0.6);
         }
       }
     }
@@ -391,29 +562,30 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // Mountain — dense forest on both sides
+    // Mountain — trees on both sides, well clear of road
     const mtZone = this.track.zones.find(z => z.name === 'mountain');
     if (mtZone) {
-      for (let i = mtZone.fromWP; i < Math.min(mtZone.toWP, wp.length-1); i++) {
+      for (let i = mtZone.fromWP; i < Math.min(mtZone.toWP, wp.length-1); i += 2) {
         const [x1,y1]=wp[i],[x2,y2]=wp[i+1];
         const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
         if (len<1) continue;
         const nx=-dy/len, ny=dx/len;
-        // Dense tree rows on both sides
+        const halfW = 80/2;
         for (let side of [-1, 1]) {
-          for (let j=0;j<4;j++) {
-            const t = j/4 + Math.random()*0.2;
+          // Single row of trees — far from road
+          for (let j=0;j<2;j++) {
+            const t = j/2 + Math.random()*0.4;
             if (t > 1) continue;
-            // Close trees
-            const d1 = 80/2 + 30 + Math.random()*40;
-            this.add.sprite(x1+dx*t+nx*side*d1, y1+dy*t+ny*side*d1, 'pine_tree')
-              .setDepth(2).setScale(0.8+Math.random()*0.4);
-            // Background trees (larger, slightly transparent)
-            if (j%2===0) {
-              const d2 = 80/2 + 80 + Math.random()*80;
-              this.add.sprite(x1+dx*t+nx*side*d2, y1+dy*t+ny*side*d2, 'pine_tree')
-                .setDepth(1).setScale(1.2+Math.random()*0.5).setAlpha(0.7);
-            }
+            const d = halfW + 60 + Math.random()*50;
+            this.add.sprite(x1+dx*t+nx*side*d, y1+dy*t+ny*side*d, 'pine_tree')
+              .setDepth(2).setScale(0.6+Math.random()*0.3);
+          }
+          // Background tree (further out, subtle)
+          if (Math.random() > 0.5) {
+            const t2 = Math.random();
+            const d2 = halfW + 120 + Math.random()*60;
+            this.add.sprite(x1+dx*t2+nx*side*d2, y1+dy*t2+ny*side*d2, 'pine_tree')
+              .setDepth(1).setScale(0.8+Math.random()*0.3).setAlpha(0.5);
           }
         }
       }
@@ -476,7 +648,7 @@ export class RaceScene extends Phaser.Scene {
       callback:()=>{
         count--;
         if(count>0) this.countdownText.setText(count.toString());
-        else if(count===0){this.countdownText.setText('GO!').setColor('#e63946');this.raceState.started=true;}
+        else if(count===0){this.countdownText.setText('GO!').setColor('#e63946');this.raceState.started=true;soundEngine.startBGM();}
         else this.countdownText.setVisible(false);
       }
     });
@@ -489,7 +661,7 @@ export class RaceScene extends Phaser.Scene {
     this.raceState.timeRemaining-=delta;
 
     if(this.raceState.timeRemaining<=0){
-      this.raceState.timeRemaining=0;this.raceState.timedOut=true;this.showTimeOut();return;
+      this.raceState.timeRemaining=0;this.raceState.timedOut=true;soundEngine.stopAll();soundEngine.stopBGM();this.showTimeOut();return;
     }
 
     if(this.raceState.timeRemaining<10000)
@@ -506,6 +678,12 @@ export class RaceScene extends Phaser.Scene {
 
     this.player.x=this.carState.x; this.player.y=this.carState.y;
     this.player.angle=this.carState.angle+90;
+
+    // Camera look-ahead: offset toward movement direction at high speed
+    const spd = Math.abs(this.carState.speed);
+    const lookAhead = Math.min(spd / 3, 80); // max 80px ahead
+    const moveRad = Phaser.Math.DegToRad(this.carState.moveAngle);
+    this.cameras.main.setFollowOffset(-Math.cos(moveRad)*lookAhead, -Math.sin(moveRad)*lookAhead);
 
     // Zone-adaptive dust particles
     const zoneName = this.currentZoneName || 'desert';
@@ -546,6 +724,16 @@ export class RaceScene extends Phaser.Scene {
     }
 
     this.obstacles.forEach(o=>{if(o.type==='obs_tokamak')o.sprite.angle+=2;});
+
+    // Sound updates
+    const result = isOnTrack(this.carState.x, this.carState.y, this.track.waypoints, this.track.zones);
+    const cp = this.selectedCar.physics;
+    const sRoadType = this._currentRoadType || 'offroad';
+    soundEngine.updateEngine(this.carState.speed, cp.roadMaxSpeed[sRoadType] || 400);
+    soundEngine.updateOffroad(!result.onTrack, this.carState.speed, this.currentZoneName);
+    soundEngine.updateDrift(this.carState.drifting, this.carState.speed, this.carState.driftAngle);
+    soundEngine.updateBrake(this.cursors.down.isDown, this.carState.speed);
+
     this.emitUI();
   }
 
@@ -571,7 +759,8 @@ export class RaceScene extends Phaser.Scene {
     const effectiveMax = cp.roadMaxSpeed[roadType] || 400;
     const effectiveTurn = phys.turn * cp.turnMul;
     const effectiveBrake = 400 * cp.brakeMul;
-    const effectiveFriction = result.onTrack ? phys.friction : phys.friction * cp.offroadMul;
+    // Off-road: apply offroadMul AND additional deceleration penalty
+    const effectiveFriction = result.onTrack ? phys.friction : (phys.friction * cp.offroadMul * 0.92);
 
     // Accel / Brake
     if(this.cursors.up.isDown) car.speed+=effectiveAccel*dt;
@@ -639,6 +828,32 @@ export class RaceScene extends Phaser.Scene {
     car.prevX=car.x;car.prevY=car.y;
     car.x+=Math.cos(moveRad)*car.speed*dt;
     car.y+=Math.sin(moveRad)*car.speed*dt;
+
+    // Sprint zone banner wall barrier — banners act as solid walls
+    if (this._sprintBarrierSegments && this._sprintBarrierSegments.length > 0) {
+      // Find closest barrier segment to car
+      let minD = Infinity, closest = null;
+      for (const seg of this._sprintBarrierSegments) {
+        const d = (car.x - seg.x) ** 2 + (car.y - seg.y) ** 2;
+        if (d < minD) { minD = d; closest = seg; }
+      }
+      if (closest && minD < 150 * 150) {
+        const dx = car.x - closest.x, dy = car.y - closest.y;
+        const perpDist = dx * closest.nx + dy * closest.ny; // signed distance across road
+        const absDist = Math.abs(perpDist);
+        if (absDist > closest.dist - 5) {
+          // Push car back to barrier edge
+          const sign = perpDist > 0 ? 1 : -1;
+          const pushDist = closest.dist - 8;
+          // Project car position: keep along-road component, clamp perpendicular
+          const alongX = dx - perpDist * closest.nx;
+          const alongY = dy - perpDist * closest.ny;
+          car.x = closest.x + alongX + closest.nx * sign * pushDist;
+          car.y = closest.y + alongY + closest.ny * sign * pushDist;
+          car.speed *= 0.4; // bounce off wall
+        }
+      }
+    }
   }
 
   checkObstacles(){
@@ -652,6 +867,7 @@ export class RaceScene extends Phaser.Scene {
         car.hitCooldown=800;
         this.hitFlash.setAlpha(1);
         this.tweens.add({targets:this.hitFlash,alpha:0,duration:500});
+        soundEngine.playHit();
         this.cameras.main.shake(200,0.006);
         const a=Math.atan2(car.y-o.y,car.x-o.x);
         car.x+=Math.cos(a)*6;car.y+=Math.sin(a)*6;
@@ -668,9 +884,35 @@ export class RaceScene extends Phaser.Scene {
         rs.checkpointsPassed++;rs.timeRemaining+=cp.timeBonus;
         rs.checkpointTimes.push(rs.elapsedTime);
         this.showCPPopup(cp);
+        soundEngine.playCheckpoint();
       }
     }
-    if(checkFinish(car.x,car.y,this.track.waypoints)){rs.finished=true;this.showFinish();}
+    // Finish: must cross the finish line (perpendicular to road at last waypoint)
+    if(!rs.finished && this._checkLineCross(car.prevX, car.prevY, car.x, car.y, this.track.waypoints)){
+      rs.finished=true;soundEngine.stopAll();soundEngine.stopBGM();soundEngine.playFinish();this.showFinish();
+    }
+  }
+
+  _checkLineCross(px, py, cx, cy, wp) {
+    // Check if car crossed the finish line (perpendicular line at last waypoint)
+    const last = wp[wp.length-1], prev = wp[wp.length-2];
+    const dx = last[0]-prev[0], dy = last[1]-prev[1];
+    const len = Math.sqrt(dx*dx+dy*dy) || 1;
+    const nx = -dy/len, ny = dx/len; // perpendicular
+    const halfW = 80;
+    // Finish line endpoints
+    const lx1 = last[0]+nx*halfW, ly1 = last[1]+ny*halfW;
+    const lx2 = last[0]-nx*halfW, ly2 = last[1]-ny*halfW;
+    // Check segment intersection between car movement and finish line
+    const d1x = cx-px, d1y = cy-py;
+    const d2x = lx2-lx1, d2y = ly2-ly1;
+    const cross = d1x*d2y - d1y*d2x;
+    if (Math.abs(cross) < 0.001) return false;
+    const t = ((lx1-px)*d2y - (ly1-py)*d2x) / cross;
+    const u = ((lx1-px)*d1y - (ly1-py)*d1x) / cross;
+    // Also require car to be near the finish area (within 150px)
+    const distToFinish = Math.sqrt((cx-last[0])**2+(cy-last[1])**2);
+    return t >= 0 && t <= 1 && u >= 0 && u <= 1 && distToFinish < 150;
   }
 
   checkZoneChange(){
@@ -754,10 +996,12 @@ export class RaceScene extends Phaser.Scene {
     }
 
     this.input.keyboard.once('keydown-ENTER', () => {
+      soundEngine.stopAll(); soundEngine.stopBGM();
       this.scene.stop('UI');
       this.scene.restart({ carId: this.selectedCarId });
     });
     this.input.keyboard.once('keydown-ESC', () => {
+      soundEngine.stopAll(); soundEngine.stopBGM();
       this.scene.stop('UI');
       this.scene.stop('Race');
       this.scene.start('Menu');

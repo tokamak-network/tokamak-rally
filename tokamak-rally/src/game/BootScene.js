@@ -4,6 +4,11 @@ import { CARS, CAR_PIXELS } from './Cars.js';
 export class BootScene extends Phaser.Scene {
   constructor() { super('Boot'); }
 
+  preload() {
+    this.load.image('tokamak_logo', '/tokamak-logo-cropped.png');
+    this.load.image('tokamak_logo_white', '/tokamak-logo-white.png');
+  }
+
   create() {
     this.genAllCars();
     this.genBackgrounds();
@@ -75,11 +80,11 @@ export class BootScene extends Phaser.Scene {
       g.fillRect(startX, y, 15+((y*3)%10), 1);
       g.fillRect((startX+50)%S, y+1, 10+((y*5)%8), 1);
     }
-    // Tire track marks (subtle parallel lines)
-    g.fillStyle(0x9a6a38, 0.15);
-    for (let y = 0; y < S; y++) {
-      g.fillRect(40, y, 2, 1); g.fillRect(48, y, 2, 1);
-      g.fillRect(85, y, 2, 1); g.fillRect(93, y, 2, 1);
+    // Tire track marks (short dashes, not full-height lines)
+    g.fillStyle(0x9a6a38, 0.12);
+    for (let y = 10; y < S; y += 20) {
+      g.fillRect(40, y, 2, 6); g.fillRect(48, y+3, 2, 6);
+      g.fillRect(85, y+5, 2, 6); g.fillRect(93, y+8, 2, 6);
     }
     // Scattered gravel/pebbles
     g.fillStyle(0x7a5828, 0.4);
@@ -89,140 +94,112 @@ export class BootScene extends Phaser.Scene {
     }
     g.generateTexture('bg_desert', S, S); g.destroy();
 
-    // ====== CANYON — golden-brown sandstone slot canyon (Dakar reference) ======
+    // ====== CANYON — warm sandstone ground, rocky terrain (no vertical lines) ======
     g = this.add.graphics();
-    // Layered sandstone strata — golden to dark brown
-    const canyonLayers = [0xc49050,0xb88040,0xd0a060,0xa87030,0xc09048,0x907028,0xb08038,0x806020,0xa07830,0x705818];
-    for (let i = 0; i < canyonLayers.length; i++) {
-      const h = Math.floor(S / canyonLayers.length);
-      g.fillStyle(canyonLayers[i]);
-      g.fillRect(0, i*h, S, h);
-      // Layer boundary — lighter edge
-      g.fillStyle(0xc06a48, 0.25);
-      g.fillRect(0, i*h, S, 1);
-    }
-    // Erosion texture — horizontal noise
+    // Base: warm golden-brown rocky ground (seen from above)
     for (let y = 0; y < S; y++) {
-      for (let x = 0; x < S; x += 3) {
-        if (((x*y*7+x*3)%17) < 3) {
-          g.fillStyle(0x551510, 0.12);
-          g.fillRect(x, y, 2, 1);
-        }
-      }
+      const t = y / S;
+      const r = Math.floor(0xb8 + (0xa0-0xb8)*t + Math.sin(y*0.2+3)*6);
+      const gv = Math.floor(0x80 + (0x68-0x80)*t + Math.sin(y*0.15+1)*5);
+      const b = Math.floor(0x40 + (0x30-0x40)*t + Math.sin(y*0.12)*3);
+      g.fillStyle((Math.max(0,Math.min(255,r))<<16)|(Math.max(0,Math.min(255,gv))<<8)|Math.max(0,Math.min(255,b)));
+      g.fillRect(0, y, S, 1);
     }
-    // Deep vertical cracks
-    g.fillStyle(0x3a0d06, 0.6);
-    const cracks = [[18,0,20,45],[19,40,22,S],[48,5,50,55],[49,50,51,S],[85,0,87,40],[86,35,88,80],[110,20,112,S]];
-    for (const [x1,y1,x2,y2] of cracks) {
-      g.fillRect(x1, y1, x2-x1, y2-y1);
+    // Scattered rock patches — irregular shapes
+    g.fillStyle(0x9a6a38, 0.3);
+    g.fillRect(10,15,14,8); g.fillRect(55,40,18,10); g.fillRect(90,80,16,9);
+    g.fillRect(30,70,12,7); g.fillRect(75,10,10,6); g.fillRect(105,55,14,8);
+    g.fillStyle(0x8a5a28, 0.25);
+    g.fillRect(12,17,10,5); g.fillRect(57,42,14,6); g.fillRect(92,82,12,5);
+    // Sand/dust patches between rocks
+    g.fillStyle(0xc8a068, 0.2);
+    g.fillRect(40,20,20,12); g.fillRect(5,50,15,10); g.fillRect(80,35,18,12);
+    g.fillRect(60,90,22,14); g.fillRect(20,100,16,10);
+    // Small gravel
+    for (let i = 0; i < 40; i++) {
+      const px = (i*43+17)%S, py = (i*61+23)%S;
+      g.fillStyle([0x7a5a30,0x8a6a40,0x6a4a20,0x9a7a48][i%4], 0.4);
+      g.fillRect(px, py, 1+(i%2), 1+(i%3===0?1:0));
     }
-    // Horizontal crack branches
-    g.fillStyle(0x4a1508, 0.4);
-    g.fillRect(20,30,12,1); g.fillRect(50,48,15,1); g.fillRect(87,35,10,1);
-    g.fillRect(15,65,18,1); g.fillRect(60,85,14,1); g.fillRect(95,100,16,1);
-    // Highlight on rock edges
-    g.fillStyle(0xd07850, 0.2);
-    for (let i = 0; i < canyonLayers.length; i++) {
-      const h = Math.floor(S / canyonLayers.length);
-      g.fillRect(0, i*h+1, S, 1);
-    }
-    // Shadow pockets
-    g.fillStyle(0x2a0a04, 0.2);
-    g.fillRect(25,18,8,4); g.fillRect(58,42,10,3); g.fillRect(90,70,7,4);
-    g.fillRect(12,95,9,3); g.fillRect(70,15,6,3);
+    // Shadow spots (small, not lines)
+    g.fillStyle(0x5a3a18, 0.15);
+    g.fillRect(25,32,6,4); g.fillRect(68,58,8,5); g.fillRect(42,88,7,4);
+    g.fillRect(100,22,5,4); g.fillRect(15,75,6,3);
     g.generateTexture('bg_canyon', S, S); g.destroy();
 
-    // ====== RIVERBED — gravel, rocks, dried mud with water hints ======
+    // ====== RIVERBED — grey gravel with green-brown vegetation, muddy patches ======
     g = this.add.graphics();
-    // Base: warm grey-brown earth
+    // Base: grey-blue gravel (distinctly different from sandy canyon)
     for (let y = 0; y < S; y++) {
       const t = y / S;
-      const base = 0xb09878;
-      const r = ((base>>16)&0xff) + Math.floor(Math.sin(y*0.15)*8);
-      const gv = ((base>>8)&0xff) + Math.floor(Math.sin(y*0.12+1)*6);
-      const b = (base&0xff) + Math.floor(Math.sin(y*0.1+2)*5);
+      const r = Math.floor(0x7a + (0x6a-0x7a)*t + Math.sin(y*0.18)*4);
+      const gv = Math.floor(0x7e + (0x6e-0x7e)*t + Math.sin(y*0.14+1)*4);
+      const b = Math.floor(0x72 + (0x62-0x72)*t + Math.sin(y*0.11+2)*3);
       g.fillStyle((Math.max(0,Math.min(255,r))<<16)|(Math.max(0,Math.min(255,gv))<<8)|Math.max(0,Math.min(255,b)));
       g.fillRect(0, y, S, 1);
     }
-    // Gravel texture — scattered small stones
-    for (let i = 0; i < 80; i++) {
+    // Dense gravel stones
+    for (let i = 0; i < 100; i++) {
       const px = (i*41+17)%S, py = (i*59+23)%S;
-      const shade = [0x8a7a6a, 0x9a8a7a, 0x7a6a5a, 0xa09080][i%4];
-      g.fillStyle(shade, 0.6);
-      const sz = 1+(i%3);
-      g.fillRect(px, py, sz, sz);
+      g.fillStyle([0x8a8a82,0x6a6a60,0x9a9a8a,0x5a5a50][i%4], 0.5);
+      g.fillRect(px, py, 1+(i%3), 1+(i%2));
     }
-    // Dried mud crack network
-    g.lineStyle(1, 0x7a6550, 0.5);
-    g.beginPath();
-    // Main cracks forming irregular polygons
-    g.moveTo(0,25); g.lineTo(20,22); g.lineTo(45,28); g.lineTo(70,20); g.lineTo(S,24);
-    g.moveTo(0,60); g.lineTo(25,65); g.lineTo(55,58); g.lineTo(80,63); g.lineTo(S,57);
-    g.moveTo(0,95); g.lineTo(30,100); g.lineTo(60,92); g.lineTo(90,98); g.lineTo(S,93);
-    g.moveTo(25,0); g.lineTo(22,25); g.lineTo(28,60); g.lineTo(24,95); g.lineTo(27,S);
-    g.moveTo(65,0); g.lineTo(60,25); g.lineTo(68,60); g.lineTo(62,95); g.lineTo(66,S);
-    g.moveTo(100,0); g.lineTo(95,30); g.lineTo(102,65); g.lineTo(97,100); g.lineTo(100,S);
-    g.strokePath();
-    // Water/mud puddle areas — brown muddy water
-    g.fillStyle(0x6a5a40, 0.2);
-    g.fillRect(25,28,30,22); g.fillRect(70,65,25,20); g.fillRect(5,85,22,18);
-    g.fillStyle(0x7a8a6a, 0.12);
-    g.fillRect(27,30,26,18); g.fillRect(72,67,21,16);
-    // Water shimmer
-    g.fillStyle(0x8aaa9a, 0.1);
-    g.fillRect(30,32,5,1); g.fillRect(35,35,8,1); g.fillRect(75,70,6,1);
-    // Green vegetation on banks — lush
-    g.fillStyle(0x4a8a3a, 0.2);
-    g.fillRect(0,0,S,8); g.fillRect(0,S-10,S,10);
-    g.fillRect(55,25,8,30); g.fillRect(100,60,12,25);
-    g.fillStyle(0x5a9a4a, 0.15);
-    g.fillRect(10,2,15,5); g.fillRect(60,27,5,8); g.fillRect(105,62,8,6);
-    // Green moss in cracks
-    g.fillStyle(0x5a7a4a, 0.18);
-    g.fillRect(22,23,4,2); g.fillRect(60,59,5,2); g.fillRect(95,94,4,2);
-    g.fillRect(25,62,3,2); g.fillRect(65,22,4,2);
-    // Larger rocks/stones in riverbed
-    g.fillStyle(0x7a7a70, 0.3);
-    g.fillRect(40,42,4,3); g.fillRect(82,78,5,4); g.fillRect(15,95,3,3);
-    g.fillRect(58,50,3,3); g.fillRect(110,45,4,3);
+    // Mud/water puddle areas — darker brownish
+    g.fillStyle(0x5a5040, 0.25);
+    g.fillRect(20,25,25,18); g.fillRect(70,60,22,16); g.fillRect(5,85,20,14);
+    // Water shimmer on puddles
+    g.fillStyle(0x8a9aa0, 0.12);
+    g.fillRect(24,29,8,2); g.fillRect(74,64,6,2); g.fillRect(9,89,7,2);
+    // Green vegetation patches (lush banks — key visual identity)
+    g.fillStyle(0x4a8a3a, 0.25);
+    g.fillRect(55,10,22,16); g.fillRect(95,50,20,14); g.fillRect(10,70,18,12);
+    g.fillStyle(0x3a7a2a, 0.2);
+    g.fillRect(57,12,16,10); g.fillRect(97,52,14,9); g.fillRect(12,72,13,8);
+    // Yellow-green moss on wet areas
+    g.fillStyle(0x7a9a50, 0.15);
+    g.fillRect(22,42,8,4); g.fillRect(68,78,10,5); g.fillRect(100,95,8,4);
+    // Larger rounded river stones
+    g.fillStyle(0x6a6a5a, 0.4);
+    g.fillRect(38,38,5,4); g.fillRect(80,22,6,5); g.fillRect(48,92,5,4);
+    g.fillRect(110,40,4,4); g.fillRect(15,55,5,3);
     g.generateTexture('bg_riverbed', S, S); g.destroy();
 
-    // ====== MOUNTAIN — forest floor with brown earth, pine needle litter ======
+    // ====== MOUNTAIN — dark green forest floor, moss, rocks, fallen leaves ======
     g = this.add.graphics();
-    // Base: dark green-brown forest floor
+    // Base: deep green-brown forest floor
     for (let y = 0; y < S; y++) {
       const t = y / S;
-      const r = Math.floor(0x3a + (0x32-0x3a)*t + Math.sin(y*0.2)*5);
-      const gv = Math.floor(0x52 + (0x48-0x52)*t + Math.sin(y*0.15)*6);
-      const b = Math.floor(0x28 + (0x22-0x28)*t + Math.sin(y*0.12)*3);
+      const r = Math.floor(0x38 + (0x30-0x38)*t + Math.sin(y*0.2+2)*5);
+      const gv = Math.floor(0x50 + (0x44-0x50)*t + Math.sin(y*0.15+1)*6);
+      const b = Math.floor(0x26 + (0x20-0x26)*t + Math.sin(y*0.12)*3);
       g.fillStyle((Math.max(0,Math.min(255,r))<<16)|(Math.max(0,Math.min(255,gv))<<8)|Math.max(0,Math.min(255,b)));
       g.fillRect(0, y, S, 1);
     }
-    // Pine needle texture — tiny brown/green lines
-    for (let i = 0; i < 100; i++) {
-      const px = (i*37+11)%S, py = (i*53+7)%S;
-      const shade = [0x4a5a30, 0x3a4a20, 0x5a3a18, 0x4a3a15][i%4];
-      g.fillStyle(shade, 0.4);
-      g.fillRect(px, py, 2+(i%2), 1);
-    }
-    // Grass/moss patches
+    // Moss patches (key visual identity — lush green)
+    g.fillStyle(0x3a6a2a, 0.3);
+    g.fillRect(8,5,20,14); g.fillRect(60,40,24,16); g.fillRect(85,85,22,16);
+    g.fillRect(30,65,16,10); g.fillRect(100,20,18,12);
     g.fillStyle(0x4a7a3a, 0.2);
-    g.fillRect(10,8,22,16); g.fillRect(65,45,20,14); g.fillRect(85,90,25,18);
-    g.fillStyle(0x5a8a4a, 0.15);
-    g.fillRect(35,60,18,12); g.fillRect(100,15,20,10);
-    // Exposed dirt patches
-    g.fillStyle(0x6a4a28, 0.15);
-    g.fillRect(45,20,15,10); g.fillRect(8,75,12,8); g.fillRect(75,105,14,10);
+    g.fillRect(10,7,14,8); g.fillRect(62,42,18,10); g.fillRect(87,87,16,10);
+    // Brown leaf litter (small dots, NOT lines)
+    for (let i = 0; i < 50; i++) {
+      const px = (i*37+11)%S, py = (i*53+7)%S;
+      g.fillStyle([0x5a4a20, 0x4a3a15, 0x6a5a28, 0x3a2a10][i%4], 0.35);
+      g.fillRect(px, py, 2, 1+(i%2));
+    }
+    // Exposed dirt/mud
+    g.fillStyle(0x5a4020, 0.18);
+    g.fillRect(42,18,14,8); g.fillRect(5,50,10,7); g.fillRect(75,100,12,8);
     // Small rocks
-    g.fillStyle(0x6a6a60, 0.3);
-    for (let i = 0; i < 12; i++) {
+    g.fillStyle(0x5a5a50, 0.35);
+    for (let i = 0; i < 10; i++) {
       const px = (i*43+19)%S, py = (i*61+31)%S;
       g.fillRect(px, py, 2+(i%2), 2);
     }
-    // Root/twig hints
-    g.fillStyle(0x5a3a18, 0.2);
-    g.fillRect(20,40,8,1); g.fillRect(70,25,6,1); g.fillRect(40,85,10,1);
-    g.fillRect(95,65,7,1); g.fillRect(15,110,9,1);
+    // Dappled light (subtle bright spots like light through canopy)
+    g.fillStyle(0x6a9a4a, 0.1);
+    g.fillRect(20,25,8,6); g.fillRect(70,55,10,7); g.fillRect(45,90,9,6);
+    g.fillRect(95,40,7,5); g.fillRect(15,80,8,5);
     g.generateTexture('bg_mountain', S, S); g.destroy();
 
     // ====== SPRINT — dry scrubland with sparse green patches (aerial view) ======
@@ -258,10 +235,10 @@ export class BootScene extends Phaser.Scene {
       const px = (i*41+23)%S, py = (i*59+31)%S;
       g.fillRect(px, py, 2+(i%2), 2);
     }
-    // Tree shadows (long diagonal)
+    // Shadow spots (NOT long lines — small elliptical shadows)
     g.fillStyle(0x3a4a2a, 0.1);
-    g.fillRect(20,10,3,20); g.fillRect(60,40,3,18); g.fillRect(100,25,3,22);
-    g.fillRect(40,75,3,16); g.fillRect(85,90,3,14);
+    g.fillRect(20,15,8,5); g.fillRect(60,45,10,6); g.fillRect(100,30,8,5);
+    g.fillRect(40,80,9,5); g.fillRect(85,95,7,4);
     g.generateTexture('bg_sprint', S, S); g.destroy();
   }
 
@@ -388,35 +365,19 @@ export class BootScene extends Phaser.Scene {
     ], 2);
     g.generateTexture('skull', 20, 20); g.destroy();
 
-    // === CANYON WALL — tall layered sandstone cliff face (golden-brown) ===
+    // === CANYON WALL — small angular rock formation (not bread!) ===
     g = this.add.graphics();
-    // Wide, tall cliff section with layered sediment
-    const CW1=0xc49450, CW2=0xb08040, CW3=0x9a6a30, CW4=0x856025, CW5=0x6a4a18,
-          CW6=0x504010, CWH=0xd8a868, CWL=0xe0b878, CWSh=0x4a3510, CWD=0x3a2808;
-    // 16×20 pixel art at 3x = 48×60 rendered
+    const CW1=0xa87838, CW2=0x906828, CW3=0x785820, CW4=0x604818, CWSh=0x4a3510, CWH=0xc09048;
+    // 8×8 pixel art at 2x = 16×16 rendered — small, angular
     this.px(g, [
-      [_,_,_,_,_,CW2,CWH,CWL,CWH,CW2,CW1,_,_,_,_,_],
-      [_,_,_,CW3,CW2,CWH,CWL,CWH,CWL,CWH,CW2,CW3,_,_,_,_],
-      [_,_,CW4,CW3,CW1,CWH,CWL,CW1,CWH,CWL,CW2,CW3,CW4,_,_,_],
-      [_,CW5,CW3,CW2,CWH,CWL,CWH,CW2,CW1,CWH,CW2,CW3,CW4,CW5,_,_],
-      [CW5,CW4,CW2,CWH,CWL,CW1,CWH,CWL,CWH,CW1,CWH,CW2,CW3,CW4,CW5,_],
-      [CW5,CW3,CW2,CW1,CWSh,CWSh,CWSh,CWSh,CWSh,CWSh,CW1,CW2,CW3,CW4,CW5,_],
-      [CW6,CW4,CW3,CW2,CW1,CWH,CW2,CW1,CWH,CW2,CW1,CW2,CW3,CW4,CW5,CW6],
-      [CW6,CW5,CW3,CW2,CWH,CWL,CW1,CWH,CWL,CWH,CW2,CW3,CW4,CW5,CW6,_],
-      [CWD,CW5,CW4,CWSh,CWSh,CWSh,CWSh,CWSh,CWSh,CWSh,CWSh,CW3,CW4,CW5,CWD,_],
-      [CWD,CW6,CW4,CW3,CW2,CW1,CWH,CW2,CW1,CWH,CW2,CW3,CW4,CW5,CWD,_],
-      [CWD,CW6,CW5,CW3,CW2,CWH,CWL,CWH,CW2,CW1,CW2,CW3,CW4,CW5,CW6,CWD],
-      [_,CWD,CW5,CW4,CW3,CW2,CW1,CW2,CW3,CW2,CW3,CW4,CW5,CW6,CWD,_],
-      [_,CWD,CW6,CW4,CWSh,CWSh,CWSh,CWSh,CWSh,CWSh,CWSh,CW4,CW5,CW6,CWD,_],
-      [_,_,CWD,CW5,CW4,CW3,CW2,CW3,CW2,CW3,CW4,CW5,CW6,CWD,_,_],
-      [_,_,CWD,CW6,CW5,CW4,CW3,CW4,CW3,CW4,CW5,CW6,CWD,_,_,_],
-      [_,_,_,CWD,CW6,CW5,CW4,CW5,CW4,CW5,CW6,CWD,_,_,_,_],
-      [_,_,_,CWD,CWD,CW6,CW5,CW6,CW5,CW6,CWD,CWD,_,_,_,_],
-      [_,_,_,_,CWD,CWD,CW6,CWD,CW6,CWD,CWD,_,_,_,_,_],
-      [_,_,_,_,_,CWD,CWD,CWD,CWD,CWD,_,_,_,_,_,_],
-      [_,_,_,_,_,_,CWD,CWD,CWD,_,_,_,_,_,_,_],
-    ], 3);
-    g.generateTexture('canyon_wall', 48, 60); g.destroy();
+      [_,_,CW3,CW2,CW1,CWH,_,_],
+      [_,CW4,CW2,CWH,CW1,CW2,CW3,_],
+      [CW4,CW3,CW1,CW2,CWH,CW1,CW3,CW4],
+      [CWSh,CW4,CW2,CW1,CW2,CW3,CW4,CWSh],
+      [_,CWSh,CW3,CW2,CW3,CW4,CWSh,_],
+      [_,_,CWSh,CW4,CW4,CWSh,_,_],
+    ], 2);
+    g.generateTexture('canyon_wall', 16, 12); g.destroy();
 
     // === BOULDER RED (canyon) — irregular with color variation ===
     g = this.add.graphics();
@@ -567,6 +528,39 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0xf4d35e);
     g.fillRect(11,8,2,6); g.fillRect(11,16,2,2);
     g.generateTexture('warning_sign', 24, 24); g.destroy();
+
+    // === CROWD PERSON — simple top-down spectator (various colors) ===
+    const crowdColors = [0xe63946, 0x1a8aff, 0xf4d35e, 0x2dd4a8, 0xff6b35, 0xffffff, 0x8855cc];
+    for (let ci = 0; ci < crowdColors.length; ci++) {
+      g = this.add.graphics();
+      const cc = crowdColors[ci];
+      const skin = 0xe8c090;
+      // Head (circle-ish)
+      g.fillStyle(skin); g.fillRect(2,0,4,4);
+      // Hair
+      g.fillStyle(0x3a2a18); g.fillRect(2,0,4,1);
+      // Body/shirt
+      g.fillStyle(cc); g.fillRect(1,4,6,5);
+      // Arms
+      g.fillStyle(cc); g.fillRect(0,5,1,3); g.fillRect(7,5,1,3);
+      // Legs
+      g.fillStyle(0x2b2d42); g.fillRect(2,9,2,3); g.fillRect(4,9,2,3);
+      g.generateTexture(`crowd_${ci}`, 8, 12); g.destroy();
+    }
+
+    // === CROWD with raised arms (cheering) ===
+    for (let ci = 0; ci < crowdColors.length; ci++) {
+      g = this.add.graphics();
+      const cc = crowdColors[ci];
+      const skin = 0xe8c090;
+      g.fillStyle(skin); g.fillRect(2,2,4,4);
+      g.fillStyle(0x3a2a18); g.fillRect(2,2,4,1);
+      // Raised arms
+      g.fillStyle(skin); g.fillRect(0,0,1,3); g.fillRect(7,0,1,3);
+      g.fillStyle(cc); g.fillRect(1,6,6,5);
+      g.fillStyle(0x2b2d42); g.fillRect(2,11,2,3); g.fillRect(4,11,2,3);
+      g.generateTexture(`crowd_cheer_${ci}`, 8, 14); g.destroy();
+    }
   }
 
   genObstacles() {

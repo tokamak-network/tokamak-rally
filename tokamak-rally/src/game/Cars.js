@@ -22,7 +22,7 @@ export const CARS = [
       brakeMul: 1.0,
       obstaclePenaltyMul: 1.0,
       offroadMul: 1.0,
-      roadMaxSpeed: { paved: 421, dirt: 349, sand: 288, rocky: 254, offroad: 197 },
+      roadMaxSpeed: { paved: 463, dirt: 384, sand: 317, rocky: 279, offroad: 217 },
     },
   },
   {
@@ -44,7 +44,7 @@ export const CARS = [
       brakeMul: 0.9,
       obstaclePenaltyMul: 1.0,
       offroadMul: 0.9,
-      roadMaxSpeed: { paved: 501, dirt: 380, sand: 304, rocky: 262, offroad: 178 },
+      roadMaxSpeed: { paved: 551, dirt: 418, sand: 334, rocky: 288, offroad: 196 },
     },
   },
   {
@@ -66,7 +66,7 @@ export const CARS = [
       brakeMul: 1.25,
       obstaclePenaltyMul: 1.0,
       offroadMul: 0.95,
-      roadMaxSpeed: { paved: 387, dirt: 338, sand: 281, rocky: 246, offroad: 190 },
+      roadMaxSpeed: { paved: 426, dirt: 372, sand: 309, rocky: 271, offroad: 209 },
     },
   },
   {
@@ -88,7 +88,7 @@ export const CARS = [
       brakeMul: 1.05,
       obstaclePenaltyMul: 0.5,
       offroadMul: 1.3,
-      roadMaxSpeed: { paved: 406, dirt: 345, sand: 293, rocky: 262, offroad: 259 },
+      roadMaxSpeed: { paved: 447, dirt: 380, sand: 322, rocky: 288, offroad: 285 },
     },
   },
   {
@@ -110,7 +110,7 @@ export const CARS = [
       brakeMul: 1.1,
       obstaclePenaltyMul: 1.15,
       offroadMul: 0.85,
-      roadMaxSpeed: { paved: 398, dirt: 330, sand: 277, rocky: 239, offroad: 178 },
+      roadMaxSpeed: { paved: 438, dirt: 363, sand: 305, rocky: 263, offroad: 196 },
     },
   },
 ];
