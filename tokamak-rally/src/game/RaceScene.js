@@ -114,6 +114,15 @@ export class RaceScene extends Phaser.Scene {
       this.scene.stop('UI');
     }
     this.scene.launch('UI');
+
+    // ESC during gameplay → back to menu
+    this.input.keyboard.on('keydown-ESC', () => {
+      if (!this.raceState.finished && !this.raceState.timedOut) {
+        this.scene.stop('UI');
+        this.scene.stop('Race');
+        this.scene.start('Menu');
+      }
+    });
   }
 
   drawBackground() {
@@ -125,8 +134,8 @@ export class RaceScene extends Phaser.Scene {
         minY=Math.min(minY,wp[i][1]); maxY=Math.max(maxY,wp[i][1]);
       }
       minX-=500; maxX+=500; minY-=500; maxY+=500;
-      for (let x=minX; x<maxX; x+=64)
-        for (let y=minY; y<maxY; y+=64)
+      for (let x=minX; x<maxX; x+=128)
+        for (let y=minY; y<maxY; y+=128)
           this.add.sprite(x, y, zone.bgTile).setOrigin(0).setDepth(0);
     }
   }
@@ -249,55 +258,69 @@ export class RaceScene extends Phaser.Scene {
 
   placeScenery() {
     const wp = this.track.waypoints;
+    // Place scenery WELL OUTSIDE road — minimum gap = halfW + 50
     for (let i=0; i<wp.length-1; i++) {
       const zone = getZoneByIndex(i, this.track.zones);
       const [x1,y1]=wp[i],[x2,y2]=wp[i+1];
       const halfW = (zone.trackWidth||100)/2;
       const items = zone.scenery||['rock_grey'];
       const count = zone.sceneryDensity||3;
+      const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
+      if (len<1) continue;
+      const nx=-dy/len, ny=dx/len; // perpendicular to road
       for (let j=0;j<count;j++) {
         const t=Math.random();
-        const bx=x1+(x2-x1)*t, by=y1+(y2-y1)*t;
-        const ang=Math.random()*Math.PI*2;
-        const dist=halfW+25+Math.random()*160;
-        const type=items[Math.floor(Math.random()*items.length)];
-        this.add.sprite(bx+Math.cos(ang)*dist, by+Math.sin(ang)*dist, type).setDepth(2);
+        const bx=x1+dx*t, by=y1+dy*t;
+        // Place on left or right side of road, guaranteed outside
+        const side = Math.random() > 0.5 ? 1 : -1;
+        const dist = halfW + 50 + Math.random()*150;
+        const ox = bx + nx*side*dist, oy = by + ny*side*dist;
+        this.add.sprite(ox, oy, items[Math.floor(Math.random()*items.length)]).setDepth(2);
       }
     }
 
-    // Dense canyon walls
+    // Canyon walls — placed along road edges (outside road)
     const canyonZone = this.track.zones.find(z => z.name === 'canyon');
     if (canyonZone) {
-      for (let i = canyonZone.fromWP + 1; i < Math.min(canyonZone.toWP, wp.length); i++) {
-        const zone = getZoneByIndex(i, this.track.zones);
-        const halfW = (zone.trackWidth||100)/2;
-        for (let side=0;side<2;side++) {
-          const [x,y]=wp[i];
-          const a=side===0?-Math.PI/2+Math.random()*0.5:Math.PI/2+Math.random()*0.5;
-          const d=halfW+5+Math.random()*25;
-          this.add.sprite(x+Math.cos(a)*d,y+Math.sin(a)*d,'canyon_wall').setDepth(2).setScale(0.6+Math.random()*0.7);
+      for (let i = canyonZone.fromWP; i < Math.min(canyonZone.toWP, wp.length-1); i++) {
+        const [x1,y1]=wp[i],[x2,y2]=wp[i+1];
+        const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
+        if (len<1) continue;
+        const nx=-dy/len, ny=dx/len;
+        const halfW = 75/2;
+        for (let side of [-1, 1]) {
+          const d = halfW + 40 + Math.random()*30;
+          const t = Math.random();
+          const sx = x1+dx*t + nx*side*d;
+          const sy = y1+dy*t + ny*side*d;
+          this.add.sprite(sx, sy, 'canyon_wall').setDepth(2).setScale(0.6+Math.random()*0.5);
         }
       }
     }
 
-    // Oasis palms around CP3
+    // Oasis palms around CP3 — far from road
     const cp3wp = this.track.checkpoints[2].waypointIndex;
     if (cp3wp < wp.length) {
       const cp3 = wp[cp3wp];
       for (let i=0;i<14;i++) {
-        const a=Math.random()*Math.PI*2, d=50+Math.random()*80;
+        const a=Math.random()*Math.PI*2, d=80+Math.random()*100;
         this.add.sprite(cp3[0]+Math.cos(a)*d,cp3[1]+Math.sin(a)*d,'palm').setDepth(2);
       }
     }
 
-    // Mountain pines
+    // Mountain pines — well outside road
     const mtZone = this.track.zones.find(z => z.name === 'mountain');
     if (mtZone) {
-      for (let i = mtZone.fromWP + 1; i < Math.min(mtZone.toWP, wp.length); i++) {
-        const [x,y]=wp[i];
+      for (let i = mtZone.fromWP; i < Math.min(mtZone.toWP, wp.length-1); i++) {
+        const [x1,y1]=wp[i],[x2,y2]=wp[i+1];
+        const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
+        if (len<1) continue;
+        const nx=-dy/len, ny=dx/len;
         for (let j=0;j<2;j++) {
-          const a=Math.random()*Math.PI*2, d=60+Math.random()*120;
-          this.add.sprite(x+Math.cos(a)*d,y+Math.sin(a)*d,'pine_tree').setDepth(2);
+          const side = Math.random()>0.5?1:-1;
+          const d = 80/2 + 50 + Math.random()*100;
+          const t = Math.random();
+          this.add.sprite(x1+dx*t+nx*side*d, y1+dy*t+ny*side*d, 'pine_tree').setDepth(2);
         }
       }
     }

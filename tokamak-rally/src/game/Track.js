@@ -235,11 +235,11 @@ export const TRACK_CONFIG = {
   },
 
   obstacleConfig: {
-    desert:   { types: ['obs_sand_pile', 'obs_tumbleweed', 'obs_tokamak'], density: 0.22 },
-    canyon:   { types: ['obs_fallen_rock', 'obs_rock_debris', 'obs_tokamak'], density: 0.25 },
-    riverbed: { types: ['obs_puddle', 'obs_mud_patch', 'obs_log', 'obs_tokamak'], density: 0.22 },
-    mountain: { types: ['obs_rock_slide', 'obs_pothole', 'obs_tokamak'], density: 0.28 },
-    sprint:   { types: ['obs_small_rock', 'obs_tokamak'], density: 0.15 },
+    desert:   { types: ['obs_sand_pile', 'obs_tumbleweed', 'obs_small_rock'], density: 0.22 },
+    canyon:   { types: ['obs_fallen_rock', 'obs_rock_debris', 'obs_small_rock'], density: 0.25 },
+    riverbed: { types: ['obs_puddle', 'obs_mud_patch', 'obs_log'], density: 0.22 },
+    mountain: { types: ['obs_rock_slide', 'obs_pothole', 'obs_fallen_rock'], density: 0.28 },
+    sprint:   { types: ['obs_small_rock', 'obs_pothole'], density: 0.15 },
   },
 };
 

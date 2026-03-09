@@ -38,139 +38,210 @@ export class BootScene extends Phaser.Scene {
   }
 
   genBackgrounds() {
-    // DESERT — warm orange sand with ripples, gravel, wind marks
-    let g = this.add.graphics();
-    // Base gradient (top warm, bottom darker)
-    g.fillStyle(0xf0c860); g.fillRect(0,0,64,16);
-    g.fillStyle(0xe8b84b); g.fillRect(0,16,64,16);
-    g.fillStyle(0xdda840); g.fillRect(0,32,64,16);
-    g.fillStyle(0xd49a38); g.fillRect(0,48,64,16);
-    // Sand ripple lines
-    g.fillStyle(0xf5d570, 0.4);
-    for (let y = 4; y < 64; y += 7) { g.fillRect(0, y, 64, 1); }
-    g.fillStyle(0xc89830, 0.3);
-    for (let y = 7; y < 64; y += 9) { g.fillRect(0, y, 64, 1); }
-    // Wind streaks
-    g.fillStyle(0xf8e088, 0.35);
-    g.fillRect(3,8,18,1); g.fillRect(28,14,22,1); g.fillRect(8,30,16,1);
-    g.fillRect(40,38,20,1); g.fillRect(12,52,14,1); g.fillRect(35,58,18,1);
-    // Small gravel dots
-    g.fillStyle(0xba8a30, 0.5);
-    g.fillRect(10,12,2,1); g.fillRect(45,22,1,1); g.fillRect(30,35,2,1);
-    g.fillRect(55,48,1,1); g.fillRect(20,55,2,1); g.fillRect(5,42,1,1);
-    g.fillStyle(0xa07828, 0.4);
-    g.fillRect(52,8,1,1); g.fillRect(18,28,1,1); g.fillRect(38,45,2,1);
-    g.generateTexture('bg_desert', 64, 64); g.destroy();
+    const S = 128; // tile size — larger for more detail
+    let g;
 
-    // CANYON — deep red layered rock with cracks and shadows
+    // ====== DESERT — realistic sand dunes with ripples, shadows, highlights ======
     g = this.add.graphics();
-    // Layered rock strata
-    g.fillStyle(0x9b4a35); g.fillRect(0,0,64,10);
-    g.fillStyle(0x8b3a2a); g.fillRect(0,10,64,10);
-    g.fillStyle(0xa05535); g.fillRect(0,20,64,8);
-    g.fillStyle(0x7a2a1a); g.fillRect(0,28,64,10);
-    g.fillStyle(0x8a3525); g.fillRect(0,38,64,8);
-    g.fillStyle(0x6b2015); g.fillRect(0,46,64,10);
-    g.fillStyle(0x943e2e); g.fillRect(0,56,64,8);
-    // Layer boundary highlights
-    g.fillStyle(0xb06040, 0.3);
-    g.fillRect(0,10,64,1); g.fillRect(0,28,64,1); g.fillRect(0,46,64,1);
-    // Cracks
-    g.fillStyle(0x551510, 0.5);
-    g.fillRect(15,0,1,18); g.fillRect(16,15,1,8); g.fillRect(14,5,1,6);
-    g.fillRect(40,12,1,22); g.fillRect(41,30,1,10); g.fillRect(39,20,1,8);
-    g.fillRect(55,35,1,20); g.fillRect(54,40,1,12);
-    g.fillRect(8,42,1,16); g.fillRect(9,50,1,10);
-    // Shadow spots
-    g.fillStyle(0x4a1a0a, 0.25);
-    g.fillRect(20,15,6,3); g.fillRect(45,35,8,2); g.fillRect(10,50,5,3);
-    // Highlight specks
-    g.fillStyle(0xc07050, 0.3);
-    g.fillRect(25,5,3,1); g.fillRect(50,18,4,1); g.fillRect(12,32,3,1);
-    g.fillRect(35,55,5,1);
-    g.generateTexture('bg_canyon', 64, 64); g.destroy();
-
-    // RIVERBED — cracked dry earth with subtle green/moisture hints
-    g = this.add.graphics();
-    // Base earth gradient
-    g.fillStyle(0xc0a888); g.fillRect(0,0,64,20);
-    g.fillStyle(0xb8a080); g.fillRect(0,20,64,24);
-    g.fillStyle(0xb09878); g.fillRect(0,44,64,20);
-    // Subtle moisture tint
-    g.fillStyle(0x8aaa90, 0.08); g.fillRect(0,0,64,64);
-    // Crack network
-    g.lineStyle(1, 0x8a7560, 0.6);
-    g.beginPath();
-    g.moveTo(0,18); g.lineTo(12,20); g.lineTo(28,16); g.lineTo(40,22); g.lineTo(64,17);
-    g.moveTo(0,42); g.lineTo(15,46); g.lineTo(30,40); g.lineTo(48,45); g.lineTo(64,41);
-    g.moveTo(18,0); g.lineTo(22,15); g.lineTo(16,30); g.lineTo(24,48); g.lineTo(20,64);
-    g.moveTo(46,0); g.lineTo(42,18); g.lineTo(48,35); g.lineTo(44,52); g.lineTo(50,64);
-    g.strokePath();
-    // Thinner secondary cracks
-    g.lineStyle(1, 0x7a6550, 0.3);
-    g.beginPath();
-    g.moveTo(8,8); g.lineTo(18,14);
-    g.moveTo(36,10); g.lineTo(44,16);
-    g.moveTo(52,30); g.lineTo(58,38);
-    g.moveTo(5,50); g.lineTo(14,56);
-    g.moveTo(30,52); g.lineTo(40,58);
-    g.strokePath();
-    // Green moss hints in cracks
-    g.fillStyle(0x6a8a5a, 0.15);
-    g.fillRect(18,18,3,2); g.fillRect(42,40,4,2); g.fillRect(8,44,3,2);
-    // Moisture shine
-    g.fillStyle(0xd0c8b8, 0.2);
-    g.fillRect(25,8,4,1); g.fillRect(50,28,3,1); g.fillRect(10,38,5,1);
-    g.generateTexture('bg_riverbed', 64, 64); g.destroy();
-
-    // MOUNTAIN — blue-grey with snow patches, rock texture
-    g = this.add.graphics();
-    // Rock gradient
-    g.fillStyle(0x6a7080); g.fillRect(0,0,64,16);
-    g.fillStyle(0x626878); g.fillRect(0,16,64,16);
-    g.fillStyle(0x5a6070); g.fillRect(0,32,64,16);
-    g.fillStyle(0x525868); g.fillRect(0,48,64,16);
-    // Checker rock texture
-    g.fillStyle(0x7a8090, 0.2);
-    for (let y = 0; y < 64; y += 8) for (let x = 0; x < 64; x += 8) {
-      if ((x+y)%16===0) g.fillRect(x, y, 8, 8);
+    // Base: warm sand gradient with color variation
+    for (let y = 0; y < S; y++) {
+      const t = y / S;
+      const r = Math.floor(0xe0 + (0xc8-0xe0)*t);
+      const gv = Math.floor(0xb0 + (0x88-0xb0)*t);
+      const b = Math.floor(0x50 + (0x30-0x50)*t);
+      g.fillStyle((r<<16)|(gv<<8)|b);
+      g.fillRect(0, y, S, 1);
     }
-    // Snow patches
-    g.fillStyle(0xd8e0e8, 0.3);
-    g.fillRect(8,3,18,5); g.fillRect(42,12,16,4);
-    g.fillRect(4,38,12,3); g.fillRect(50,50,10,4);
-    g.fillStyle(0xe8f0f8, 0.2);
-    g.fillRect(10,4,14,3); g.fillRect(44,13,12,2);
-    // Rock detail lines
-    g.fillStyle(0x4a5060, 0.25);
-    g.fillRect(0,20,64,1); g.fillRect(0,44,64,1);
-    // Highlight specks
-    g.fillStyle(0x8a90a0, 0.3);
-    g.fillRect(20,10,2,1); g.fillRect(35,28,3,1); g.fillRect(55,42,2,1);
-    g.fillRect(12,58,3,1);
-    g.generateTexture('bg_mountain', 64, 64); g.destroy();
+    // Dune ridges — curved lighter bands
+    g.fillStyle(0xf0d070, 0.3);
+    for (let y = 8; y < S; y += 18) {
+      for (let x = 0; x < S; x++) {
+        const wave = Math.sin(x*0.08+y*0.02)*3;
+        g.fillRect(x, y+wave, 1, 2);
+      }
+    }
+    // Shadow between dunes — darker bands
+    g.fillStyle(0xa07828, 0.2);
+    for (let y = 14; y < S; y += 18) {
+      for (let x = 0; x < S; x++) {
+        const wave = Math.sin(x*0.06+y*0.03)*2;
+        g.fillRect(x, y+wave, 1, 1);
+      }
+    }
+    // Sand ripple detail (wind lines)
+    g.fillStyle(0xf5d878, 0.25);
+    for (let y = 3; y < S; y += 5) {
+      const startX = (y*7)%S;
+      g.fillRect(startX, y, 12+((y*3)%8), 1);
+      g.fillRect((startX+40)%S, y+1, 8+((y*5)%6), 1);
+    }
+    // Scattered pebbles/gravel
+    g.fillStyle(0x9a7830, 0.5);
+    for (let i = 0; i < 20; i++) {
+      const px = (i*37+13)%S, py = (i*53+7)%S;
+      g.fillRect(px, py, 1+(i%2), 1);
+    }
+    g.fillStyle(0xb89040, 0.4);
+    for (let i = 0; i < 12; i++) {
+      const px = (i*43+29)%S, py = (i*61+19)%S;
+      g.fillRect(px, py, 2, 1);
+    }
+    g.generateTexture('bg_desert', S, S); g.destroy();
 
-    // SPRINT — golden sunset with orange→purple gradient hints
+    // ====== CANYON — layered red rock strata with deep cracks and erosion ======
     g = this.add.graphics();
-    // Sunset gradient bands
-    g.fillStyle(0xf0c040); g.fillRect(0,0,64,10);
-    g.fillStyle(0xe8b030); g.fillRect(0,10,64,10);
-    g.fillStyle(0xdaa520); g.fillRect(0,20,64,10);
-    g.fillStyle(0xd09818); g.fillRect(0,30,64,10);
-    g.fillStyle(0xc88a15); g.fillRect(0,40,64,10);
-    g.fillStyle(0xc08010); g.fillRect(0,50,64,14);
-    // Orange→purple tint at edges
-    g.fillStyle(0xe87030, 0.1); g.fillRect(0,0,64,20);
-    g.fillStyle(0x9060a0, 0.06); g.fillRect(0,44,64,20);
-    // Subtle horizontal streaks (light)
-    g.fillStyle(0xf8d860, 0.25);
-    for (let y = 3; y < 64; y += 11) g.fillRect(0, y, 64, 2);
-    // Warm specks
-    g.fillStyle(0xffd855, 0.3);
-    g.fillRect(8,8,3,1); g.fillRect(40,22,4,1); g.fillRect(20,48,3,1);
-    g.fillStyle(0xcc7828, 0.2);
-    g.fillRect(15,35,5,1); g.fillRect(50,55,4,1);
-    g.generateTexture('bg_sprint', 64, 64); g.destroy();
+    // Layered strata with color variation
+    const canyonLayers = [0xb05530,0x9b4525,0xa84a2e,0x8b3618,0x9a4028,0x7a2a15,0x8b3220,0x6d2210,0x943828,0x7a2a18];
+    for (let i = 0; i < canyonLayers.length; i++) {
+      const h = Math.floor(S / canyonLayers.length);
+      g.fillStyle(canyonLayers[i]);
+      g.fillRect(0, i*h, S, h);
+      // Layer boundary — lighter edge
+      g.fillStyle(0xc06a48, 0.25);
+      g.fillRect(0, i*h, S, 1);
+    }
+    // Erosion texture — horizontal noise
+    for (let y = 0; y < S; y++) {
+      for (let x = 0; x < S; x += 3) {
+        if (((x*y*7+x*3)%17) < 3) {
+          g.fillStyle(0x551510, 0.12);
+          g.fillRect(x, y, 2, 1);
+        }
+      }
+    }
+    // Deep vertical cracks
+    g.fillStyle(0x3a0d06, 0.6);
+    const cracks = [[18,0,20,45],[19,40,22,S],[48,5,50,55],[49,50,51,S],[85,0,87,40],[86,35,88,80],[110,20,112,S]];
+    for (const [x1,y1,x2,y2] of cracks) {
+      g.fillRect(x1, y1, x2-x1, y2-y1);
+    }
+    // Horizontal crack branches
+    g.fillStyle(0x4a1508, 0.4);
+    g.fillRect(20,30,12,1); g.fillRect(50,48,15,1); g.fillRect(87,35,10,1);
+    g.fillRect(15,65,18,1); g.fillRect(60,85,14,1); g.fillRect(95,100,16,1);
+    // Highlight on rock edges
+    g.fillStyle(0xd07850, 0.2);
+    for (let i = 0; i < canyonLayers.length; i++) {
+      const h = Math.floor(S / canyonLayers.length);
+      g.fillRect(0, i*h+1, S, 1);
+    }
+    // Shadow pockets
+    g.fillStyle(0x2a0a04, 0.2);
+    g.fillRect(25,18,8,4); g.fillRect(58,42,10,3); g.fillRect(90,70,7,4);
+    g.fillRect(12,95,9,3); g.fillRect(70,15,6,3);
+    g.generateTexture('bg_canyon', S, S); g.destroy();
+
+    // ====== RIVERBED — gravel, rocks, dried mud with water hints ======
+    g = this.add.graphics();
+    // Base: warm grey-brown earth
+    for (let y = 0; y < S; y++) {
+      const t = y / S;
+      const base = 0xb09878;
+      const r = ((base>>16)&0xff) + Math.floor(Math.sin(y*0.15)*8);
+      const gv = ((base>>8)&0xff) + Math.floor(Math.sin(y*0.12+1)*6);
+      const b = (base&0xff) + Math.floor(Math.sin(y*0.1+2)*5);
+      g.fillStyle((Math.max(0,Math.min(255,r))<<16)|(Math.max(0,Math.min(255,gv))<<8)|Math.max(0,Math.min(255,b)));
+      g.fillRect(0, y, S, 1);
+    }
+    // Gravel texture — scattered small stones
+    for (let i = 0; i < 80; i++) {
+      const px = (i*41+17)%S, py = (i*59+23)%S;
+      const shade = [0x8a7a6a, 0x9a8a7a, 0x7a6a5a, 0xa09080][i%4];
+      g.fillStyle(shade, 0.6);
+      const sz = 1+(i%3);
+      g.fillRect(px, py, sz, sz);
+    }
+    // Dried mud crack network
+    g.lineStyle(1, 0x7a6550, 0.5);
+    g.beginPath();
+    // Main cracks forming irregular polygons
+    g.moveTo(0,25); g.lineTo(20,22); g.lineTo(45,28); g.lineTo(70,20); g.lineTo(S,24);
+    g.moveTo(0,60); g.lineTo(25,65); g.lineTo(55,58); g.lineTo(80,63); g.lineTo(S,57);
+    g.moveTo(0,95); g.lineTo(30,100); g.lineTo(60,92); g.lineTo(90,98); g.lineTo(S,93);
+    g.moveTo(25,0); g.lineTo(22,25); g.lineTo(28,60); g.lineTo(24,95); g.lineTo(27,S);
+    g.moveTo(65,0); g.lineTo(60,25); g.lineTo(68,60); g.lineTo(62,95); g.lineTo(66,S);
+    g.moveTo(100,0); g.lineTo(95,30); g.lineTo(102,65); g.lineTo(97,100); g.lineTo(100,S);
+    g.strokePath();
+    // Moisture/water tint in low areas
+    g.fillStyle(0x5a8a9a, 0.08);
+    g.fillRect(30,30,25,20); g.fillRect(75,70,20,18); g.fillRect(5,85,18,15);
+    // Green moss in cracks
+    g.fillStyle(0x5a7a4a, 0.15);
+    g.fillRect(22,23,4,2); g.fillRect(60,59,5,2); g.fillRect(95,94,4,2);
+    g.fillRect(25,62,3,2); g.fillRect(65,22,4,2);
+    g.generateTexture('bg_riverbed', S, S); g.destroy();
+
+    // ====== MOUNTAIN — rocky terrain with snow, ice, pine shadow ======
+    g = this.add.graphics();
+    // Base: dark blue-grey rock
+    for (let y = 0; y < S; y++) {
+      const t = y / S;
+      const r = Math.floor(0x52 + (0x48-0x52)*t + Math.sin(y*0.2)*3);
+      const gv = Math.floor(0x58 + (0x4e-0x58)*t + Math.sin(y*0.18)*3);
+      const b = Math.floor(0x68 + (0x5e-0x68)*t + Math.sin(y*0.15)*3);
+      g.fillStyle((Math.max(0,r)<<16)|(Math.max(0,gv)<<8)|Math.max(0,b));
+      g.fillRect(0, y, S, 1);
+    }
+    // Rock texture — checkerboard noise
+    for (let y = 0; y < S; y += 4) for (let x = 0; x < S; x += 4) {
+      if (((x+y)%8===0)) {
+        g.fillStyle(0x6a7080, 0.2); g.fillRect(x, y, 4, 4);
+      }
+    }
+    // Large snow patches (irregular)
+    const snowPatches = [[10,5,35,18],[55,15,85,28],[5,55,25,68],[70,60,100,72],[40,90,75,105],[100,85,S,100]];
+    for (const [x1,y1,x2,y2] of snowPatches) {
+      // Soft edge snow
+      g.fillStyle(0xd8e4f0, 0.35);
+      g.fillRect(x1-2, y1-1, x2-x1+4, y2-y1+2);
+      g.fillStyle(0xe8f0f8, 0.4);
+      g.fillRect(x1, y1, x2-x1, y2-y1);
+      // Bright center
+      g.fillStyle(0xf0f4ff, 0.25);
+      g.fillRect(x1+3, y1+2, (x2-x1)*0.6, (y2-y1)*0.5);
+    }
+    // Rock face lines
+    g.fillStyle(0x3a4050, 0.3);
+    g.fillRect(0,30,S,1); g.fillRect(0,52,S,1); g.fillRect(0,78,S,1);
+    // Lichen/moss spots
+    g.fillStyle(0x5a6a4a, 0.12);
+    g.fillRect(20,32,5,3); g.fillRect(65,54,6,2); g.fillRect(40,80,4,3);
+    // Ice glint
+    g.fillStyle(0xc0d8ff, 0.15);
+    g.fillRect(15,8,2,1); g.fillRect(60,20,2,1); g.fillRect(80,65,2,1);
+    g.fillRect(10,60,2,1); g.fillRect(50,95,2,1);
+    g.generateTexture('bg_mountain', S, S); g.destroy();
+
+    // ====== SPRINT — green grass with road-side feel ======
+    g = this.add.graphics();
+    // Base: lush green grass
+    for (let y = 0; y < S; y++) {
+      const t = y / S;
+      const r = Math.floor(0x3a + Math.sin(y*0.2)*8);
+      const gv = Math.floor(0x7a + (0x6a-0x7a)*t + Math.sin(y*0.15)*10);
+      const b = Math.floor(0x2a + Math.sin(y*0.18)*5);
+      g.fillStyle((Math.max(0,r)<<16)|(Math.max(0,gv)<<8)|Math.max(0,b));
+      g.fillRect(0, y, S, 1);
+    }
+    // Grass blade texture
+    for (let i = 0; i < 120; i++) {
+      const px = (i*31+11)%S, py = (i*47+13)%S;
+      const shade = [0x4a8a3a, 0x3a7a2a, 0x5a9a4a, 0x2a6a1a][i%4];
+      g.fillStyle(shade, 0.4);
+      g.fillRect(px, py, 1, 2+(i%3));
+    }
+    // Light patches (sunlight through trees)
+    g.fillStyle(0x6aaa5a, 0.15);
+    g.fillRect(15,10,20,15); g.fillRect(60,50,25,18); g.fillRect(90,20,20,12);
+    // Shadow patches
+    g.fillStyle(0x1a4a10, 0.1);
+    g.fillRect(40,30,15,12); g.fillRect(5,70,18,15); g.fillRect(80,90,15,12);
+    // Tiny flowers
+    g.fillStyle(0xf0e060, 0.3);
+    g.fillRect(22,25,2,2); g.fillRect(70,68,2,2); g.fillRect(100,35,2,2);
+    g.fillStyle(0xf0f0f0, 0.25);
+    g.fillRect(45,80,2,2); g.fillRect(15,55,2,2); g.fillRect(85,105,2,2);
+    g.generateTexture('bg_sprint', S, S); g.destroy();
   }
 
   genScenery() {
