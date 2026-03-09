@@ -180,7 +180,7 @@ export const TRACK_CONFIG = {
       name: 'desert', fromWP: 0, toWP: 26,
       bgTile: 'bg_desert',
       roadType: 'sand',
-      roadColor: 0xc4a060, roadBorder: 0xa88040,
+      roadColor: 0xb89060, roadBorder: 0x9a7040,
       trackWidth: 110,
       scenery: ['cactus', 'bush_dry', 'rock_desert'],
       sceneryDensity: 2,

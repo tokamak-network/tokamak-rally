@@ -25,13 +25,13 @@ export class RaceScene extends Phaser.Scene {
     this.placeRoadObstacles();
 
     this.player = this.add.sprite(this.track.startX, this.track.startY, `car_${this.selectedCarId}`)
-      .setOrigin(0.5).setDepth(10);
+      .setOrigin(0.5).setDepth(10).setScale(0.7);
 
     this.dustEmitter = this.add.particles(0, 0, 'dust_particle', {
-      speed: { min: 15, max: 50 },
-      scale: { start: 1, end: 0 },
-      alpha: { start: 0.6, end: 0 },
-      lifespan: 400, frequency: 40, emitting: false,
+      speed: { min: 20, max: 70 },
+      scale: { start: 1.5, end: 0.3 },
+      alpha: { start: 0.7, end: 0 },
+      lifespan: 700, frequency: 25, emitting: false,
     });
 
     // Drift smoke emitter
@@ -148,17 +148,41 @@ export class RaceScene extends Phaser.Scene {
       const e = Math.min(zone.toWP+1, wp.length);
       const w = zone.trackWidth || 100;
 
-      // Border
-      g.lineStyle(w+16, zone.roadBorder, 0.5);
+      // Outer border
+      g.lineStyle(w+20, zone.roadBorder, 0.4);
       g.beginPath(); g.moveTo(wp[s][0],wp[s][1]);
       for (let i=s+1;i<e;i++) g.lineTo(wp[i][0],wp[i][1]);
       g.strokePath();
 
-      // Road
+      // Road surface
       g.lineStyle(w, zone.roadColor);
       g.beginPath(); g.moveTo(wp[s][0],wp[s][1]);
       for (let i=s+1;i<e;i++) g.lineTo(wp[i][0],wp[i][1]);
       g.strokePath();
+
+      // Red-white curb markings on road edges (alternating dashes)
+      const CURB_DASH = 10, CURB_W = 4;
+      for (const side of [-1, 1]) {
+        let curbDist = 0;
+        for (let i = s; i < e - 1; i++) {
+          const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1];
+          const segLen = Math.sqrt(dx*dx+dy*dy);
+          if (segLen < 1) continue;
+          const ux = dx/segLen, uy = dy/segLen;
+          const nx = -uy*side*(w/2+2), ny = ux*side*(w/2+2);
+          let pos = 0;
+          while (pos < segLen) {
+            const step = Math.min(CURB_DASH, segLen - pos);
+            const isRed = (Math.floor(curbDist / CURB_DASH) % 2 === 0);
+            g.lineStyle(CURB_W, isRed ? 0xcc3333 : 0xeeeeee, 0.7);
+            const x1 = wp[i][0]+ux*pos+nx, y1 = wp[i][1]+uy*pos+ny;
+            const x2 = wp[i][0]+ux*(pos+step)+nx, y2 = wp[i][1]+uy*(pos+step)+ny;
+            g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.strokePath();
+            pos += step;
+            curbDist += step;
+          }
+        }
+      }
 
       // Road details by type
       if (zone.roadType === 'paved') {
