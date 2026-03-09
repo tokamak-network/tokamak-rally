@@ -1,173 +1,183 @@
 /**
- * Track v0.6 — Extreme A-to-B Rally with C-curves, chicanes, hairpins
- * 115 waypoints. No straight >300px. Every zone has 180° turns.
+ * Track v0.8 — Redesigned course with zone-appropriate curve ratios
+ * ~122 waypoints. Inspired by WRC stage maps.
+ * Sand 70:30 straight/curve, Canyon 40:60, Riverbed 50:50,
+ * Mountain 30:70, Sprint 60:40.
  */
 
 export const TRACK_CONFIG = {
   name: 'Stage 1: Sahara Crossing',
 
   waypoints: [
-    // ===== ZONE 1: DESERT — Sand, aggressive S-curves & C-turn =====
-    [500, 14000],   // 0 START
-    [500, 13750],   // 1
-    [530, 13550],   // 2
-    [620, 13400],   // 3 right bend
-    [780, 13300],   // 4
-    [900, 13150],   // 5
-    [820, 12980],   // 6 chicane left
-    [650, 12880],   // 7
-    [520, 12750],   // 8
-    [450, 12550],   // 9
-    [520, 12350],   // 10 chicane right
-    [700, 12250],   // 11
-    [850, 12100],   // 12
-    // C-curve (180° turnaround)
-    [950, 11920],   // 13
-    [980, 11740],   // 14
-    [920, 11580],   // 15 apex
-    [780, 11500],   // 16
-    [620, 11520],   // 17
-    [500, 11620],   // 18
-    // Back north after C
-    [450, 11450],   // 19
-    [500, 11250],   // 20
-    [650, 11100],   // 21
-    [850, 11000],   // 22
-    [1050, 10900],  // 23
-    // Tight S through dunes
-    [1150, 10700],  // 24
-    [1050, 10520],  // 25
-    [1150, 10350],  // 26
-    [1300, 10250],  // 27
+    // ===== ZONE 1: DESERT (0-25) — Open, long straights, gentle sweepers =====
+    [500, 14200],   // 0  START
+    [500, 13950],   // 1  straight north
+    [500, 13700],   // 2  long straight
+    [520, 13450],   // 3  gentle drift right
+    [580, 13200],   // 4
+    [700, 13000],   // 5  gentle right bend
+    [850, 12850],   // 6
+    [1000, 12750],  // 7  long diagonal straight
+    [1200, 12650],  // 8
+    [1400, 12580],  // 9
+    [1550, 12480],  // 10 gentle left sweep
+    [1600, 12280],  // 11
+    [1580, 12080],  // 12 straightens north
+    [1550, 11850],  // 13
+    [1580, 11620],  // 14 gentle right
+    [1680, 11420],  // 15
+    [1820, 11280],  // 16 wide sweeper right
+    [1950, 11200],  // 17
+    [2100, 11180],  // 18 long straight east
+    [2300, 11180],  // 19
+    [2450, 11140],  // 20 gentle left
+    [2550, 11040],  // 21
+    [2600, 10880],  // 22 north
+    [2580, 10680],  // 23
+    [2520, 10500],  // 24 gentle left curve
+    [2400, 10350],  // 25
     // CP1
-    [1350, 10050],  // 28 << CP1: Dune Ridge
+    [2300, 10180],  // 26 << CP1: Dune Ridge
 
-    // ===== ZONE 2: CANYON — Narrow, hairpins, C-curves =====
-    [1400, 9850],   // 29
-    [1500, 9650],   // 30
-    // Hairpin 1 (tight right)
-    [1650, 9480],   // 31
-    [1750, 9300],   // 32
-    [1700, 9120],   // 33 apex
-    [1550, 9050],   // 34
-    [1400, 9100],   // 35
-    // Chicane
-    [1300, 8950],   // 36
-    [1400, 8800],   // 37
-    [1300, 8650],   // 38
-    // C-curve (180° back east)
-    [1200, 8480],   // 39
-    [1150, 8300],   // 40
-    [1200, 8130],   // 41 apex
-    [1350, 8020],   // 42
-    [1520, 8000],   // 43
-    // Hairpin 2 (tight left)
-    [1650, 7850],   // 44
-    [1700, 7670],   // 45
-    [1600, 7520],   // 46 apex
-    [1420, 7480],   // 47
-    // Quick chicane exit
-    [1350, 7300],   // 48
-    [1450, 7150],   // 49
-    [1550, 7000],   // 50
-    [1650, 6820],   // 51
-    [1750, 6650],   // 52
+    // ===== ZONE 2: CANYON (27-52) — Tight, technical, hairpins =====
+    [2250, 10000],  // 27 entry
+    [2300, 9850],   // 28
+    // Hairpin 1 — tight right
+    [2400, 9700],   // 29
+    [2500, 9580],   // 30
+    [2550, 9430],   // 31
+    [2500, 9290],   // 32 apex
+    [2380, 9220],   // 33
+    [2250, 9260],   // 34 exit
+    // Short straight
+    [2180, 9100],   // 35
+    // Chicane (S-curve)
+    [2250, 8950],   // 36
+    [2150, 8820],   // 37
+    [2250, 8680],   // 38
+    // Hairpin 2 — tight left
+    [2350, 8530],   // 39
+    [2400, 8370],   // 40
+    [2350, 8220],   // 41 apex
+    [2200, 8150],   // 42
+    [2060, 8200],   // 43 exit
+    // C-curve (180° turnaround)
+    [1950, 8080],   // 44
+    [1900, 7900],   // 45
+    [1920, 7730],   // 46 apex
+    [2050, 7640],   // 47
+    [2200, 7660],   // 48
+    // Tight esses exit
+    [2320, 7540],   // 49
+    [2250, 7400],   // 50
+    [2350, 7260],   // 51
     // CP2
-    [1800, 6450],   // 53 << CP2: Canyon Exit
+    [2400, 7080],   // 52 << CP2: Canyon Exit
 
-    // ===== ZONE 3: RIVERBED — Flowing curves, C-turn, chicanes =====
-    [1850, 6250],   // 54
-    [1950, 6050],   // 55
-    [2100, 5900],   // 56
+    // ===== ZONE 3: RIVERBED (53-73) — Winding, irregular 50:50 =====
+    [2450, 6880],   // 53
+    [2550, 6700],   // 54 straight segment
+    [2700, 6560],   // 55
     // Sweeper right
-    [2300, 5800],   // 57
-    [2500, 5750],   // 58
-    // C-curve (180° south-to-north)
-    [2650, 5650],   // 59
-    [2750, 5500],   // 60
-    [2700, 5320],   // 61 apex
-    [2550, 5250],   // 62
-    [2400, 5300],   // 63
-    // Chicane
-    [2300, 5150],   // 64
-    [2400, 5000],   // 65
-    [2300, 4850],   // 66
+    [2900, 6450],   // 56
+    [3050, 6380],   // 57
+    [3150, 6260],   // 58 curve tightens
+    // Winding section
+    [3100, 6080],   // 59 left
+    [3000, 5940],   // 60
+    [3080, 5780],   // 61 right
+    [3200, 5650],   // 62
+    // C-curve
+    [3300, 5490],   // 63
+    [3320, 5310],   // 64
+    [3240, 5160],   // 65 apex
+    [3100, 5100],   // 66
+    [2960, 5150],   // 67
     // Quick esses
-    [2200, 4680],   // 67
-    [2350, 4530],   // 68
-    [2250, 4380],   // 69
-    [2150, 4230],   // 70
+    [2880, 5000],   // 68
+    [2960, 4860],   // 69
+    [2880, 4720],   // 70
+    [2820, 4560],   // 71 straight exit
+    [2800, 4380],   // 72
     // CP3
-    [2200, 4030],   // 71 << CP3: Oasis
+    [2800, 4200],   // 73 << CP3: Oasis
 
-    // ===== ZONE 4: MOUNTAIN — Tight switchbacks, C-curve =====
-    [2200, 3830],   // 72
-    [2150, 3630],   // 73
-    // Switchback 1
-    [2050, 3450],   // 74
-    [1900, 3320],   // 75
-    [2050, 3170],   // 76 switch
-    [2250, 3080],   // 77
-    // C-curve (180°)
-    [2400, 2950],   // 78
-    [2450, 2780],   // 79
-    [2380, 2620],   // 80 apex
-    [2220, 2550],   // 81
-    [2080, 2600],   // 82
+    // ===== ZONE 4: MOUNTAIN (74-97) — Switchbacks, hairpins dominant =====
+    [2780, 4000],   // 74
+    [2730, 3840],   // 75
+    // Switchback 1 — right then left
+    [2650, 3680],   // 76
+    [2500, 3580],   // 77 right
+    [2350, 3520],   // 78
+    [2500, 3380],   // 79 switch left
+    [2680, 3300],   // 80
+    // Hairpin (180° right)
+    [2800, 3180],   // 81
+    [2850, 3020],   // 82
+    [2780, 2870],   // 83 apex
+    [2620, 2800],   // 84
+    [2480, 2850],   // 85 exit
     // Switchback 2
-    [2000, 2450],   // 83
-    [2100, 2280],   // 84 switch
-    [2280, 2200],   // 85
-    [2200, 2050],   // 86 switch
-    [2050, 1950],   // 87
-    // Summit chicane
-    [2100, 1780],   // 88
-    [2250, 1650],   // 89
-    [2350, 1480],   // 90
-    [2500, 1350],   // 91
+    [2380, 2710],   // 86
+    [2480, 2560],   // 87 switch
+    [2650, 2480],   // 88
+    [2580, 2320],   // 89 switch back
+    [2420, 2240],   // 90
+    // Hairpin (180° left)
+    [2320, 2100],   // 91
+    [2300, 1930],   // 92
+    [2380, 1780],   // 93 apex
+    [2530, 1720],   // 94
+    [2680, 1770],   // 95
+    // Short exit to summit
+    [2780, 1640],   // 96
     // CP4
-    [2650, 1200],   // 92 << CP4: Summit
+    [2850, 1480],   // 97 << CP4: Summit
 
-    // ===== ZONE 5: SPRINT — Paved, fast but with curves =====
-    [2850, 1100],   // 93
-    [3100, 1020],   // 94
-    [3350, 980],    // 95
+    // ===== ZONE 5: SPRINT (98-121) — Fast paved, flowing curves =====
+    [2950, 1340],   // 98
+    [3100, 1240],   // 99  long straight diagonal
+    [3300, 1160],   // 100
+    [3550, 1100],   // 101
     // Sweeper right
-    [3600, 960],    // 96
-    [3800, 1000],   // 97
-    // Chicane
-    [3950, 950],    // 98
-    [4100, 1000],   // 99
-    [4250, 940],    // 100
+    [3800, 1080],   // 102
+    [4000, 1120],   // 103
+    [4150, 1100],   // 104
     // Gentle S
-    [4450, 920],    // 101
-    [4650, 960],    // 102
-    [4850, 920],    // 103
-    // Slight kink
-    [5050, 900],    // 104
-    [5250, 940],    // 105
-    [5450, 910],    // 106
-    // Final approach
-    [5650, 880],    // 107
-    [5850, 850],    // 108
-    [6050, 830],    // 109
+    [4350, 1060],   // 105 straight
+    [4550, 1020],   // 106
+    [4750, 1060],   // 107 gentle left
+    [4900, 1020],   // 108
+    // Long straight
+    [5100, 980],    // 109
+    [5350, 960],    // 110
+    [5600, 950],    // 111
+    // Medium right curve
+    [5800, 980],    // 112
+    [5950, 1050],   // 113
+    [6080, 1000],   // 114 straightens
+    // Final straight
+    [6250, 960],    // 115
+    [6450, 940],    // 116
+    [6650, 930],    // 117
     // Gentle curve to finish
-    [6250, 850],    // 110
-    [6450, 900],    // 111
+    [6850, 950],    // 118
+    [7050, 1000],   // 119
+    [7200, 1060],   // 120
     // FINISH
-    [6600, 950],    // 112
+    [7350, 1100],   // 121
   ],
 
   checkpoints: [
-    { waypointIndex: 28, timeBonus: 22000, name: 'CP1: Dune Ridge' },
-    { waypointIndex: 53, timeBonus: 20000, name: 'CP2: Canyon Exit' },
-    { waypointIndex: 71, timeBonus: 20000, name: 'CP3: Oasis' },
-    { waypointIndex: 92, timeBonus: 22000, name: 'CP4: Summit' },
+    { waypointIndex: 26, timeBonus: 22000, name: 'CP1: Dune Ridge' },
+    { waypointIndex: 52, timeBonus: 20000, name: 'CP2: Canyon Exit' },
+    { waypointIndex: 73, timeBonus: 20000, name: 'CP3: Oasis' },
+    { waypointIndex: 97, timeBonus: 22000, name: 'CP4: Summit' },
   ],
 
   zones: [
     {
-      name: 'desert', fromWP: 0, toWP: 28,
+      name: 'desert', fromWP: 0, toWP: 26,
       bgTile: 'bg_desert',
       roadType: 'sand',
       roadColor: 0xc4a060, roadBorder: 0xa88040,
@@ -176,7 +186,7 @@ export const TRACK_CONFIG = {
       sceneryDensity: 2,
     },
     {
-      name: 'canyon', fromWP: 28, toWP: 53,
+      name: 'canyon', fromWP: 26, toWP: 52,
       bgTile: 'bg_canyon',
       roadType: 'dirt',
       roadColor: 0x7a5535, roadBorder: 0x5a3520,
@@ -185,7 +195,7 @@ export const TRACK_CONFIG = {
       sceneryDensity: 3,
     },
     {
-      name: 'riverbed', fromWP: 53, toWP: 71,
+      name: 'riverbed', fromWP: 52, toWP: 73,
       bgTile: 'bg_riverbed',
       roadType: 'dirt',
       roadColor: 0x8a7555, roadBorder: 0x6a5a40,
@@ -194,7 +204,7 @@ export const TRACK_CONFIG = {
       sceneryDensity: 2,
     },
     {
-      name: 'mountain', fromWP: 71, toWP: 92,
+      name: 'mountain', fromWP: 73, toWP: 97,
       bgTile: 'bg_mountain',
       roadType: 'rocky',
       roadColor: 0x5a5a55, roadBorder: 0x4a4a45,
@@ -203,7 +213,7 @@ export const TRACK_CONFIG = {
       sceneryDensity: 2,
     },
     {
-      name: 'sprint', fromWP: 92, toWP: 112,
+      name: 'sprint', fromWP: 97, toWP: 121,
       bgTile: 'bg_sprint',
       roadType: 'paved',
       roadColor: 0x3a3a42, roadBorder: 0x5a5a62,
@@ -213,7 +223,7 @@ export const TRACK_CONFIG = {
     },
   ],
 
-  startX: 500, startY: 13950, startAngle: -90,
+  startX: 500, startY: 14150, startAngle: -90,
   initialTime: 35000,
 
   roadPhysics: {
