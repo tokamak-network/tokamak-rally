@@ -546,6 +546,18 @@ export class BootScene extends Phaser.Scene {
     g.fillStyle(0xe63946); g.fillRect(0,0,168,1); g.fillRect(0,24,168,1);
     g.generateTexture('finish_banner', 168, 25); g.destroy();
 
+    // === STONE WALL (sprint zone roadside) ===
+    g = this.add.graphics();
+    const SW1=0x8a8a80, SW2=0x7a7a70, SW3=0x6a6a60, SW4=0x5a5a50, SWH=0x9a9a90;
+    // Low stone wall, 12x4 at 2x = 24x8
+    this.px(g, [
+      [SW3,SW2,SWH,SW1,SW2,SW3,SW1,SWH,SW2,SW3,SW2,SW1],
+      [SW4,SW3,SW2,SWH,SW1,SW2,SWH,SW1,SW3,SW2,SW3,SW4],
+      [SW3,SW4,SW3,SW2,SW3,SW4,SW2,SW3,SW4,SW3,SW4,SW3],
+      [SW4,SW4,SW4,SW3,SW4,SW3,SW4,SW4,SW3,SW4,SW3,SW4],
+    ], 2);
+    g.generateTexture('stone_wall', 24, 8); g.destroy();
+
     // Warning sign
     g = this.add.graphics();
     g.fillStyle(0xf4d35e);

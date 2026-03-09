@@ -121,7 +121,7 @@ export const CAR_PIXELS = {
     const _=0, W=0xf1faee, Ws=0xd8e8dd, Wd=0xc0d0c5, Wk=0xa8b8ad, R=0xe63946, Rd=0xcc2a38, Rl=0xff5060,
           B=0x1d3557, Bl=0x2a4a6e, Y=0xf4d35e, Yb=0xffe080, D=0x2b2d42, Dd=0x1a1c30,
           G=0x6c757d, Gl=0x8a949c, Gd=0x555565, L=0xa8dadc, Ll=0xc0eef0, O=0xff6b35, Od=0xdd5522,
-          M=0x4a4e5e, Sh=0x1a1a2a;
+          M=0x4a4e5e, Sh=0x1a1a2a, T=0x222230, Tl=0x333340;
     return [
       [_,_,_,_,_,_,_,Y,Yb,Yb,Yb,Yb,Y,_,_,_,_,_,_,_],
       [_,_,_,_,_,_,Y,Yb,Yb,Yb,Yb,Yb,Yb,Y,_,_,_,_,_,_],
@@ -130,9 +130,9 @@ export const CAR_PIXELS = {
       [_,_,_,D,Dd,Gd,W,Ws,R,R,R,R,Ws,W,Gd,Dd,D,_,_,_],
       [_,_,_,D,Dd,B,Bl,B,B,B,B,B,B,Bl,B,Dd,D,_,_,_],
       [_,_,_,D,Dd,B,L,Ll,Ll,Ll,Ll,Ll,Ll,L,B,Dd,D,_,_,_],
-      [_,_,_,D,Dd,B,Bl,L,Ll,Ll,Ll,Ll,L,Bl,B,Dd,D,_,_,_],
-      [_,_,M,G,Gd,Ws,W,R,Rd,Rd,Rd,Rd,R,W,Ws,Gd,G,M,_,_],
-      [_,_,_,G,Wd,Ws,W,R,R,Rd,Rd,R,R,W,Ws,Wd,G,_,_,_],
+      [_,_,T,Tl,Dd,B,Bl,L,Ll,Ll,Ll,Ll,L,Bl,B,Dd,Tl,T,_,_],
+      [_,T,Tl,G,Gd,Ws,W,R,Rd,Rd,Rd,Rd,R,W,Ws,Gd,G,Tl,T,_],
+      [_,_,T,G,Wd,Ws,W,R,R,Rd,Rd,R,R,W,Ws,Wd,G,T,_,_],
       [_,_,_,_,Wd,Ws,W,W,R,R,R,R,W,W,Ws,Wd,_,_,_,_],
       [_,_,_,_,Wk,Wd,W,Ws,R,Rl,Rl,R,Ws,W,Wd,Wk,_,_,_,_],
       [_,_,_,_,Wk,Wd,Ws,W,R,R,R,R,W,Ws,Wd,Wk,_,_,_,_],
@@ -140,9 +140,9 @@ export const CAR_PIXELS = {
       [_,_,_,_,Wk,Wd,Ws,W,R,Rl,Rl,R,W,Ws,Wd,Wk,_,_,_,_],
       [_,_,_,_,Wk,Wd,W,W,R,R,R,R,W,W,Ws,Wd,_,_,_,_],
       [_,_,_,_,Wd,Ws,W,Ws,Rd,R,R,Rd,Ws,W,Ws,Wd,_,_,_,_],
-      [_,_,_,G,Wd,Ws,W,R,R,Rd,Rd,R,R,W,Ws,Wd,G,_,_,_],
-      [_,_,M,G,Gd,Ws,W,R,Rd,Rd,Rd,Rd,R,W,Ws,Gd,G,M,_,_],
-      [_,_,_,D,Dd,Gd,W,Ws,R,R,R,R,Ws,W,Gd,Dd,D,_,_,_],
+      [_,_,T,G,Wd,Ws,W,R,R,Rd,Rd,R,R,W,Ws,Wd,G,T,_,_],
+      [_,T,Tl,G,Gd,Ws,W,R,Rd,Rd,Rd,Rd,R,W,Ws,Gd,G,Tl,T,_],
+      [_,_,T,Tl,Dd,Gd,W,Ws,R,R,R,R,Ws,W,Gd,Dd,Tl,T,_,_],
       [_,_,_,D,Dd,W,Ws,W,R,R,R,R,W,Ws,W,Dd,D,_,_,_],
       [_,_,_,D,Dd,Ws,W,W,W,W,W,W,W,W,Ws,Dd,D,_,_,_],
       [_,_,_,D,Dd,Wd,Ws,Ws,Ws,Ws,Ws,Ws,Ws,Ws,Wd,Dd,D,_,_,_],
@@ -156,7 +156,7 @@ export const CAR_PIXELS = {
   hyper_blue: (() => {
     const _=0, Bl=0x1a8aff, Bm=0x0a6add, Bd=0x0a5acc, Bk=0x0a3a88, Bkd=0x062a66,
           Bh=0x55aaff, Blg=0x88bbff, Bx=0x3399ff, W=0xffffff, R=0xe63946, Rd=0xcc2a38,
-          D=0x2b2d42, Dd=0x1a1c30, G=0x555566, Gl=0x6a6a7a, Gd=0x444455,
+          D=0x2b2d42, Dd=0x1a1c30, G=0x555566, Gl=0x6a6a7a, Gd=0x444455, T=0x222230, Tl=0x333340,
           Y=0xf4d35e, Yb=0xffe080, M=0x3a3a4e, Sh=0x1a1a2a;
     return [
       [_,_,_,_,_,_,_,Y,Yb,Yb,Yb,Yb,Y,_,_,_,_,_,_,_],
@@ -166,8 +166,8 @@ export const CAR_PIXELS = {
       [_,_,_,D,Dd,Gd,Bl,Bh,W,W,W,W,Bh,Bl,Gd,Dd,D,_,_,_],
       [_,_,_,D,Dd,Bk,Bkd,Bk,Bk,Bk,Bk,Bk,Bk,Bkd,Bk,Dd,D,_,_,_],
       [_,_,_,D,Dd,Bk,Blg,Blg,Blg,Blg,Blg,Blg,Blg,Blg,Bk,Dd,D,_,_,_],
-      [_,_,_,D,Dd,Bk,Bkd,Blg,Bx,Bx,Bx,Bx,Blg,Bkd,Bk,Dd,D,_,_,_],
-      [_,_,M,G,Gd,Bl,Bm,R,R,R,R,R,R,Bm,Bl,Gd,G,M,_,_],
+      [_,_,T,Tl,Dd,Bk,Bkd,Blg,Bx,Bx,Bx,Bx,Blg,Bkd,Bk,Dd,Tl,T,_,_],
+      [_,T,Tl,G,Gd,Bl,Bm,R,R,R,R,R,R,Bm,Bl,Gd,G,Tl,T,_],
       [_,_,_,G,Bd,Bl,Bm,Rd,Rd,Bm,Bm,Rd,Rd,Bm,Bl,Bd,G,_,_,_],
       [_,_,_,_,Bd,Bl,Bm,Bm,Bl,Bh,Bh,Bl,Bm,Bm,Bl,Bd,_,_,_,_],
       [_,_,_,_,Bkd,Bd,Bl,Bh,Blg,Bh,Bh,Blg,Bh,Bl,Bd,Bkd,_,_,_,_],
@@ -176,8 +176,8 @@ export const CAR_PIXELS = {
       [_,_,_,_,Bkd,Bd,Bm,Bl,Bh,Bh,Bh,Bh,Bl,Bm,Bd,Bkd,_,_,_,_],
       [_,_,_,_,Bd,Bl,Bm,Bm,Bl,Bh,Bh,Bl,Bm,Bm,Bl,Bd,_,_,_,_],
       [_,_,_,_,Bd,Bl,Bm,Bl,Rd,Bm,Bm,Rd,Bl,Bm,Bl,Bd,_,_,_,_],
-      [_,_,_,G,Bd,Bl,Bm,R,R,Rd,Rd,R,R,Bm,Bl,Bd,G,_,_,_],
-      [_,_,M,G,Gd,Bl,Bm,R,R,R,R,R,R,Bm,Bl,Gd,G,M,_,_],
+      [_,_,T,G,Bd,Bl,Bm,R,R,Rd,Rd,R,R,Bm,Bl,Bd,G,T,_,_],
+      [_,T,Tl,G,Gd,Bl,Bm,R,R,R,R,R,R,Bm,Bl,Gd,G,Tl,T,_],
       [_,_,_,D,Dd,Gd,Bl,Bl,Bh,Bh,Bh,Bh,Bl,Bl,Gd,Dd,D,_,_,_],
       [_,_,_,D,Dd,Bl,Bm,R,R,Bm,Bm,R,R,Bm,Bl,Dd,D,_,_,_],
       [_,_,_,D,Dd,Bd,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bl,Bd,Dd,D,_,_,_],
@@ -192,7 +192,7 @@ export const CAR_PIXELS = {
   puma_orange: (() => {
     const _=0, O=0xff6b35, Om=0xee5a28, Od=0xcc5020, Ob=0xff8855, Oh=0xffaa77, Ox=0xff9966,
           W=0xffffff, Wg=0xeeeeff, Blk=0x1a3a6a, Bld=0x0a2a55, Blg=0x6688aa,
-          D=0x2b2d42, Dd=0x1a1c30, G=0x555566, Gl=0x6a6a7a, Gd=0x444455,
+          D=0x2b2d42, Dd=0x1a1c30, G=0x555566, Gl=0x6a6a7a, Gd=0x444455, T=0x222230, Tl=0x333340,
           Y=0xf4d35e, Yb=0xffe080, M=0x4a3a2e, Sh=0x1a1a2a;
     return [
       [_,_,_,_,_,_,_,Y,Yb,Yb,Yb,Yb,Y,_,_,_,_,_,_,_],
@@ -228,7 +228,7 @@ export const CAR_PIXELS = {
   tundra_red: (() => {
     const _=0, R=0xe63946, Rm=0xd42d3a, Rd=0xb02030, Rb=0xff5566, Rh=0xff7788, Rx=0xff8899,
           W=0xffffff, Bk=0x1a1a2e, Bkd=0x0e0e1e, Bkg=0x8888aa,
-          D=0x2b2d42, Dd=0x1a1c30, G=0x555566, Gl=0x6a6a7a, Gd=0x444455,
+          D=0x2b2d42, Dd=0x1a1c30, G=0x555566, Gl=0x6a6a7a, Gd=0x444455, T=0x222230, Tl=0x333340,
           Y=0xf4d35e, Yb=0xffe080, M=0x3a2a2e, Sh=0x1a1a2a;
     return [
       [_,_,_,_,_,_,_,Y,Yb,Yb,Yb,Yb,Y,_,_,_,_,_,_,_],
@@ -264,7 +264,7 @@ export const CAR_PIXELS = {
   volt_green: (() => {
     const _=0, Gr=0x2dd4a8, Gm=0x22bb95, Gd2=0x1aaa80, Gb=0x55ffcc, Gh=0x77ffdd, Gx=0x44eebb,
           W=0xffffff, Wg=0xeeffee, Bk=0x1a2a2a, Bkd=0x0e1e1e, Bkg=0x88ddcc,
-          D=0x2b2d42, Dd=0x1a1c30, G=0x555566, Gl=0x6a6a7a, Gd=0x444455,
+          D=0x2b2d42, Dd=0x1a1c30, G=0x555566, Gl=0x6a6a7a, Gd=0x444455, T=0x222230, Tl=0x333340,
           Y=0xf4d35e, Yb=0xffe080, M=0x2a3a3e, Sh=0x1a1a2a;
     return [
       [_,_,_,_,_,_,_,Y,Yb,Yb,Yb,Yb,Y,_,_,_,_,_,_,_],

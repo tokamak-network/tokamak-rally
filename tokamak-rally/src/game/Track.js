@@ -218,8 +218,8 @@ export const TRACK_CONFIG = {
       roadType: 'paved',
       roadColor: 0x484850, roadBorder: 0x606068,
       trackWidth: 120,
-      scenery: ['bush_green', 'bush_dry'],
-      sceneryDensity: 2,
+      scenery: ['bush_green', 'bush_dry', 'stone_wall'],
+      sceneryDensity: 3,
     },
   ],
 
