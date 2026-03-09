@@ -16,18 +16,35 @@ const LEADERBOARD_ABI = [
   "event NicknameSet(address indexed player, string nickname)",
 ];
 
+const SEPOLIA_RPC = 'https://ethereum-sepolia-rpc.publicnode.com';
+
 export class WalletManager {
   constructor() {
     this.provider = null;
     this.signer = null;
     this.address = null;
     this.connected = false;
-    this.contract = null;
+    this.contract = null;      // signer contract (write)
+    this.readContract = null;   // read-only contract
     this.nickname = null;
+    this._initReadContract();
+  }
+
+  _initReadContract() {
+    if (LEADERBOARD_ADDRESS !== '0x0000000000000000000000000000000000000000') {
+      try {
+        const readProvider = new ethers.JsonRpcProvider(SEPOLIA_RPC);
+        this.readContract = new ethers.Contract(LEADERBOARD_ADDRESS, LEADERBOARD_ABI, readProvider);
+      } catch(e) { console.warn('Read contract init failed:', e); }
+    }
   }
 
   isContractReady() {
-    return LEADERBOARD_ADDRESS !== '0x0000000000000000000000000000000000000000' && this.contract !== null;
+    return LEADERBOARD_ADDRESS !== '0x0000000000000000000000000000000000000000' && (this.contract !== null || this.readContract !== null);
+  }
+
+  getReadContract() {
+    return this.contract || this.readContract;
   }
 
   async connect() {
@@ -89,8 +106,9 @@ export class WalletManager {
   }
 
   async getRecordCount() {
-    if (!this.contract) return 0;
-    return Number(await this.contract.getRecordCount());
+    const c = this.getReadContract();
+    if (!c) return 0;
+    return Number(await c.getRecordCount());
   }
 
   async getRecord(idx) {
@@ -99,11 +117,12 @@ export class WalletManager {
   }
 
   async getAllRecords() {
-    if (!this.contract) return [];
-    const count = await this.getRecordCount();
+    const c = this.getReadContract();
+    if (!c) return [];
+    const count = Number(await c.getRecordCount());
     const records = [];
     for (let i = 0; i < count; i++) {
-      const r = await this.contract.getRecord(i);
+      const r = await c.getRecord(i);
       records.push({
         player: r.player,
         time: Number(r.time),
