@@ -280,8 +280,20 @@ export class RaceScene extends Phaser.Scene {
     }
   }
 
+  // Seeded PRNG (mulberry32) — ensures identical obstacle layout every attempt
+  _seededRng(seed) {
+    let s = seed | 0;
+    return () => {
+      s = (s + 0x6D2B79F5) | 0;
+      let t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
   placeRoadObstacles() {
     this.obstacles = [];
+    const rng = this._seededRng(20260309); // fixed seed — same layout every run
     const wp = this.track.waypoints;
     const penaltyMap = { obs_tokamak: 0.6 };
     const radiusMap = { obs_tokamak: 11 };
@@ -290,17 +302,17 @@ export class RaceScene extends Phaser.Scene {
       const cfg = this.track.obstacleConfig[zone.name];
       if (!cfg) continue;
       for (let i=zone.fromWP; i<Math.min(zone.toWP,wp.length-1); i++) {
-        if (Math.random() > cfg.density) continue;
+        if (rng() > cfg.density) continue;
         const [x1,y1]=wp[i],[x2,y2]=wp[i+1];
-        const t=0.15+Math.random()*0.7;
+        const t=0.15+rng()*0.7;
         const bx=x1+(x2-x1)*t, by=y1+(y2-y1)*t;
         const dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);
         if (len<1) continue;
         const nx=-dy/len,ny=dx/len;
         const hw=(zone.trackWidth||100)/2;
-        const off=(Math.random()-0.5)*hw*1.0;
+        const off=(rng()-0.5)*hw*1.0;
         const ox=bx+nx*off, oy=by+ny*off;
-        const type=cfg.types[Math.floor(Math.random()*cfg.types.length)];
+        const type=cfg.types[Math.floor(rng()*cfg.types.length)];
         const sprite=this.add.sprite(ox,oy,type).setDepth(5);
         this.obstacles.push({x:ox,y:oy,radius:radiusMap[type]||9,type,penalty:penaltyMap[type]||0.6,sprite});
       }
@@ -510,7 +522,7 @@ export class RaceScene extends Phaser.Scene {
     const p=getTrackProgress(this.carState.x,this.carState.y,this.track.waypoints);
     this.add.text(400,240,'⏱ TIME OUT',{fontSize:'48px',fontFamily:'monospace',color:'#e63946',fontStyle:'bold',stroke:'#000',strokeThickness:5}).setOrigin(0.5).setScrollFactor(0).setDepth(100);
     this.add.text(400,300,`Progress: ${Math.floor(p.progress*100)}%  |  CP: ${this.raceState.checkpointsPassed}/${this.raceState.totalCheckpoints}`,{fontSize:'18px',fontFamily:'monospace',color:'#f1faee'}).setOrigin(0.5).setScrollFactor(0).setDepth(100);
-    this.addRestart();
+    this.addRestart(this.raceState);
   }
 
   showFinish(){
@@ -521,43 +533,50 @@ export class RaceScene extends Phaser.Scene {
     let sp=''; rs.checkpointTimes.forEach((t,i)=>{sp+=`CP${i+1}: ${this.fmt(t)}  `;});
     this.add.text(400,330,sp,{fontSize:'13px',fontFamily:'monospace',color:'#a89070'}).setOrigin(0.5).setScrollFactor(0).setDepth(100);
 
-    // Leaderboard submit button
-    if (wallet.connected) {
-      if (!wallet.isContractReady()) {
-        this.add.text(400, 370, 'Leaderboard coming soon', {
-          fontSize: '13px', fontFamily: 'monospace', color: '#5a4a3a',
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
-      } else {
-        const submitText = this.add.text(400, 370, '[ S: Submit to Leaderboard ]', {
-          fontSize: '15px', fontFamily: 'monospace', color: '#2d6a4f',
-        }).setOrigin(0.5).setScrollFactor(0).setDepth(100).setInteractive({ useHandCursor: true });
-
-        const doSubmit = async () => {
-          submitText.setText('Submitting...').setColor('#f4d35e').removeInteractive();
-          try {
-            const txHash = await wallet.submitRecord(Math.floor(rs.elapsedTime), this.selectedCarId);
-            const shortTx = `${txHash.slice(0, 10)}...${txHash.slice(-6)}`;
-            submitText.setText(`✓ Record submitted! Tx: ${shortTx}`).setColor('#2d6a4f');
-          } catch (e) {
-            submitText.setText('✗ Failed — press S to retry').setColor('#e63946');
-            this.input.keyboard.once('keydown-S', doSubmit);
-          }
-        };
-
-        submitText.on('pointerdown', doSubmit);
-        this.input.keyboard.once('keydown-S', doSubmit);
-      }
-    }
-
-    this.addRestart();
+    this.addRestart(rs);
   }
 
-  addRestart(){
-    const rt=this.add.text(400,440,'[ ENTER: Retry  |  ESC: Menu ]',{fontSize:'16px',fontFamily:'monospace',color:'#f4d35e'}).setOrigin(0.5).setScrollFactor(0).setDepth(100);
+  addRestart(rs){
+    // Build bottom action line dynamically
+    let actionParts = [];
+
+    // Submit button (only on finish with wallet)
+    if (rs && rs.finished && wallet.connected) {
+      if (wallet.isContractReady()) {
+        actionParts.push('S: Submit Record');
+      }
+    }
+    actionParts.push('ENTER: Retry');
+    actionParts.push('ESC: Menu');
+
+    const actionStr = '[ ' + actionParts.join('  |  ') + ' ]';
+    const rt=this.add.text(400,440,actionStr,{fontSize:'16px',fontFamily:'monospace',color:'#f4d35e'}).setOrigin(0.5).setScrollFactor(0).setDepth(100);
     this.tweens.add({targets:rt,alpha:0.3,duration:500,yoyo:true,repeat:-1});
 
     this.input.keyboard.removeAllListeners('keydown-ENTER');
     this.input.keyboard.removeAllListeners('keydown-ESC');
+    this.input.keyboard.removeAllListeners('keydown-S');
+
+    // Submit handler
+    if (rs && rs.finished && wallet.connected && wallet.isContractReady()) {
+      const doSubmit = async () => {
+        rt.setText('[ Submitting...  |  ENTER: Retry  |  ESC: Menu ]');
+        try {
+          const txHash = await wallet.submitRecord(Math.floor(rs.elapsedTime), this.selectedCarId);
+          const shortTx = `${txHash.slice(0, 10)}...${txHash.slice(-6)}`;
+          rt.setText(`✓ Submitted (${shortTx})  [ ENTER: Retry  |  ESC: Menu  |  L: Leaderboard ]`);
+          this.input.keyboard.once('keydown-L', () => {
+            this.scene.stop('UI');
+            this.scene.stop('Race');
+            this.scene.start('Leaderboard');
+          });
+        } catch (e) {
+          rt.setText('[ S: Retry Submit  |  ENTER: Retry  |  ESC: Menu ]');
+          this.input.keyboard.once('keydown-S', doSubmit);
+        }
+      };
+      this.input.keyboard.once('keydown-S', doSubmit);
+    }
 
     this.input.keyboard.once('keydown-ENTER', () => {
       this.scene.stop('UI');
