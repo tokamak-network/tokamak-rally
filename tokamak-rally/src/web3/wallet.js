@@ -1,7 +1,7 @@
 import { ethers } from 'ethers';
 
 const SEPOLIA_CHAIN_ID = '0xaa36a7'; // 11155111
-const LEADERBOARD_ADDRESS = '0x0000000000000000000000000000000000000000'; // placeholder — 배포 후 교체
+const LEADERBOARD_ADDRESS = '0x3290A564E0602016F5DA40310BdaDdD471978306'; // Sepolia testnet
 
 const LEADERBOARD_ABI = [
   "function submitRecord(uint256 _time, string calldata _carId, bytes32 _replayHash) external",
