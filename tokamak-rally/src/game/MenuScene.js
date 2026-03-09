@@ -121,9 +121,9 @@ export class MenuScene extends Phaser.Scene {
       fontSize:'12px',fontFamily:'monospace',color:'#5a4a3a',
     }).setOrigin(0.5);
 
-    // Start
-    const startText = this.add.text(cx,568,'[ PRESS ENTER TO START ]',{
-      fontSize:'20px',fontFamily:'monospace',color:'#f4d35e',
+    // Start + Leaderboard on same line
+    const startText = this.add.text(cx,568,'[ ENTER: Start  |  L: Leaderboard ]',{
+      fontSize:'18px',fontFamily:'monospace',color:'#f4d35e',
     }).setOrigin(0.5);
     this.tweens.add({targets:startText,alpha:0.2,duration:700,yoyo:true,repeat:-1});
 
@@ -153,11 +153,6 @@ export class MenuScene extends Phaser.Scene {
         });
       });
     });
-
-    // === LEADERBOARD HINT ===
-    this.add.text(cx, 556, 'L: Leaderboard', {
-      fontSize: '11px', fontFamily: 'monospace', color: '#5a4a3a',
-    }).setOrigin(0.5);
 
     // Input
     this.input.keyboard.on('keydown-LEFT', () => this.changeCar(-1));
