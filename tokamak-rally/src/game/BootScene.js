@@ -163,54 +163,66 @@ export class BootScene extends Phaser.Scene {
     g.moveTo(65,0); g.lineTo(60,25); g.lineTo(68,60); g.lineTo(62,95); g.lineTo(66,S);
     g.moveTo(100,0); g.lineTo(95,30); g.lineTo(102,65); g.lineTo(97,100); g.lineTo(100,S);
     g.strokePath();
-    // Moisture/water tint in low areas
-    g.fillStyle(0x5a8a9a, 0.08);
-    g.fillRect(30,30,25,20); g.fillRect(75,70,20,18); g.fillRect(5,85,18,15);
+    // Water/mud puddle areas — brown muddy water
+    g.fillStyle(0x6a5a40, 0.2);
+    g.fillRect(25,28,30,22); g.fillRect(70,65,25,20); g.fillRect(5,85,22,18);
+    g.fillStyle(0x7a8a6a, 0.12);
+    g.fillRect(27,30,26,18); g.fillRect(72,67,21,16);
+    // Water shimmer
+    g.fillStyle(0x8aaa9a, 0.1);
+    g.fillRect(30,32,5,1); g.fillRect(35,35,8,1); g.fillRect(75,70,6,1);
+    // Green vegetation on banks — lush
+    g.fillStyle(0x4a8a3a, 0.2);
+    g.fillRect(0,0,S,8); g.fillRect(0,S-10,S,10);
+    g.fillRect(55,25,8,30); g.fillRect(100,60,12,25);
+    g.fillStyle(0x5a9a4a, 0.15);
+    g.fillRect(10,2,15,5); g.fillRect(60,27,5,8); g.fillRect(105,62,8,6);
     // Green moss in cracks
-    g.fillStyle(0x5a7a4a, 0.15);
+    g.fillStyle(0x5a7a4a, 0.18);
     g.fillRect(22,23,4,2); g.fillRect(60,59,5,2); g.fillRect(95,94,4,2);
     g.fillRect(25,62,3,2); g.fillRect(65,22,4,2);
+    // Larger rocks/stones in riverbed
+    g.fillStyle(0x7a7a70, 0.3);
+    g.fillRect(40,42,4,3); g.fillRect(82,78,5,4); g.fillRect(15,95,3,3);
+    g.fillRect(58,50,3,3); g.fillRect(110,45,4,3);
     g.generateTexture('bg_riverbed', S, S); g.destroy();
 
-    // ====== MOUNTAIN — rocky terrain with snow, ice, pine shadow ======
+    // ====== MOUNTAIN — forest floor with brown earth, pine needle litter ======
     g = this.add.graphics();
-    // Base: dark blue-grey rock
+    // Base: dark green-brown forest floor
     for (let y = 0; y < S; y++) {
       const t = y / S;
-      const r = Math.floor(0x52 + (0x48-0x52)*t + Math.sin(y*0.2)*3);
-      const gv = Math.floor(0x58 + (0x4e-0x58)*t + Math.sin(y*0.18)*3);
-      const b = Math.floor(0x68 + (0x5e-0x68)*t + Math.sin(y*0.15)*3);
-      g.fillStyle((Math.max(0,r)<<16)|(Math.max(0,gv)<<8)|Math.max(0,b));
+      const r = Math.floor(0x3a + (0x32-0x3a)*t + Math.sin(y*0.2)*5);
+      const gv = Math.floor(0x52 + (0x48-0x52)*t + Math.sin(y*0.15)*6);
+      const b = Math.floor(0x28 + (0x22-0x28)*t + Math.sin(y*0.12)*3);
+      g.fillStyle((Math.max(0,Math.min(255,r))<<16)|(Math.max(0,Math.min(255,gv))<<8)|Math.max(0,Math.min(255,b)));
       g.fillRect(0, y, S, 1);
     }
-    // Rock texture — checkerboard noise
-    for (let y = 0; y < S; y += 4) for (let x = 0; x < S; x += 4) {
-      if (((x+y)%8===0)) {
-        g.fillStyle(0x6a7080, 0.2); g.fillRect(x, y, 4, 4);
-      }
+    // Pine needle texture — tiny brown/green lines
+    for (let i = 0; i < 100; i++) {
+      const px = (i*37+11)%S, py = (i*53+7)%S;
+      const shade = [0x4a5a30, 0x3a4a20, 0x5a3a18, 0x4a3a15][i%4];
+      g.fillStyle(shade, 0.4);
+      g.fillRect(px, py, 2+(i%2), 1);
     }
-    // Large snow patches (irregular)
-    const snowPatches = [[10,5,35,18],[55,15,85,28],[5,55,25,68],[70,60,100,72],[40,90,75,105],[100,85,S,100]];
-    for (const [x1,y1,x2,y2] of snowPatches) {
-      // Soft edge snow
-      g.fillStyle(0xd8e4f0, 0.35);
-      g.fillRect(x1-2, y1-1, x2-x1+4, y2-y1+2);
-      g.fillStyle(0xe8f0f8, 0.4);
-      g.fillRect(x1, y1, x2-x1, y2-y1);
-      // Bright center
-      g.fillStyle(0xf0f4ff, 0.25);
-      g.fillRect(x1+3, y1+2, (x2-x1)*0.6, (y2-y1)*0.5);
+    // Grass/moss patches
+    g.fillStyle(0x4a7a3a, 0.2);
+    g.fillRect(10,8,22,16); g.fillRect(65,45,20,14); g.fillRect(85,90,25,18);
+    g.fillStyle(0x5a8a4a, 0.15);
+    g.fillRect(35,60,18,12); g.fillRect(100,15,20,10);
+    // Exposed dirt patches
+    g.fillStyle(0x6a4a28, 0.15);
+    g.fillRect(45,20,15,10); g.fillRect(8,75,12,8); g.fillRect(75,105,14,10);
+    // Small rocks
+    g.fillStyle(0x6a6a60, 0.3);
+    for (let i = 0; i < 12; i++) {
+      const px = (i*43+19)%S, py = (i*61+31)%S;
+      g.fillRect(px, py, 2+(i%2), 2);
     }
-    // Rock face lines
-    g.fillStyle(0x3a4050, 0.3);
-    g.fillRect(0,30,S,1); g.fillRect(0,52,S,1); g.fillRect(0,78,S,1);
-    // Lichen/moss spots
-    g.fillStyle(0x5a6a4a, 0.12);
-    g.fillRect(20,32,5,3); g.fillRect(65,54,6,2); g.fillRect(40,80,4,3);
-    // Ice glint
-    g.fillStyle(0xc0d8ff, 0.15);
-    g.fillRect(15,8,2,1); g.fillRect(60,20,2,1); g.fillRect(80,65,2,1);
-    g.fillRect(10,60,2,1); g.fillRect(50,95,2,1);
+    // Root/twig hints
+    g.fillStyle(0x5a3a18, 0.2);
+    g.fillRect(20,40,8,1); g.fillRect(70,25,6,1); g.fillRect(40,85,10,1);
+    g.fillRect(95,65,7,1); g.fillRect(15,110,9,1);
     g.generateTexture('bg_mountain', S, S); g.destroy();
 
     // ====== SPRINT — green grass with road-side feel ======

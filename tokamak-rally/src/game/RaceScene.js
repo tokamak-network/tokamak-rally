@@ -341,6 +341,27 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
+    // Riverbed — green vegetation along banks
+    const rbZone = this.track.zones.find(z => z.name === 'riverbed');
+    if (rbZone) {
+      for (let i = rbZone.fromWP; i < Math.min(rbZone.toWP, wp.length-1); i++) {
+        const [x1,y1]=wp[i],[x2,y2]=wp[i+1];
+        const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
+        if (len<1) continue;
+        const nx=-dy/len, ny=dx/len;
+        for (let side of [-1, 1]) {
+          for (let j=0;j<2;j++) {
+            const t = j/2 + Math.random()*0.4;
+            if (t > 1) continue;
+            const d = 100/2 + 35 + Math.random()*50;
+            const tex = Math.random() > 0.4 ? 'bush_green' : 'rock_grey';
+            this.add.sprite(x1+dx*t+nx*side*d, y1+dy*t+ny*side*d, tex)
+              .setDepth(2).setScale(0.8+Math.random()*0.4);
+          }
+        }
+      }
+    }
+
     // Oasis palms around CP3 — far from road
     const cp3wp = this.track.checkpoints[2].waypointIndex;
     if (cp3wp < wp.length) {
@@ -351,7 +372,7 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // Mountain pines — well outside road
+    // Mountain — dense forest on both sides
     const mtZone = this.track.zones.find(z => z.name === 'mountain');
     if (mtZone) {
       for (let i = mtZone.fromWP; i < Math.min(mtZone.toWP, wp.length-1); i++) {
@@ -359,11 +380,22 @@ export class RaceScene extends Phaser.Scene {
         const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
         if (len<1) continue;
         const nx=-dy/len, ny=dx/len;
-        for (let j=0;j<2;j++) {
-          const side = Math.random()>0.5?1:-1;
-          const d = 80/2 + 50 + Math.random()*100;
-          const t = Math.random();
-          this.add.sprite(x1+dx*t+nx*side*d, y1+dy*t+ny*side*d, 'pine_tree').setDepth(2);
+        // Dense tree rows on both sides
+        for (let side of [-1, 1]) {
+          for (let j=0;j<4;j++) {
+            const t = j/4 + Math.random()*0.2;
+            if (t > 1) continue;
+            // Close trees
+            const d1 = 80/2 + 30 + Math.random()*40;
+            this.add.sprite(x1+dx*t+nx*side*d1, y1+dy*t+ny*side*d1, 'pine_tree')
+              .setDepth(2).setScale(0.8+Math.random()*0.4);
+            // Background trees (larger, slightly transparent)
+            if (j%2===0) {
+              const d2 = 80/2 + 80 + Math.random()*80;
+              this.add.sprite(x1+dx*t+nx*side*d2, y1+dy*t+ny*side*d2, 'pine_tree')
+                .setDepth(1).setScale(1.2+Math.random()*0.5).setAlpha(0.7);
+            }
+          }
         }
       }
     }
