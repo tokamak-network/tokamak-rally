@@ -189,7 +189,7 @@ export const TRACK_CONFIG = {
       name: 'canyon', fromWP: 26, toWP: 52,
       bgTile: 'bg_canyon',
       roadType: 'dirt',
-      roadColor: 0x7a5535, roadBorder: 0x5a3520,
+      roadColor: 0x8a7555, roadBorder: 0x6a5535,
       trackWidth: 75,
       scenery: ['canyon_wall', 'rock_red'],
       sceneryDensity: 3,

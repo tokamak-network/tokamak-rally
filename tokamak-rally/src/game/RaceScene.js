@@ -303,7 +303,7 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // Canyon walls — placed along road edges (outside road)
+    // Canyon walls — dense, layered cliff walls on both sides forming slot canyon
     const canyonZone = this.track.zones.find(z => z.name === 'canyon');
     if (canyonZone) {
       for (let i = canyonZone.fromWP; i < Math.min(canyonZone.toWP, wp.length-1); i++) {
@@ -312,12 +312,31 @@ export class RaceScene extends Phaser.Scene {
         if (len<1) continue;
         const nx=-dy/len, ny=dx/len;
         const halfW = 75/2;
+        // Multiple layers of walls on each side — creates depth
         for (let side of [-1, 1]) {
-          const d = halfW + 40 + Math.random()*30;
-          const t = Math.random();
-          const sx = x1+dx*t + nx*side*d;
-          const sy = y1+dy*t + ny*side*d;
-          this.add.sprite(sx, sy, 'canyon_wall').setDepth(2).setScale(0.6+Math.random()*0.5);
+          // Row 1: immediate road edge walls (tall, close)
+          for (let j = 0; j < 3; j++) {
+            const t = j / 3 + Math.random() * 0.3;
+            if (t > 1) continue;
+            const d = halfW + 15 + Math.random()*15;
+            const sx = x1+dx*t + nx*side*d;
+            const sy = y1+dy*t + ny*side*d;
+            this.add.sprite(sx, sy, 'canyon_wall').setDepth(2).setScale(1.0+Math.random()*0.5);
+          }
+          // Row 2: taller background walls
+          for (let j = 0; j < 2; j++) {
+            const t = j / 2 + Math.random() * 0.4;
+            if (t > 1) continue;
+            const d = halfW + 50 + Math.random()*40;
+            const sx = x1+dx*t + nx*side*d;
+            const sy = y1+dy*t + ny*side*d;
+            this.add.sprite(sx, sy, 'canyon_wall').setDepth(2).setScale(1.3+Math.random()*0.7);
+          }
+          // Row 3: distant massive walls
+          const t3 = Math.random();
+          const d3 = halfW + 100 + Math.random()*60;
+          this.add.sprite(x1+dx*t3+nx*side*d3, y1+dy*t3+ny*side*d3, 'canyon_wall')
+            .setDepth(1).setScale(1.8+Math.random()*0.8).setAlpha(0.7);
         }
       }
     }

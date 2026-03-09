@@ -89,10 +89,10 @@ export class BootScene extends Phaser.Scene {
     }
     g.generateTexture('bg_desert', S, S); g.destroy();
 
-    // ====== CANYON — layered red rock strata with deep cracks and erosion ======
+    // ====== CANYON — golden-brown sandstone slot canyon (Dakar reference) ======
     g = this.add.graphics();
-    // Layered strata with color variation
-    const canyonLayers = [0xb05530,0x9b4525,0xa84a2e,0x8b3618,0x9a4028,0x7a2a15,0x8b3220,0x6d2210,0x943828,0x7a2a18];
+    // Layered sandstone strata — golden to dark brown
+    const canyonLayers = [0xc49050,0xb88040,0xd0a060,0xa87030,0xc09048,0x907028,0xb08038,0x806020,0xa07830,0x705818];
     for (let i = 0; i < canyonLayers.length; i++) {
       const h = Math.floor(S / canyonLayers.length);
       g.fillStyle(canyonLayers[i]);
@@ -368,26 +368,35 @@ export class BootScene extends Phaser.Scene {
     ], 2);
     g.generateTexture('skull', 20, 20); g.destroy();
 
-    // === CANYON SPIRE — tall layered rock column ===
+    // === CANYON WALL — tall layered sandstone cliff face (golden-brown) ===
     g = this.add.graphics();
-    const CS1=0x8b3520, CS2=0x9b4530, CS3=0x6b2510, CS4=0xa05535,
-          CS5=0xb06545, CS6=0x551a08, CS7=0x7a2a18, CSH=0xc07555;
+    // Wide, tall cliff section with layered sediment
+    const CW1=0xc49450, CW2=0xb08040, CW3=0x9a6a30, CW4=0x856025, CW5=0x6a4a18,
+          CW6=0x504010, CWH=0xd8a868, CWL=0xe0b878, CWSh=0x4a3510, CWD=0x3a2808;
+    // 16×20 pixel art at 3x = 48×60 rendered
     this.px(g, [
-      [_,_,_,_,_,CS1,_,_,_,_,_,_],
-      [_,_,_,_,CS1,CS2,CS1,_,_,_,_,_],
-      [_,_,_,CS3,CS2,CS4,CS2,CS1,_,_,_,_],
-      [_,_,_,CS3,CS4,CSH,CS4,CS2,_,_,_,_],
-      [_,_,CS3,CS1,CS5,CSH,CS4,CS2,CS1,_,_,_],
-      [_,_,CS6,CS3,CS4,CS5,CSH,CS4,CS3,_,_,_],
-      [_,CS6,CS3,CS1,CS5,CS4,CS5,CS2,CS7,CS3,_,_],
-      [_,CS6,CS7,CS2,CS4,CSH,CS4,CS2,CS7,CS3,_,_],
-      [CS6,CS3,CS7,CS1,CS5,CS4,CS5,CS1,CS7,CS3,CS6,_],
-      [CS6,CS7,CS1,CS2,CS4,CS2,CS4,CS2,CS1,CS7,CS6,_],
-      [_,CS6,CS7,CS1,CS2,CS1,CS2,CS1,CS7,CS6,_,_],
-      [_,_,CS6,CS7,CS3,CS7,CS3,CS7,CS6,_,_,_],
-      [_,_,_,CS6,CS6,CS6,CS6,CS6,_,_,_,_],
+      [_,_,_,_,_,CW2,CWH,CWL,CWH,CW2,CW1,_,_,_,_,_],
+      [_,_,_,CW3,CW2,CWH,CWL,CWH,CWL,CWH,CW2,CW3,_,_,_,_],
+      [_,_,CW4,CW3,CW1,CWH,CWL,CW1,CWH,CWL,CW2,CW3,CW4,_,_,_],
+      [_,CW5,CW3,CW2,CWH,CWL,CWH,CW2,CW1,CWH,CW2,CW3,CW4,CW5,_,_],
+      [CW5,CW4,CW2,CWH,CWL,CW1,CWH,CWL,CWH,CW1,CWH,CW2,CW3,CW4,CW5,_],
+      [CW5,CW3,CW2,CW1,CWSh,CWSh,CWSh,CWSh,CWSh,CWSh,CW1,CW2,CW3,CW4,CW5,_],
+      [CW6,CW4,CW3,CW2,CW1,CWH,CW2,CW1,CWH,CW2,CW1,CW2,CW3,CW4,CW5,CW6],
+      [CW6,CW5,CW3,CW2,CWH,CWL,CW1,CWH,CWL,CWH,CW2,CW3,CW4,CW5,CW6,_],
+      [CWD,CW5,CW4,CWSh,CWSh,CWSh,CWSh,CWSh,CWSh,CWSh,CWSh,CW3,CW4,CW5,CWD,_],
+      [CWD,CW6,CW4,CW3,CW2,CW1,CWH,CW2,CW1,CWH,CW2,CW3,CW4,CW5,CWD,_],
+      [CWD,CW6,CW5,CW3,CW2,CWH,CWL,CWH,CW2,CW1,CW2,CW3,CW4,CW5,CW6,CWD],
+      [_,CWD,CW5,CW4,CW3,CW2,CW1,CW2,CW3,CW2,CW3,CW4,CW5,CW6,CWD,_],
+      [_,CWD,CW6,CW4,CWSh,CWSh,CWSh,CWSh,CWSh,CWSh,CWSh,CW4,CW5,CW6,CWD,_],
+      [_,_,CWD,CW5,CW4,CW3,CW2,CW3,CW2,CW3,CW4,CW5,CW6,CWD,_,_],
+      [_,_,CWD,CW6,CW5,CW4,CW3,CW4,CW3,CW4,CW5,CW6,CWD,_,_,_],
+      [_,_,_,CWD,CW6,CW5,CW4,CW5,CW4,CW5,CW6,CWD,_,_,_,_],
+      [_,_,_,CWD,CWD,CW6,CW5,CW6,CW5,CW6,CWD,CWD,_,_,_,_],
+      [_,_,_,_,CWD,CWD,CW6,CWD,CW6,CWD,CWD,_,_,_,_,_],
+      [_,_,_,_,_,CWD,CWD,CWD,CWD,CWD,_,_,_,_,_,_],
+      [_,_,_,_,_,_,CWD,CWD,CWD,_,_,_,_,_,_,_],
     ], 3);
-    g.generateTexture('canyon_wall', 36, 39); g.destroy();
+    g.generateTexture('canyon_wall', 48, 60); g.destroy();
 
     // === BOULDER RED (canyon) — irregular with color variation ===
     g = this.add.graphics();
