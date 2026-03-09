@@ -27,13 +27,13 @@ export class BootScene extends Phaser.Scene {
       const pixels = CAR_PIXELS[car.id];
       if (pixels) {
         this.px(g, pixels, 2);
-        g.generateTexture(`car_${car.id}`, 28, 40);
+        g.generateTexture(`car_${car.id}`, 40, 56);
         g.destroy();
       }
     }
     const g2 = this.add.graphics();
     this.px(g2, CAR_PIXELS['alpine_white'], 2);
-    g2.generateTexture('car_player', 28, 40);
+    g2.generateTexture('car_player', 40, 56);
     g2.destroy();
   }
 
@@ -593,11 +593,40 @@ export class BootScene extends Phaser.Scene {
     ], 2);
     g.generateTexture('obs_tokamak', 30, 20); g.destroy();
 
-    // Dust particle
+    // Dust particle (sand)
     g = this.add.graphics();
     g.fillStyle(0xd4b880,0.5); g.fillCircle(4,4,4);
     g.fillStyle(0xe8cc98,0.3); g.fillCircle(3,3,2);
     g.generateTexture('dust_particle', 8, 8); g.destroy();
+
+    // Canyon dust (reddish)
+    g = this.add.graphics();
+    g.fillStyle(0xaa6040,0.5); g.fillCircle(4,4,4);
+    g.fillStyle(0xcc8060,0.3); g.fillCircle(3,3,2);
+    g.generateTexture('dust_canyon', 8, 8); g.destroy();
+
+    // Water splash (blue)
+    g = this.add.graphics();
+    g.fillStyle(0x4aaacc,0.6); g.fillCircle(4,4,4);
+    g.fillStyle(0x8aeeff,0.4); g.fillCircle(3,3,2);
+    g.generateTexture('splash_particle', 8, 8); g.destroy();
+
+    // Snow particle
+    g = this.add.graphics();
+    g.fillStyle(0xe8f0f8,0.7); g.fillCircle(3,3,3);
+    g.fillStyle(0xffffff,0.5); g.fillCircle(2,2,1);
+    g.generateTexture('snow_particle', 6, 6); g.destroy();
+
+    // Tire smoke (grey-white)
+    g = this.add.graphics();
+    g.fillStyle(0xcccccc,0.4); g.fillCircle(5,5,5);
+    g.fillStyle(0xeeeeee,0.25); g.fillCircle(4,4,3);
+    g.generateTexture('smoke_particle', 10, 10); g.destroy();
+
+    // Skidmark segment (dark)
+    g = this.add.graphics();
+    g.fillStyle(0x222222,0.3); g.fillRect(0,0,4,4);
+    g.generateTexture('skid_particle', 4, 4); g.destroy();
   }
 
   genUI() {

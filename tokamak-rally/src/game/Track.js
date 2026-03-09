@@ -208,8 +208,8 @@ export const TRACK_CONFIG = {
       roadType: 'paved',
       roadColor: 0x3a3a42, roadBorder: 0x5a5a62,
       trackWidth: 120,
-      scenery: ['cactus', 'bush_dry'],
-      sceneryDensity: 1,
+      scenery: ['bush_green', 'bush_dry'],
+      sceneryDensity: 2,
     },
   ],
 
@@ -225,11 +225,11 @@ export const TRACK_CONFIG = {
   },
 
   obstacleConfig: {
-    desert:   { types: ['obs_tokamak'], density: 0.18 },
-    canyon:   { types: ['obs_tokamak'], density: 0.2 },
-    riverbed: { types: ['obs_tokamak'], density: 0.18 },
-    mountain: { types: ['obs_tokamak'], density: 0.24 },
-    sprint:   { types: ['obs_tokamak'], density: 0.12 },
+    desert:   { types: ['obs_sand_pile', 'obs_tumbleweed', 'obs_tokamak'], density: 0.22 },
+    canyon:   { types: ['obs_fallen_rock', 'obs_rock_debris', 'obs_tokamak'], density: 0.25 },
+    riverbed: { types: ['obs_puddle', 'obs_mud_patch', 'obs_log', 'obs_tokamak'], density: 0.22 },
+    mountain: { types: ['obs_rock_slide', 'obs_pothole', 'obs_tokamak'], density: 0.28 },
+    sprint:   { types: ['obs_small_rock', 'obs_tokamak'], density: 0.15 },
   },
 };
 

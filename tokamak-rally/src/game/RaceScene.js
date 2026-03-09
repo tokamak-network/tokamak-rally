@@ -34,6 +34,29 @@ export class RaceScene extends Phaser.Scene {
       lifespan: 400, frequency: 40, emitting: false,
     });
 
+    // Drift smoke emitter
+    this.driftSmoke = this.add.particles(0, 0, 'smoke_particle', {
+      speed: { min: 10, max: 30 },
+      scale: { start: 1.2, end: 0 },
+      alpha: { start: 0.5, end: 0 },
+      lifespan: 600, frequency: 20, emitting: false,
+    });
+
+    // Snow ambient emitter (mountain zone only)
+    this.snowEmitter = this.add.particles(0, 0, 'snow_particle', {
+      speed: { min: 5, max: 20 },
+      angle: { min: 240, max: 300 },
+      scale: { start: 0.8, end: 0.2 },
+      alpha: { start: 0.6, end: 0 },
+      lifespan: 3000, frequency: 80, emitting: false,
+    }).setDepth(15);
+
+    // Zone dust texture mapping
+    this._zoneDustTextures = {
+      desert: 'dust_particle', canyon: 'dust_canyon', riverbed: 'dust_particle',
+      mountain: 'snow_particle', sprint: 'smoke_particle',
+    };
+
     this.carState = {
       x: this.track.startX, y: this.track.startY,
       angle: this.track.startAngle, speed: 0,
@@ -295,8 +318,18 @@ export class RaceScene extends Phaser.Scene {
     this.obstacles = [];
     const rng = this._seededRng(20260309); // fixed seed — same layout every run
     const wp = this.track.waypoints;
-    const penaltyMap = { obs_tokamak: 0.6 };
-    const radiusMap = { obs_tokamak: 11 };
+    const penaltyMap = {
+      obs_tokamak: 0.55, obs_sand_pile: 0.7, obs_tumbleweed: 0.8,
+      obs_fallen_rock: 0.5, obs_rock_debris: 0.6, obs_small_rock: 0.75,
+      obs_puddle: 0.7, obs_mud_patch: 0.65, obs_log: 0.55,
+      obs_rock_slide: 0.45, obs_pothole: 0.65,
+    };
+    const radiusMap = {
+      obs_tokamak: 11, obs_sand_pile: 10, obs_tumbleweed: 8,
+      obs_fallen_rock: 13, obs_rock_debris: 12, obs_small_rock: 9,
+      obs_puddle: 14, obs_mud_patch: 15, obs_log: 11,
+      obs_rock_slide: 18, obs_pothole: 10,
+    };
 
     for (const zone of this.track.zones) {
       const cfg = this.track.obstacleConfig[zone.name];
@@ -357,10 +390,16 @@ export class RaceScene extends Phaser.Scene {
     this.player.x=this.carState.x; this.player.y=this.carState.y;
     this.player.angle=this.carState.angle+90;
 
+    // Zone-adaptive dust particles
+    const zoneName = this.currentZoneName || 'desert';
+    const dustTex = this._zoneDustTextures[zoneName] || 'dust_particle';
+    if (this.dustEmitter.texture.key !== dustTex) {
+      try { this.dustEmitter.setTexture(dustTex); } catch(e) {}
+    }
+
     if(Math.abs(this.carState.speed)>25){
       this.dustEmitter.emitting=true;
       this.dustEmitter.setPosition(this.carState.x,this.carState.y);
-      // Extra dust when drifting — use try/catch for particle API compat
       try {
         if(this.carState.drifting){
           this.dustEmitter.frequency=15;
@@ -369,6 +408,25 @@ export class RaceScene extends Phaser.Scene {
         }
       } catch(e){}
     } else this.dustEmitter.emitting=false;
+
+    // Drift smoke
+    if (this.carState.drifting && Math.abs(this.carState.speed) > 40) {
+      this.driftSmoke.emitting = true;
+      this.driftSmoke.setPosition(this.carState.x, this.carState.y);
+    } else {
+      this.driftSmoke.emitting = false;
+    }
+
+    // Mountain snow ambient
+    if (zoneName === 'mountain') {
+      this.snowEmitter.emitting = true;
+      this.snowEmitter.setPosition(
+        this.carState.x + (Math.random() - 0.5) * 600,
+        this.carState.y - 300
+      );
+    } else {
+      this.snowEmitter.emitting = false;
+    }
 
     this.obstacles.forEach(o=>{if(o.type==='obs_tokamak')o.sprite.angle+=2;});
     this.emitUI();
