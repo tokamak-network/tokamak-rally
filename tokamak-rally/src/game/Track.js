@@ -102,37 +102,37 @@ export const TRACK_CONFIG = {
     // CP3
     [2800, 4200],   // 73 << CP3: Oasis
 
-    // ===== ZONE 4: MOUNTAIN (74-97) — Switchbacks, hairpins dominant =====
-    [2780, 4000],   // 74
-    [2730, 3840],   // 75
-    // Switchback 1 — right then left
-    [2650, 3680],   // 76
-    [2500, 3580],   // 77 right
-    [2350, 3520],   // 78
-    [2500, 3380],   // 79 switch left
-    [2680, 3300],   // 80
-    // Hairpin (180° right)
-    [2800, 3180],   // 81
-    [2850, 3020],   // 82
-    [2780, 2870],   // 83 apex
-    [2620, 2800],   // 84
-    [2480, 2850],   // 85 exit
-    // Switchback 2
-    [2380, 2710],   // 86
-    [2480, 2560],   // 87 switch
-    [2650, 2480],   // 88
-    [2580, 2320],   // 89 switch back
-    [2420, 2240],   // 90
-    // Hairpin (180° left)
-    [2320, 2100],   // 91
-    [2300, 1930],   // 92
-    [2380, 1780],   // 93 apex
-    [2530, 1720],   // 94
-    [2680, 1770],   // 95
-    // Short exit to summit
-    [2780, 1640],   // 96
+    // ===== ZONE 4: MOUNTAIN (74-97) — Extreme switchbacks, Dades/Sawtooth style =====
+    [2780, 4000],   // 74 entry
+    [2730, 3850],   // 75
+    // Switchback 1 — tight right hairpin
+    [2650, 3720],   // 76
+    [2500, 3650],   // 77
+    [2350, 3680],   // 78 apex right
+    [2300, 3560],   // 79 reverse
+    [2450, 3460],   // 80
+    [2600, 3380],   // 81
+    // Hairpin left (180°, very tight)
+    [2700, 3250],   // 82
+    [2720, 3100],   // 83
+    [2650, 2980],   // 84 apex
+    [2500, 2940],   // 85
+    [2380, 3000],   // 86 exit
+    // Switchback 2 — zigzag descent
+    [2300, 2860],   // 87
+    [2420, 2740],   // 88
+    [2560, 2680],   // 89
+    [2480, 2540],   // 90 switch
+    [2320, 2480],   // 91
+    // Hairpin right (180°)
+    [2220, 2340],   // 92
+    [2250, 2180],   // 93
+    [2380, 2080],   // 94 apex
+    [2520, 2120],   // 95
+    // Exit to summit
+    [2620, 1980],   // 96
     // CP4
-    [2850, 1480],   // 97 << CP4: Summit
+    [2700, 1800],   // 97 << CP4: Summit
 
     // ===== ZONE 5: SPRINT (98-121) — Fast paved, flowing curves =====
     [2950, 1340],   // 98
@@ -216,7 +216,7 @@ export const TRACK_CONFIG = {
       name: 'sprint', fromWP: 97, toWP: 121,
       bgTile: 'bg_sprint',
       roadType: 'paved',
-      roadColor: 0x3a3a42, roadBorder: 0x5a5a62,
+      roadColor: 0x484850, roadBorder: 0x606068,
       trackWidth: 120,
       scenery: ['bush_green', 'bush_dry'],
       sceneryDensity: 2,

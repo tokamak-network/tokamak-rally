@@ -160,26 +160,45 @@ export class RaceScene extends Phaser.Scene {
       for (let i=s+1;i<e;i++) g.lineTo(wp[i][0],wp[i][1]);
       g.strokePath();
 
-      // Red-white curb markings on road edges (alternating dashes)
-      const CURB_DASH = 10, CURB_W = 4;
-      for (const side of [-1, 1]) {
-        let curbDist = 0;
-        for (let i = s; i < e - 1; i++) {
-          const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1];
-          const segLen = Math.sqrt(dx*dx+dy*dy);
-          if (segLen < 1) continue;
-          const ux = dx/segLen, uy = dy/segLen;
-          const nx = -uy*side*(w/2+2), ny = ux*side*(w/2+2);
-          let pos = 0;
-          while (pos < segLen) {
-            const step = Math.min(CURB_DASH, segLen - pos);
-            const isRed = (Math.floor(curbDist / CURB_DASH) % 2 === 0);
-            g.lineStyle(CURB_W, isRed ? 0xcc3333 : 0xeeeeee, 0.7);
-            const x1 = wp[i][0]+ux*pos+nx, y1 = wp[i][1]+uy*pos+ny;
-            const x2 = wp[i][0]+ux*(pos+step)+nx, y2 = wp[i][1]+uy*(pos+step)+ny;
-            g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.strokePath();
-            pos += step;
-            curbDist += step;
+      // Road edge markings — zone-specific style
+      if (zone.roadType === 'paved') {
+        // Sprint: solid white edge lines (paved road style)
+        for (const side of [-1, 1]) {
+          g.lineStyle(3, 0xdddddd, 0.6);
+          g.beginPath();
+          const nx0 = -(wp[s+1>e-1?s:s+1][1]-wp[s][1]), ny0 = (wp[s+1>e-1?s:s+1][0]-wp[s][0]);
+          const len0 = Math.sqrt(nx0*nx0+ny0*ny0)||1;
+          g.moveTo(wp[s][0]+(-ny0/len0)*0*side*(w/2+1)+nx0/len0*0, wp[s][1]);
+          for (let i = s; i < e - 1; i++) {
+            const dx=wp[i+1][0]-wp[i][0], dy=wp[i+1][1]-wp[i][1];
+            const segLen=Math.sqrt(dx*dx+dy*dy); if(segLen<1) continue;
+            const nx=-dy/segLen*side*(w/2+1), ny=dx/segLen*side*(w/2+1);
+            g.lineTo(wp[i+1][0]+nx, wp[i+1][1]+ny);
+          }
+          g.strokePath();
+        }
+      } else {
+        // Non-paved: red-white curb dashes
+        const CURB_DASH = 10, CURB_W = 4;
+        for (const side of [-1, 1]) {
+          let curbDist = 0;
+          for (let i = s; i < e - 1; i++) {
+            const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1];
+            const segLen = Math.sqrt(dx*dx+dy*dy);
+            if (segLen < 1) continue;
+            const ux = dx/segLen, uy = dy/segLen;
+            const nx = -uy*side*(w/2+2), ny = ux*side*(w/2+2);
+            let pos = 0;
+            while (pos < segLen) {
+              const step = Math.min(CURB_DASH, segLen - pos);
+              const isRed = (Math.floor(curbDist / CURB_DASH) % 2 === 0);
+              g.lineStyle(CURB_W, isRed ? 0xcc3333 : 0xeeeeee, 0.7);
+              const x1 = wp[i][0]+ux*pos+nx, y1 = wp[i][1]+uy*pos+ny;
+              const x2 = wp[i][0]+ux*(pos+step)+nx, y2 = wp[i][1]+uy*(pos+step)+ny;
+              g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.strokePath();
+              pos += step;
+              curbDist += step;
+            }
           }
         }
       }

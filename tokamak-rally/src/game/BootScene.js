@@ -225,35 +225,43 @@ export class BootScene extends Phaser.Scene {
     g.fillRect(95,65,7,1); g.fillRect(15,110,9,1);
     g.generateTexture('bg_mountain', S, S); g.destroy();
 
-    // ====== SPRINT — green grass with road-side feel ======
+    // ====== SPRINT — dry scrubland with sparse green patches (aerial view) ======
     g = this.add.graphics();
-    // Base: lush green grass
+    // Base: brown-tan dry earth
     for (let y = 0; y < S; y++) {
       const t = y / S;
-      const r = Math.floor(0x3a + Math.sin(y*0.2)*8);
-      const gv = Math.floor(0x7a + (0x6a-0x7a)*t + Math.sin(y*0.15)*10);
-      const b = Math.floor(0x2a + Math.sin(y*0.18)*5);
-      g.fillStyle((Math.max(0,r)<<16)|(Math.max(0,gv)<<8)|Math.max(0,b));
+      const r = Math.floor(0x8a + (0x7a-0x8a)*t + Math.sin(y*0.15)*6);
+      const gv = Math.floor(0x78 + (0x68-0x78)*t + Math.sin(y*0.12)*5);
+      const b = Math.floor(0x50 + (0x42-0x50)*t + Math.sin(y*0.1)*4);
+      g.fillStyle((Math.max(0,Math.min(255,r))<<16)|(Math.max(0,Math.min(255,gv))<<8)|Math.max(0,Math.min(255,b)));
       g.fillRect(0, y, S, 1);
     }
-    // Grass blade texture
-    for (let i = 0; i < 120; i++) {
-      const px = (i*31+11)%S, py = (i*47+13)%S;
-      const shade = [0x4a8a3a, 0x3a7a2a, 0x5a9a4a, 0x2a6a1a][i%4];
-      g.fillStyle(shade, 0.4);
-      g.fillRect(px, py, 1, 2+(i%3));
+    // Sparse green scrub patches
+    g.fillStyle(0x5a7a3a, 0.2);
+    g.fillRect(8,5,12,10); g.fillRect(50,30,15,12); g.fillRect(95,70,14,10);
+    g.fillRect(30,80,10,8); g.fillRect(75,15,11,9); g.fillRect(110,100,12,10);
+    g.fillStyle(0x6a8a4a, 0.15);
+    g.fillRect(10,7,8,6); g.fillRect(52,32,10,8); g.fillRect(97,72,9,7);
+    // Dry grass tufts
+    for (let i = 0; i < 60; i++) {
+      const px = (i*37+11)%S, py = (i*53+17)%S;
+      const shade = [0x7a8a50, 0x6a7a40, 0x8a9a5a, 0x5a6a30][i%4];
+      g.fillStyle(shade, 0.3);
+      g.fillRect(px, py, 1, 2+(i%2));
     }
-    // Light patches (sunlight through trees)
-    g.fillStyle(0x6aaa5a, 0.15);
-    g.fillRect(15,10,20,15); g.fillRect(60,50,25,18); g.fillRect(90,20,20,12);
-    // Shadow patches
-    g.fillStyle(0x1a4a10, 0.1);
-    g.fillRect(40,30,15,12); g.fillRect(5,70,18,15); g.fillRect(80,90,15,12);
-    // Tiny flowers
-    g.fillStyle(0xf0e060, 0.3);
-    g.fillRect(22,25,2,2); g.fillRect(70,68,2,2); g.fillRect(100,35,2,2);
-    g.fillStyle(0xf0f0f0, 0.25);
-    g.fillRect(45,80,2,2); g.fillRect(15,55,2,2); g.fillRect(85,105,2,2);
+    // Bare earth patches
+    g.fillStyle(0x9a8060, 0.12);
+    g.fillRect(35,20,18,14); g.fillRect(65,55,20,16); g.fillRect(10,95,16,12);
+    // Small rocks
+    g.fillStyle(0x7a7a6a, 0.25);
+    for (let i = 0; i < 10; i++) {
+      const px = (i*41+23)%S, py = (i*59+31)%S;
+      g.fillRect(px, py, 2+(i%2), 2);
+    }
+    // Tree shadows (long diagonal)
+    g.fillStyle(0x3a4a2a, 0.1);
+    g.fillRect(20,10,3,20); g.fillRect(60,40,3,18); g.fillRect(100,25,3,22);
+    g.fillRect(40,75,3,16); g.fillRect(85,90,3,14);
     g.generateTexture('bg_sprint', S, S); g.destroy();
   }
 
