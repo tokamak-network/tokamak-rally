@@ -3,6 +3,7 @@ import { BootScene } from './game/BootScene.js';
 import { RaceScene } from './game/RaceScene.js';
 import { UIScene } from './game/UIScene.js';
 import { MenuScene } from './game/MenuScene.js';
+import { LeaderboardScene } from './game/LeaderboardScene.js';
 
 const config = {
   type: Phaser.AUTO,
@@ -16,7 +17,7 @@ const config = {
       debug: false,
     }
   },
-  scene: [BootScene, MenuScene, RaceScene, UIScene],
+  scene: [BootScene, MenuScene, RaceScene, UIScene, LeaderboardScene],
   pixelArt: true,
   scale: {
     mode: Phaser.Scale.FIT,

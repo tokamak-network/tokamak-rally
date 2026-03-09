@@ -1,6 +1,7 @@
 import Phaser from 'phaser';
 import { TRACK_CONFIG, isOnTrack, getTrackProgress, getZoneByIndex, checkCheckpoint, checkFinish } from './Track.js';
 import { CARS } from './Cars.js';
+import { wallet } from '../web3/wallet.js';
 
 export class RaceScene extends Phaser.Scene {
   constructor() { super('Race'); }
@@ -519,6 +520,35 @@ export class RaceScene extends Phaser.Scene {
     this.add.text(400,290,`Time Left: ${this.fmt(rs.timeRemaining)}`,{fontSize:'18px',fontFamily:'monospace',color:'#2d6a4f'}).setOrigin(0.5).setScrollFactor(0).setDepth(100);
     let sp=''; rs.checkpointTimes.forEach((t,i)=>{sp+=`CP${i+1}: ${this.fmt(t)}  `;});
     this.add.text(400,330,sp,{fontSize:'13px',fontFamily:'monospace',color:'#a89070'}).setOrigin(0.5).setScrollFactor(0).setDepth(100);
+
+    // Leaderboard submit button
+    if (wallet.connected) {
+      if (!wallet.isContractReady()) {
+        this.add.text(400, 370, 'Leaderboard coming soon', {
+          fontSize: '13px', fontFamily: 'monospace', color: '#5a4a3a',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(100);
+      } else {
+        const submitText = this.add.text(400, 370, '[ S: Submit to Leaderboard ]', {
+          fontSize: '15px', fontFamily: 'monospace', color: '#2d6a4f',
+        }).setOrigin(0.5).setScrollFactor(0).setDepth(100).setInteractive({ useHandCursor: true });
+
+        const doSubmit = async () => {
+          submitText.setText('Submitting...').setColor('#f4d35e').removeInteractive();
+          try {
+            const txHash = await wallet.submitRecord(Math.floor(rs.elapsedTime), this.selectedCarId);
+            const shortTx = `${txHash.slice(0, 10)}...${txHash.slice(-6)}`;
+            submitText.setText(`✓ Record submitted! Tx: ${shortTx}`).setColor('#2d6a4f');
+          } catch (e) {
+            submitText.setText('✗ Failed — press S to retry').setColor('#e63946');
+            this.input.keyboard.once('keydown-S', doSubmit);
+          }
+        };
+
+        submitText.on('pointerdown', doSubmit);
+        this.input.keyboard.once('keydown-S', doSubmit);
+      }
+    }
+
     this.addRestart();
   }
 

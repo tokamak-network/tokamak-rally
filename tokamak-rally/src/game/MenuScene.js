@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { CARS } from './Cars.js';
+import { wallet } from '../web3/wallet.js';
 
 export class MenuScene extends Phaser.Scene {
   constructor() { super('Menu'); }
@@ -126,13 +127,46 @@ export class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
     this.tweens.add({targets:startText,alpha:0.2,duration:700,yoyo:true,repeat:-1});
 
-    this.add.text(780,588,'v0.6.0',{fontSize:'10px',fontFamily:'monospace',color:'#3a2510'}).setOrigin(1,1);
+    this.add.text(780,588,'v0.7.0',{fontSize:'10px',fontFamily:'monospace',color:'#3a2510'}).setOrigin(1,1);
+
+    // === WALLET CONNECT (top-right) ===
+    this.walletText = this.add.text(770, 16, '[ Connect Wallet ]', {
+      fontSize: '12px', fontFamily: 'monospace', color: '#f4d35e',
+    }).setOrigin(1, 0).setInteractive({ useHandCursor: true });
+
+    this.walletStatus = this.add.graphics();
+
+    if (wallet.connected) {
+      this.updateWalletDisplay();
+    }
+
+    this.walletText.on('pointerdown', () => {
+      if (wallet.connected) return;
+      this.walletText.setText('Connecting...');
+      wallet.connect().then(() => {
+        this.updateWalletDisplay();
+      }).catch((err) => {
+        const msg = err.message.includes('MetaMask') ? 'MetaMask not found' : 'Connection failed';
+        this.walletText.setText(msg).setColor('#e63946');
+        this.time.delayedCall(2000, () => {
+          this.walletText.setText('[ Connect Wallet ]').setColor('#f4d35e');
+        });
+      });
+    });
+
+    // === LEADERBOARD HINT ===
+    this.add.text(cx, 556, 'L: Leaderboard', {
+      fontSize: '11px', fontFamily: 'monospace', color: '#5a4a3a',
+    }).setOrigin(0.5);
 
     // Input
     this.input.keyboard.on('keydown-LEFT', () => this.changeCar(-1));
     this.input.keyboard.on('keydown-RIGHT', () => this.changeCar(1));
     this.input.keyboard.once('keydown-ENTER', () => this.startRace());
     this.input.keyboard.once('keydown-SPACE', () => this.startRace());
+    this.input.keyboard.on('keydown-L', () => {
+      this.scene.start('Leaderboard');
+    });
 
     this.updateCarDisplay();
   }
@@ -168,6 +202,14 @@ export class MenuScene extends Phaser.Scene {
       this.statBars[i].fillRect(barX, y - barH/2, val / 10 * barW, barH);
       this.statTexts[i].setText(val + '/10');
     }
+  }
+
+  updateWalletDisplay() {
+    this.walletText.setText(wallet.getShortAddress()).setColor('#2d6a4f');
+    this.walletStatus.clear();
+    this.walletStatus.fillStyle(0x2d6a4f);
+    const bounds = this.walletText.getBounds();
+    this.walletStatus.fillCircle(bounds.x - 10, bounds.y + 7, 4);
   }
 
   startRace() {
