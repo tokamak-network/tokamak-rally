@@ -5,7 +5,7 @@
 export const CARS = [
   {
     id: 'alpine_white',
-    name: 'ALPINE GT',
+    name: 'TOKAMAK GT',
     team: 'Team Tokamak',
     desc: 'Balanced all-rounder. No weakness, no dominance.',
     color: '#f1faee',
@@ -118,9 +118,9 @@ export const CARS = [
 // Pixel art definitions for each car (20x28 grid, 2x scale = 40x56)
 export const CAR_PIXELS = {
   alpine_white: (() => {
-    const _=0, W=0xf1faee, Ws=0xd8e8dd, Wd=0xc0d0c5, Wk=0xa8b8ad, R=0xe63946, Rd=0xcc2a38, Rl=0xff5060,
+    const _=0, W=0xf1faee, Ws=0xd8e8dd, Wd=0xc0d0c5, Wk=0xa8b8ad, R=0x2A72E5, Rd=0x1D5BC0, Rl=0x4A8FFF,
           B=0x1d3557, Bl=0x2a4a6e, Y=0xf4d35e, Yb=0xffe080, D=0x2b2d42, Dd=0x1a1c30,
-          G=0x6c757d, Gl=0x8a949c, Gd=0x555565, L=0xa8dadc, Ll=0xc0eef0, O=0xff6b35, Od=0xdd5522,
+          G=0x6c757d, Gl=0x8a949c, Gd=0x555565, L=0xa8dadc, Ll=0xc0eef0, O=0x2A72E5, Od=0x1D5BC0,
           M=0x4a4e5e, Sh=0x1a1a2a, T=0x222230, Tl=0x333340;
     return [
       [_,_,_,_,_,_,_,Y,Yb,Yb,Yb,Yb,Y,_,_,_,_,_,_,_],
