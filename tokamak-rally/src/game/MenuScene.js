@@ -112,7 +112,7 @@ export class MenuScene extends Phaser.Scene {
       fontSize:'11px',fontFamily:'monospace',color:'#8b7355',
     }).setOrigin(0.5);
 
-    this.add.text(cx,510,'⚠ Obstacles = speed penalty  |  CPs extend time  |  40s initial',{
+    this.add.text(cx,510,'⚠ Obstacles = speed penalty  |  CPs extend time  |  20s initial',{
       fontSize:'10px',fontFamily:'monospace',color:'#d4a76a',
     }).setOrigin(0.5);
 
