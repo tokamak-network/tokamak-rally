@@ -545,6 +545,19 @@ export class SoundEngine {
     this.driftGain.gain.setTargetAtTime(0, t, 0.05);
     this.brakeGain.gain.setTargetAtTime(0, t, 0.05);
   }
+
+  destroy() {
+    this.stopBGM();
+    if (this.ctx) {
+      try { this.ctx.close(); } catch (e) {}
+    }
+    this.ctx = null;
+    this.started = false;
+    this.masterGain = null;
+    this.sfxGain = null;
+    this.bgmGain = null;
+    this.bgmPlaying = false;
+  }
 }
 
 export const soundEngine = new SoundEngine();
