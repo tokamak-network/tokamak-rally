@@ -13,7 +13,7 @@ export class UIScene extends Phaser.Scene {
       fontSize: '9px', fontFamily: 'monospace', color: '#a89070', letterSpacing: 2,
     }).setOrigin(0.5, 0).setDepth(201);
 
-    this.timeText = this.add.text(400, 28, '0:30.000', {
+    this.timeText = this.add.text(400, 28, '0:20.000', {
       fontSize: '28px', fontFamily: 'monospace', color: '#f4d35e', fontStyle: 'bold',
     }).setOrigin(0.5, 0).setDepth(201);
 
