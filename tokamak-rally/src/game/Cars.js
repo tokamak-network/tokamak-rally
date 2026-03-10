@@ -76,19 +76,19 @@ export const CARS = [
     desc: 'Tank-like durability. Obstacles barely slow it down.',
     color: '#e63946',
     stats: {
-      topSpeed: 4,
-      cornering: 5,
+      topSpeed: 5,
+      cornering: 4,
       acceleration: 5,
       braking: 6,
       recovery: 10,
     },
     physics: {
       accelMul: 0.95,
-      turnMul: 0.95,
+      turnMul: 0.82,
       brakeMul: 1.05,
       obstaclePenaltyMul: 0.5,
       offroadMul: 1.3,
-      roadMaxSpeed: { paved: 396, dirt: 336, sand: 285, rocky: 255, offroad: 252 },
+      roadMaxSpeed: { paved: 447, dirt: 380, sand: 322, rocky: 288, offroad: 285 },
     },
   },
   {
