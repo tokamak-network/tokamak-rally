@@ -164,10 +164,10 @@ export const TRACK_CONFIG = {
   ],
 
   checkpoints: [
-    { waypointIndex: 25, timeBonus: 24000, name: 'CP1: Dune Ridge' },
-    { waypointIndex: 49, timeBonus: 22000, name: 'CP2: Canyon Exit' },
-    { waypointIndex: 72, timeBonus: 24000, name: 'CP3: Oasis' },
-    { waypointIndex: 96, timeBonus: 18000, name: 'CP4: Summit' },
+    { waypointIndex: 25, timeBonus: 15000, name: 'CP1: Dune Ridge' },
+    { waypointIndex: 49, timeBonus: 15000, name: 'CP2: Canyon Exit' },
+    { waypointIndex: 72, timeBonus: 15000, name: 'CP3: Oasis' },
+    { waypointIndex: 96, timeBonus: 15000, name: 'CP4: Summit' },
   ],
 
   zones: [
@@ -219,7 +219,7 @@ export const TRACK_CONFIG = {
   ],
 
   startX: 500, startY: 14150, startAngle: -90,
-  initialTime: 38000,
+  initialTime: 20000,
 
   roadPhysics: {
     paved:   { accel: 243, friction: 0.990, turn: 110, label: 'PAVED' },
