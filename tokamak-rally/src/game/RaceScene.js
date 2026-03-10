@@ -32,8 +32,9 @@ export class RaceScene extends Phaser.Scene {
       speed: { min: 20, max: 70 },
       scale: { start: 1.5, end: 0.3 },
       alpha: { start: 0.7, end: 0 },
-      lifespan: 700, frequency: 25, emitting: false,
-    });
+      lifespan: 700, frequency: -1, emitting: false,
+    }).setDepth(9);
+    this._dustTimer = 0;
 
     // Drift smoke emitter
     this.driftSmoke = this.add.particles(0, 0, 'smoke_particle', {
@@ -692,30 +693,26 @@ export class RaceScene extends Phaser.Scene {
       try { this.dustEmitter.setTexture(dustTex); } catch(e) {}
     }
 
-    // Dust trail on unpaved roads (sand, dirt, rocky) — emits behind the car
+    // Dust trail on unpaved roads (sand, dirt, rocky, offroad) — emits behind the car
     const isUnpaved = this._currentRoadType && this._currentRoadType !== 'paved';
-    if(isUnpaved && Math.abs(this.carState.speed)>15){
-      this.dustEmitter.emitting=true;
-      // Position dust behind the car based on movement angle
-      const dustDist = 28; // pixels behind car center
-      const mRad = Phaser.Math.DegToRad(this.carState.moveAngle + 180);
-      const dustX = this.carState.x + Math.cos(mRad) * dustDist;
-      const dustY = this.carState.y + Math.sin(mRad) * dustDist;
-      this.dustEmitter.setPosition(dustX, dustY);
-      try {
-        const spd = Math.abs(this.carState.speed);
-        if(this.carState.drifting){
-          this.dustEmitter.frequency=8;
-          this.dustEmitter.quantity=3;
-        } else if(spd > 80) {
-          this.dustEmitter.frequency=12;
-          this.dustEmitter.quantity=2;
-        } else {
-          this.dustEmitter.frequency=30;
-          this.dustEmitter.quantity=1;
-        }
-      } catch(e){}
-    } else this.dustEmitter.emitting=false;
+    const carSpd = Math.abs(this.carState.speed);
+    this._dustTimer = (this._dustTimer || 0) + dt;
+    if (isUnpaved && carSpd > 15) {
+      // Determine emit interval & count based on speed/drift
+      let dustInterval, dustCount;
+      if (this.carState.drifting) { dustInterval = 0.04; dustCount = 3; }
+      else if (carSpd > 80) { dustInterval = 0.06; dustCount = 2; }
+      else { dustInterval = 0.12; dustCount = 1; }
+
+      if (this._dustTimer >= dustInterval) {
+        this._dustTimer = 0;
+        const dustDist = 28;
+        const mRad = Phaser.Math.DegToRad(this.carState.moveAngle + 180);
+        const dustX = this.carState.x + Math.cos(mRad) * dustDist;
+        const dustY = this.carState.y + Math.sin(mRad) * dustDist;
+        this.dustEmitter.emitParticleAt(dustX, dustY, dustCount);
+      }
+    }
 
     // Drift smoke
     if (this.carState.drifting && Math.abs(this.carState.speed) > 40) {
