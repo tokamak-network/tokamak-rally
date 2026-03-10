@@ -692,14 +692,27 @@ export class RaceScene extends Phaser.Scene {
       try { this.dustEmitter.setTexture(dustTex); } catch(e) {}
     }
 
-    if(Math.abs(this.carState.speed)>25){
+    // Dust trail on unpaved roads (sand, dirt, rocky) — emits behind the car
+    const isUnpaved = this._currentRoadType && this._currentRoadType !== 'paved';
+    if(isUnpaved && Math.abs(this.carState.speed)>15){
       this.dustEmitter.emitting=true;
-      this.dustEmitter.setPosition(this.carState.x,this.carState.y);
+      // Position dust behind the car based on movement angle
+      const dustDist = 28; // pixels behind car center
+      const mRad = Phaser.Math.DegToRad(this.carState.moveAngle + 180);
+      const dustX = this.carState.x + Math.cos(mRad) * dustDist;
+      const dustY = this.carState.y + Math.sin(mRad) * dustDist;
+      this.dustEmitter.setPosition(dustX, dustY);
       try {
+        const spd = Math.abs(this.carState.speed);
         if(this.carState.drifting){
-          this.dustEmitter.frequency=15;
+          this.dustEmitter.frequency=8;
+          this.dustEmitter.quantity=3;
+        } else if(spd > 80) {
+          this.dustEmitter.frequency=12;
+          this.dustEmitter.quantity=2;
         } else {
-          this.dustEmitter.frequency=40;
+          this.dustEmitter.frequency=30;
+          this.dustEmitter.quantity=1;
         }
       } catch(e){}
     } else this.dustEmitter.emitting=false;
