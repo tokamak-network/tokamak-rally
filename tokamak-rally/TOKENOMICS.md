@@ -28,7 +28,11 @@
 | 항목 | 비율 | 설명 |
 |------|------|------|
 | 우승자 배분 | 90% | 1위 50%, 2위 30%, 3위 10% |
-| 운영자 | 10% | 인프라 + 운영 비용 |
+| 주최자 | 10% | 인프라 + 운영 비용 |
+
+**주최자 조건:**
+- 토너먼트 생성 시 **최소 TON 예치 필요** (무자본 주최 후 참가비 10% 수취 방지)
+- 예치금은 상금 풀에 추가되거나 보증금으로 동작 (세부 규칙 TBD)
 
 ## Tokamon에서 차용한 패턴
 
@@ -47,15 +51,9 @@
 → Tokamon의 `admin` / `claimManager` 분리 패턴과 동일
 
 ### 3. 쿨다운 메커니즘
-- 같은 토너먼트 연속 참가 제한 (기본 1시간)
-- 어뷰징 방지: 동일 지갑 멀티 엔트리 차단
+- 10회 연속 참가 가능 → 이후 1시간 쿨다운
+- 적당한 자유도 + 무한 반복(봇/어뷰징) 차단
 - Tokamon의 `cooldown` + `claimLastTime` 패턴 차용
-
-### 4. 스탬프 보너스 (Retention)
-- N회 레이스 완주 시 추가 TON 보너스
-- 예: 10레이스 완주 → 보너스 0.5 TON
-- Tokamon의 `stampGoal` + `stampBonus` 개념 차용
-- 재방문/재플레이 유도 장치
 
 ## 컨트랙트 아키텍처 (계획)
 
@@ -64,14 +62,14 @@ RallyLeaderboard (현재, Sepolia)
   └── submitRecord() / getRecord() / setNickname()
 
 RallyTournament (향후, Titan L2)
-  ├── createTournament(entryFee, maxPlayers, duration)
+  ├── createTournament(entryFee, maxPlayers, duration) payable — 최소 예치 필요
   ├── enterTournament(tournamentId) payable
   ├── submitResult(tournamentId, time, carId, replayHash) — onlyResultSubmitter
   ├── finalizeTournament(tournamentId) — onlyPayoutManager
   │     ├── 90% → winners
-  │     └── 10% → operator
-  ├── stampCount(address) / stampBonus()
-  └── cooldownRemaining(address, tournamentId)
+  │     └── 10% → host
+  ├── cooldownRemaining(address) — 10회 참가 후 1시간
+  └── minDeposit() — 주최자 최소 예치량
 ```
 
 ## 마이그레이션 경로
