@@ -1,192 +1,259 @@
 /**
- * Track v1.0 — "Straight is default, corners are variation"
- * Inspired by Thrash Rally (Neo Geo). Primary direction: NORTH (↑12 o'clock).
- * Every corner exits back to straight. Min 50% straight per zone.
- * ~120 waypoints. Desert→Canyon→Riverbed→Mountain→Sprint.
+ * Track v2.0 — "Straight is default, corners are variation"
+ * Thrash Rally inspired. Primary direction: NORTH (↑12 o'clock).
+ * Each zone has 2-3 variation sections (S-curves, hairpins).
+ * All variations exit back to 12 o'clock straight.
+ * Hairpins are smooth U-arcs, never sharp V-turns.
  */
 
 export const TRACK_CONFIG = {
   name: 'Stage 1: Sahara Crossing',
 
   waypoints: [
-    // ===== ZONE 1: DESERT (0-24) — Wide open, mostly straight north =====
-    // Long straight → gentle right sweep → straight → gentle left sweep → straight
-    [2000, 14200],  // 0  START — straight north
+    // ===== ZONE 1: DESERT (0-34) — Wide open, S-curves + gentle hairpins =====
+    // --- Straight north from start ---
+    [2000, 14200],  // 0  START
     [2000, 13950],  // 1
     [2000, 13700],  // 2
     [2000, 13450],  // 3
-    [2000, 13200],  // 4
-    [2000, 12950],  // 5  long straight done
-    // Gentle right sweep (diagonal NE)
-    [2060, 12750],  // 6
-    [2140, 12560],  // 7
-    [2200, 12380],  // 8  apex
-    // Return to straight north
-    [2220, 12150],  // 9
-    [2220, 11900],  // 10
-    [2220, 11650],  // 11
-    [2220, 11400],  // 12
-    // Gentle left sweep (diagonal NW)
-    [2160, 11200],  // 13
-    [2080, 11020],  // 14
-    [2020, 10840],  // 15 apex
-    // Return to straight north
-    [2000, 10600],  // 16
-    [2000, 10350],  // 17
-    [2000, 10100],  // 18
-    [2000, 9850],   // 19
-    [2000, 9600],   // 20
-    [2000, 9350],   // 21
-    [2000, 9100],   // 22
-    // CP1
-    [2000, 8850],   // 23 << CP1: Dune Ridge
 
-    // ===== TRANSITION: DESERT→CANYON (24-27) =====
-    [2000, 8600],   // 24
-    [2000, 8400],   // 25
-    [2000, 8200],   // 26
-    [2000, 8000],   // 27
+    // --- S-curve 1: right diagonal → left diagonal ---
+    [2050, 13250],  // 4  enter right
+    [2110, 13070],  // 5
+    [2150, 12890],  // 6  right apex
+    [2110, 12710],  // 7  transition
+    [2050, 12540],  // 8
+    [2000, 12370],  // 9  center
+    [1950, 12200],  // 10 enter left
+    [1890, 12030],  // 11
+    [1850, 11860],  // 12 left apex
+    [1890, 11690],  // 13
+    [1950, 11520],  // 14
+    [2000, 11350],  // 15 back to center — straight
 
-    // ===== ZONE 2: CANYON (28-48) — Narrow gorge, straight with one hairpin =====
-    // Long straight between cliff walls (like Thrash Rally canyon screenshot)
-    [2000, 7800],   // 28
-    [2000, 7550],   // 29
-    [2000, 7300],   // 30
-    [2000, 7050],   // 31
-    [2000, 6800],   // 32
-    [2000, 6550],   // 33
-    // Right sweep through narrow pass
-    [2080, 6350],   // 34
-    [2180, 6180],   // 35
-    [2250, 6000],   // 36 apex
-    // Straight north
-    [2250, 5750],   // 37
-    [2250, 5500],   // 38
-    [2250, 5250],   // 39
-    // Left sweep back to center
-    [2180, 5060],   // 40
-    [2080, 4880],   // 41
-    [2000, 4700],   // 42 apex
-    // Straight north exit
-    [2000, 4450],   // 43
-    [2000, 4200],   // 44
-    [2000, 3950],   // 45
-    // CP2
-    [2000, 3700],   // 46 << CP2: Canyon Exit
+    // --- Straight recovery ---
+    [2000, 11100],  // 16
+    [2000, 10850],  // 17
 
-    // ===== TRANSITION: CANYON→RIVERBED (47-50) =====
-    [2000, 3500],   // 47
-    [2000, 3300],   // 48
-    [2000, 3100],   // 49
-    [2000, 2900],   // 50
+    // --- S-curve 2: left then right ---
+    [1950, 10650],  // 18
+    [1890, 10470],  // 19
+    [1850, 10300],  // 20 left apex
+    [1890, 10130],  // 21
+    [1950, 9970],   // 22
+    [2000, 9810],   // 23 center
+    [2050, 9650],   // 24
+    [2110, 9480],   // 25
+    [2150, 9310],   // 26 right apex
+    [2110, 9140],   // 27
+    [2050, 8980],   // 28
+    [2000, 8820],   // 29 back to center
 
-    // ===== ZONE 3: RIVERBED (51-71) — Bamboo/tree-lined, gentle S-curves =====
-    // Straight north
-    [2000, 2700],   // 51
-    [2000, 2450],   // 52
-    [2000, 2200],   // 53
-    [2000, 1950],   // 54
-    // Gentle S-curve: right then left
-    [2060, 1750],   // 55
-    [2130, 1570],   // 56
-    [2160, 1400],   // 57 right apex
-    [2130, 1230],   // 58
-    [2060, 1060],   // 59
-    [2000, 900],    // 60 center
-    [1940, 730],    // 61
-    [1870, 560],    // 62
-    [1840, 390],    // 63 left apex
-    [1870, 220],    // 64
-    [1940, 60],     // 65
-    // Straight north
-    [2000, -120],   // 66
-    [2000, -370],   // 67
-    [2000, -620],   // 68
-    [2000, -870],   // 69
-    // CP3
-    [2000, -1100],  // 70 << CP3: Riverbed Crossing
+    // --- Straight to CP1 ---
+    [2000, 8570],   // 30
+    [2000, 8320],   // 31
+    [2000, 8070],   // 32
+    [2000, 7820],   // 33 << CP1: Dune Ridge
+    [2000, 7570],   // 34
 
-    // ===== TRANSITION: RIVERBED→MOUNTAIN (71-74) =====
-    [2000, -1300],  // 71
-    [2000, -1500],  // 72
-    [2000, -1700],  // 73
-    [2000, -1900],  // 74
+    // ===== TRANSITION: DESERT→CANYON (35-38) =====
+    [2000, 7370],   // 35
+    [2000, 7170],   // 36
+    [2000, 6970],   // 37
+    [2000, 6770],   // 38
 
-    // ===== ZONE 4: MOUNTAIN (75-96) — Switchbacks but wider arcs =====
-    // Straight climb
-    [2000, -2100],  // 75
-    [2000, -2350],  // 76
-    [2000, -2600],  // 77
-    // Wide U-turn right (hairpin, smooth arc)
-    [2080, -2800],  // 78
-    [2200, -2950],  // 79
-    [2350, -3030],  // 80 apex east
-    [2200, -3110],  // 81
-    [2080, -3260],  // 82
-    // Straight north
-    [2000, -3450],  // 83
-    [2000, -3700],  // 84
-    [2000, -3950],  // 85
-    // Wide U-turn left (hairpin, smooth arc)
-    [1920, -4150],  // 86
-    [1800, -4300],  // 87
-    [1650, -4380],  // 88 apex west
-    [1800, -4460],  // 89
-    [1920, -4610],  // 90
-    // Straight north to summit
-    [2000, -4800],  // 91
-    [2000, -5050],  // 92
-    [2000, -5300],  // 93
-    // CP4
-    [2000, -5550],  // 94 << CP4: Summit
+    // ===== ZONE 2: CANYON (39-56) — Narrow gorge, tight S-curves =====
+    // --- Straight into gorge ---
+    [2000, 6570],   // 39
+    [2000, 6320],   // 40
+    [2000, 6070],   // 41
 
-    // ===== TRANSITION: MOUNTAIN→SPRINT (95-98) =====
-    [2000, -5750],  // 95
-    [2000, -5950],  // 96
-    [2000, -6150],  // 97
-    [2000, -6350],  // 98
+    // --- S-curve through canyon ---
+    [2040, 5890],   // 42
+    [2090, 5720],   // 43
+    [2120, 5560],   // 44 right apex
+    [2090, 5400],   // 45
+    [2040, 5240],   // 46
+    [2000, 5080],   // 47 center
+    [1960, 4920],   // 48
+    [1910, 4760],   // 49
+    [1880, 4600],   // 50 left apex
+    [1910, 4440],   // 51
+    [1960, 4280],   // 52
+    [2000, 4120],   // 53 back to center
 
-    // ===== ZONE 5: SPRINT (99-120) — City grid: straights + 90° corners =====
-    // Long straight north
-    [2000, -6550],  // 99
-    [2000, -6800],  // 100
-    [2000, -7050],  // 101
-    [2000, -7300],  // 102
-    [2000, -7550],  // 103
-    [2000, -7800],  // 104
-    // 90° right turn (smooth arc)
-    [2080, -7980],  // 105
-    [2220, -8100],  // 106
-    [2400, -8140],  // 107 apex
-    // Straight east
-    [2650, -8140],  // 108
-    [2900, -8140],  // 109
-    [3150, -8140],  // 110
-    // 90° left turn (smooth arc north)
-    [3330, -8060],  // 111
-    [3450, -7920],  // 112
-    [3490, -7740],  // 113 apex
-    // Straight north
-    [3490, -7490],  // 114
-    [3490, -7240],  // 115
-    [3490, -6990],  // 116
-    [3490, -6740],  // 117
-    [3490, -6490],  // 118
-    [3490, -6240],  // 119
-    // FINISH
-    [3490, -5990],  // 120
+    // --- Straight ---
+    [2000, 3870],   // 54
+    [2000, 3620],   // 55
+    [2000, 3370],   // 56 << CP2: Canyon Exit
+
+    // ===== TRANSITION: CANYON→RIVERBED (57-60) =====
+    [2000, 3170],   // 57
+    [2000, 2970],   // 58
+    [2000, 2770],   // 59
+    [2000, 2570],   // 60
+
+    // ===== ZONE 3: RIVERBED (61-83) — Tree-lined, flowing S-curves =====
+    // --- Straight ---
+    [2000, 2370],   // 61
+    [2000, 2120],   // 62
+
+    // --- S-curve 1 ---
+    [2060, 1930],   // 63
+    [2130, 1750],   // 64
+    [2170, 1580],   // 65 right apex
+    [2130, 1410],   // 66
+    [2060, 1250],   // 67
+    [2000, 1090],   // 68 center
+    [1940, 930],    // 69
+    [1870, 770],    // 70
+    [1830, 610],    // 71 left apex
+    [1870, 450],    // 72
+    [1940, 290],    // 73
+    [2000, 130],    // 74 back to center
+
+    // --- Short straight ---
+    [2000, -70],    // 75
+
+    // --- Hairpin right (smooth U-arc) ---
+    [2060, -230],   // 76 enter
+    [2150, -370],   // 77
+    [2250, -470],   // 78
+    [2310, -580],   // 79 apex east
+    [2250, -690],   // 80
+    [2150, -790],   // 81
+    [2060, -870],   // 82
+    [2000, -950],   // 83 exit — back to 12 o'clock
+
+    // --- Straight to CP3 ---
+    [2000, -1150],  // 84
+    [2000, -1350],  // 85 << CP3: Riverbed Crossing
+
+    // ===== TRANSITION: RIVERBED→MOUNTAIN (86-89) =====
+    [2000, -1550],  // 86
+    [2000, -1750],  // 87
+    [2000, -1950],  // 88
+    [2000, -2150],  // 89
+
+    // ===== ZONE 4: MOUNTAIN (90-114) — Switchbacks with smooth U-arcs =====
+    // --- Straight climb ---
+    [2000, -2350],  // 90
+    [2000, -2600],  // 91
+    [2000, -2850],  // 92
+
+    // --- S-curve 1 (gentle) ---
+    [2050, -3030],  // 93
+    [2100, -3200],  // 94
+    [2130, -3370],  // 95 right apex
+    [2100, -3540],  // 96
+    [2050, -3700],  // 97
+    [2000, -3860],  // 98 center
+    [1950, -4020],  // 99
+    [1900, -4180],  // 100
+    [1870, -4340],  // 101 left apex
+    [1900, -4500],  // 102
+    [1950, -4660],  // 103
+    [2000, -4820],  // 104 back to center
+
+    // --- Short straight ---
+    [2000, -5020],  // 105
+
+    // --- Hairpin left (smooth U-arc) ---
+    [1940, -5180],  // 106 enter
+    [1860, -5330],  // 107
+    [1770, -5440],  // 108
+    [1700, -5530],  // 109 apex west
+    [1770, -5640],  // 110
+    [1860, -5750],  // 111
+    [1940, -5850],  // 112
+    [2000, -5950],  // 113 exit — back to 12 o'clock
+
+    // --- Straight to CP4 ---
+    [2000, -6150],  // 114 << CP4: Summit
+
+    // ===== TRANSITION: MOUNTAIN→SPRINT (115-118) =====
+    [2000, -6350],  // 115
+    [2000, -6550],  // 116
+    [2000, -6750],  // 117
+    [2000, -6950],  // 118
+
+    // ===== ZONE 5: SPRINT (119-148) — City grid: straights + 90° turns + 180° finish =====
+    // --- Long straight north ---
+    [2000, -7150],  // 119
+    [2000, -7400],  // 120
+    [2000, -7650],  // 121
+    [2000, -7900],  // 122
+    [2000, -8150],  // 123
+
+    // --- 90° right turn (smooth arc) ---
+    [2060, -8320],  // 124
+    [2160, -8450],  // 125
+    [2300, -8520],  // 126
+    [2450, -8540],  // 127 apex E
+
+    // --- Straight east ---
+    [2700, -8540],  // 128
+    [2950, -8540],  // 129
+    [3200, -8540],  // 130
+
+    // --- 90° left turn (smooth arc north) ---
+    [3370, -8470],  // 131
+    [3490, -8350],  // 132
+    [3560, -8190],  // 133
+    [3580, -8030],  // 134 apex N
+
+    // --- Straight north ---
+    [3580, -7780],  // 135
+    [3580, -7530],  // 136
+    [3580, -7280],  // 137
+    [3580, -7030],  // 138
+
+    // --- 180° hairpin right (smooth U-arc, turning south→north for finish) ---
+    [3640, -6860],  // 139 enter
+    [3730, -6720],  // 140
+    [3830, -6620],  // 141
+    [3920, -6580],  // 142 apex east
+    [3830, -6540],  // 143
+    [3730, -6440],  // 144
+    [3640, -6300],  // 145
+    [3580, -6140],  // 146 exit — heading south
+
+    // --- Short south straight then another 180° to head north for finish ---
+    [3580, -5940],  // 147
+    [3580, -5740],  // 148
+
+    // --- 180° hairpin left (turn back north for finish) ---
+    [3520, -5580],  // 149
+    [3430, -5440],  // 150
+    [3330, -5340],  // 151
+    [3240, -5300],  // 152 apex west
+    [3330, -5260],  // 153
+    [3430, -5160],  // 154
+    [3520, -5020],  // 155
+    [3580, -4860],  // 156 exit — heading north
+
+    // --- Final straight north to FINISH ---
+    [3580, -4610],  // 157
+    [3580, -4360],  // 158
+
+    // --- FINISH LINE ---
+    [3580, -4110],  // 159 FINISH
+
+    // --- Road continues after finish (for visual continuity) ---
+    [3580, -3860],  // 160
+    [3580, -3610],  // 161
   ],
 
   checkpoints: [
-    { waypointIndex: 23, timeBonus: 15000, name: 'CP1: Dune Ridge' },
-    { waypointIndex: 46, timeBonus: 15000, name: 'CP2: Canyon Exit' },
-    { waypointIndex: 70, timeBonus: 15000, name: 'CP3: Riverbed Crossing' },
-    { waypointIndex: 94, timeBonus: 15000, name: 'CP4: Summit' },
+    { waypointIndex: 33, timeBonus: 15000, name: 'CP1: Dune Ridge' },
+    { waypointIndex: 56, timeBonus: 15000, name: 'CP2: Canyon Exit' },
+    { waypointIndex: 85, timeBonus: 15000, name: 'CP3: Riverbed Crossing' },
+    { waypointIndex: 114, timeBonus: 15000, name: 'CP4: Summit' },
   ],
 
   zones: [
     {
-      name: 'desert', fromWP: 0, toWP: 22,
+      name: 'desert', fromWP: 0, toWP: 34,
       bgTile: 'v3_bg_desert',
       roadType: 'sand',
       roadColor: 0xb89060, roadBorder: 0x9a7040,
@@ -196,7 +263,7 @@ export const TRACK_CONFIG = {
       barrierTile: 'v3_barrier_desert',
     },
     {
-      name: 'trans_desert_canyon', fromWP: 22, toWP: 28,
+      name: 'trans_desert_canyon', fromWP: 34, toWP: 39,
       bgTile: 'v3_bg_desert',
       roadType: 'dirt',
       roadColor: 0xa08050, roadBorder: 0x806030,
@@ -207,7 +274,7 @@ export const TRACK_CONFIG = {
       transition: { from: 'desert', to: 'canyon' },
     },
     {
-      name: 'canyon', fromWP: 28, toWP: 45,
+      name: 'canyon', fromWP: 39, toWP: 56,
       bgTile: 'v3_bg_canyon',
       roadType: 'dirt',
       roadColor: 0x8a7555, roadBorder: 0x6a5535,
@@ -217,7 +284,7 @@ export const TRACK_CONFIG = {
       barrierTile: 'v3_barrier_canyon',
     },
     {
-      name: 'trans_canyon_riverbed', fromWP: 45, toWP: 51,
+      name: 'trans_canyon_riverbed', fromWP: 56, toWP: 61,
       bgTile: 'v3_bg_canyon',
       roadType: 'dirt',
       roadColor: 0x827050, roadBorder: 0x625540,
@@ -228,7 +295,7 @@ export const TRACK_CONFIG = {
       transition: { from: 'canyon', to: 'riverbed' },
     },
     {
-      name: 'riverbed', fromWP: 51, toWP: 69,
+      name: 'riverbed', fromWP: 61, toWP: 85,
       bgTile: 'v3_bg_riverbed',
       roadType: 'dirt',
       roadColor: 0x7a6a50, roadBorder: 0x5a4a35,
@@ -238,7 +305,7 @@ export const TRACK_CONFIG = {
       barrierTile: 'v3_barrier_riverbed',
     },
     {
-      name: 'trans_riverbed_mountain', fromWP: 69, toWP: 75,
+      name: 'trans_riverbed_mountain', fromWP: 85, toWP: 90,
       bgTile: 'v3_bg_riverbed',
       roadType: 'rocky',
       roadColor: 0x6a5a40, roadBorder: 0x4a3a28,
@@ -249,7 +316,7 @@ export const TRACK_CONFIG = {
       transition: { from: 'riverbed', to: 'mountain' },
     },
     {
-      name: 'mountain', fromWP: 75, toWP: 93,
+      name: 'mountain', fromWP: 90, toWP: 114,
       bgTile: 'v3_bg_mountain',
       roadType: 'rocky',
       roadColor: 0x7a5538, roadBorder: 0x5a3a22,
@@ -259,7 +326,7 @@ export const TRACK_CONFIG = {
       barrierTile: 'v3_barrier_mountain',
     },
     {
-      name: 'trans_mountain_sprint', fromWP: 93, toWP: 99,
+      name: 'trans_mountain_sprint', fromWP: 114, toWP: 119,
       bgTile: 'v3_bg_mountain',
       roadType: 'paved',
       roadColor: 0x585860, roadBorder: 0x505058,
@@ -270,7 +337,7 @@ export const TRACK_CONFIG = {
       transition: { from: 'mountain', to: 'sprint' },
     },
     {
-      name: 'sprint', fromWP: 99, toWP: 120,
+      name: 'sprint', fromWP: 119, toWP: 161,
       bgTile: 'v3_bg_sprint',
       roadType: 'paved',
       roadColor: 0x484850, roadBorder: 0x606068,
@@ -283,6 +350,7 @@ export const TRACK_CONFIG = {
 
   startX: 2000, startY: 14150, startAngle: -90,
   initialTime: 120000,
+  finishWP: 159,
 
   roadPhysics: {
     paved:   { accel: 243, friction: 0.990, turn: 110, label: 'PAVED' },
@@ -338,8 +406,9 @@ export function checkCheckpoint(x, y, cp, waypoints) {
   return Math.sqrt((x-wp[0])**2 + (y-wp[1])**2) < 100;
 }
 
-export function checkFinish(x, y, waypoints) {
-  const f = waypoints[waypoints.length - 1];
+export function checkFinish(x, y, waypoints, config) {
+  const fIdx = config?.finishWP ?? (waypoints.length - 1);
+  const f = waypoints[fIdx];
   return Math.sqrt((x-f[0])**2 + (y-f[1])**2) < 100;
 }
 

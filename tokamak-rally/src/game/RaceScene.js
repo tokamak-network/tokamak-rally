@@ -622,7 +622,7 @@ export class RaceScene extends Phaser.Scene {
       'v4_desert_rock_sm': 0.088, 'v4_desert_rock_lg': 0.100,
       'v4_desert_bush': 0.064, 'v4_desert_tumbleweed': 0.060,
       'v4_desert_hut': 0.160, 'v4_desert_fence': 0.089,
-      'v4_desert_cow': 0.084, 'v4_desert_dry_grass': 0.058,
+      'v4_desert_cow': 0.168, 'v4_desert_dry_grass': 0.058,
       // Canyon
       'v4_canyon_pillar': 0.111, 'v4_canyon_debris_sm': 0.051,
       'v4_canyon_wall': 0.054, 'v4_canyon_arch': 0.086,
@@ -1300,8 +1300,9 @@ export class RaceScene extends Phaser.Scene {
   }
 
   _checkLineCross(px, py, cx, cy, wp) {
-    // Check if car crossed the finish line (perpendicular line at last waypoint)
-    const last = wp[wp.length-1], prev = wp[wp.length-2];
+    // Check if car crossed the finish line (perpendicular line at finish waypoint)
+    const fIdx = this.track.finishWP ?? (wp.length - 1);
+    const last = wp[fIdx], prev = wp[fIdx - 1];
     const dx = last[0]-prev[0], dy = last[1]-prev[1];
     const len = Math.sqrt(dx*dx+dy*dy) || 1;
     const nx = -dy/len, ny = dx/len; // perpendicular
