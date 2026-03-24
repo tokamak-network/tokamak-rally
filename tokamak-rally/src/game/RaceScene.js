@@ -383,28 +383,31 @@ export class RaceScene extends Phaser.Scene {
           const nnx = nxi/nl, nny = nyi/nl;
 
           const isBlue = bannerIdx % 2 === 0;
-          // Only place banner every 4th segment
-          if (bannerIdx % 4 === 0) {
-            for (const side of [-1, 1]) {
-              const bx = px + nnx*side*BDIST;
-              const by = py + nny*side*BDIST;
-              // Banner background — colored banners only, no logos
-              const bg = this.add.graphics().setDepth(5);
-              bg.fillStyle(isBlue ? 0x2a6ddb : 0xffffff, 0.95);
-              bg.fillRect(-BW/2, -BH/2, BW, BH);
-              bg.x = bx; bg.y = by; bg.rotation = segAngle;
+          // Place banner every segment — dense wall of banners
+          for (const side of [-1, 1]) {
+            const bx = px + nnx*side*BDIST;
+            const by = py + nny*side*BDIST;
+            // Banner background with Tokamak branding
+            const bg = this.add.graphics().setDepth(5);
+            bg.fillStyle(isBlue ? 0x2a72e5 : 0xffffff, 0.95);
+            bg.fillRect(-BW/2, -BH/2, BW, BH);
+            // Tokamak logo text on blue banners
+            if (isBlue) {
+              bg.fillStyle(0xffffff, 0.9);
+              bg.fillRect(-BW/2+4, -2, BW-8, 4);
+            }
+            bg.x = bx; bg.y = by; bg.rotation = segAngle;
 
-              // Sparse crowd behind banners — max 2 rows deep
-              for (let row = 0; row < 2; row++) {
-                const crowdD = CROWD_START + row * 11;
-                for (let j = 0; j < 2; j++) {
-                  const along = (j - 0.5) * 12 + (Math.random()-0.5)*6;
-                  const cx = px + nnx*side*crowdD + Math.cos(segAngle)*along;
-                  const cy = py + nny*side*crowdD + Math.sin(segAngle)*along;
-                  const ci = Math.floor(Math.random()*7);
-                  const tex = Math.random()>0.4 ? `crowd_cheer_${ci}` : `crowd_${ci}`;
-                  this.add.sprite(cx, cy, tex).setDepth(4).setScale(1.4+Math.random()*0.3);
-                }
+            // Dense crowd behind banners — 5 rows, packed
+            for (let row = 0; row < 5; row++) {
+              const crowdD = CROWD_START + row * 10;
+              for (let j = 0; j < 4; j++) {
+                const along = (j - 1.5) * 10 + (Math.random()-0.5)*5;
+                const cx = px + nnx*side*crowdD + Math.cos(segAngle)*along;
+                const cy = py + nny*side*crowdD + Math.sin(segAngle)*along;
+                const ci = Math.floor(Math.random()*7);
+                const tex = Math.random()>0.4 ? `crowd_cheer_${ci}` : `crowd_${ci}`;
+                this.add.sprite(cx, cy, tex).setDepth(4).setScale(1.4+Math.random()*0.3);
               }
             }
           }
@@ -430,12 +433,12 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // Finish crowd behind banners — reduced density
+    // Finish crowd behind banners — dense packed crowd
     for (let side of [-1, 1]) {
-      for (let row = 0; row < 2; row++) {
-        const baseDist = 92 + row * 14;
-        for (let j = 0; j < 5; j++) {
-          const along = (j - 2) * 20 + (Math.random()-0.5)*6;
+      for (let row = 0; row < 5; row++) {
+        const baseDist = 88 + row * 10;
+        for (let j = 0; j < 8; j++) {
+          const along = (j - 3.5) * 14 + (Math.random()-0.5)*5;
           const cx = wLast[0] + fnx*side*baseDist + fux*along;
           const cy = wLast[1] + fny*side*baseDist + fuy*along;
           const isCheer = Math.random() > 0.35;
