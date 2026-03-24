@@ -134,7 +134,7 @@ async function main() {
 
   // ========== file_211: Desert objects 11-pack (3×4 grid, last cell may be empty) ==========
   console.log('\nDesert Objects (file_211):');
-  const img211 = await loadImage(path.join(MEDIA, 'file_211---a5881004-180c-4077-a50e-119208c01714.jpg'));
+  const img211 = await loadImage(path.join(MEDIA, 'file_211---86c4c6e9-5f44-436a-890b-bb66fc54f3fe.jpg'));
   const grid211 = detectGrid(img211, 3, 4);
   const desertObjs = [
     { name: 'cactus_tall', targetW: 64, targetH: 96 },
@@ -149,19 +149,21 @@ async function main() {
     { name: 'cow_rest', targetW: 96, targetH: 72 },
     { name: 'dry_grass', targetW: 48, targetH: 48 },
   ];
-  // Process non-cow desert objects normally
-  for (let i = 0; i < Math.min(desertObjs.length, grid211.length); i++) {
-    if (desertObjs[i].name === 'cow_stand' || desertObjs[i].name === 'cow_rest') continue;
-    await cropSprite(img211, grid211[i], desertObjs[i].targetW, desertObjs[i].targetH,
+  // Row 0-1: 4 columns (grid211), Row 2: 3 columns (wider cells for cows + grass)
+  const grid211_row2 = detectGrid(img211, 3, 3); // 3×3 grid for bottom row extraction
+  for (let i = 0; i < Math.min(desertObjs.length, 12); i++) {
+    let cell;
+    if (i < 8) {
+      // Rows 0-1: use 4-column grid
+      cell = grid211[i];
+    } else {
+      // Row 2: use 3-column grid (indices 6,7,8 in 3×3 grid = row2 col0,1,2)
+      cell = grid211_row2[6 + (i - 8)];
+    }
+    if (!cell) continue;
+    await cropSprite(img211, cell, desertObjs[i].targetW, desertObjs[i].targetH,
       'objects', 'desert', `${desertObjs[i].name}.png`);
   }
-  // Cows — manual regions. Head is on the RIGHT side (x~390-430 in source)
-  // cow_stand: full cell from x:60 to x:460 to capture head on right
-  await cropSprite(img211, { x: 60, y: 520, w: 420, h: 260 }, 96, 80,
-    'objects', 'desert', 'cow_stand.png');
-  // cow_rest: col 1 (x starts at 320), similar head-right orientation
-  await cropSprite(img211, { x: 360, y: 520, w: 300, h: 260 }, 96, 72,
-    'objects', 'desert', 'cow_rest.png');
 
   // ========== file_212: Canyon objects 7-pack (roughly 3×3, 2 empty) ==========
   console.log('\nCanyon Objects (file_212):');
