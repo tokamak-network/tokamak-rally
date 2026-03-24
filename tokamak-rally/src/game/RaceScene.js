@@ -18,6 +18,8 @@ export class RaceScene extends Phaser.Scene {
   create() {
     this.track = TRACK_CONFIG;
     this.cameras.main.setBackgroundColor(0xe8b84b);
+    this._animals = [];
+    this._birdTimer = 5000 + Math.random() * 8000;
 
     this.drawBackground();
     this.drawTrack();
@@ -112,10 +114,6 @@ export class RaceScene extends Phaser.Scene {
     this._currentRoadLabel = 'SAND';
     this._currentZone = this.track.zones[0];
     this._currentRoadType = 'sand';
-
-    // Animal tracking
-    this._animals = [];
-    this._birdTimer = 5000 + Math.random() * 8000;
 
     this.startCountdown();
 
