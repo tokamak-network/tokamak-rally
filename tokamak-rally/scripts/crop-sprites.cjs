@@ -155,11 +155,12 @@ async function main() {
     await cropSprite(img211, grid211[i], desertObjs[i].targetW, desertObjs[i].targetH,
       'objects', 'desert', `${desertObjs[i].name}.png`);
   }
-  // Cows need manual regions — heads extend beyond grid cell
-  // cow_stand head is at x~80 in source, need to start from x:0
-  await cropSprite(img211, { x: 0, y: 520, w: 310, h: 310 }, 96, 80,
+  // Cows — manual regions. Head is on the RIGHT side (x~390-430 in source)
+  // cow_stand: full cell from x:60 to x:460 to capture head on right
+  await cropSprite(img211, { x: 60, y: 520, w: 420, h: 260 }, 96, 80,
     'objects', 'desert', 'cow_stand.png');
-  await cropSprite(img211, { x: 320, y: 520, w: 310, h: 310 }, 96, 72,
+  // cow_rest: col 1 (x starts at 320), similar head-right orientation
+  await cropSprite(img211, { x: 360, y: 520, w: 300, h: 260 }, 96, 72,
     'objects', 'desert', 'cow_rest.png');
 
   // ========== file_212: Canyon objects 7-pack (roughly 3×3, 2 empty) ==========
