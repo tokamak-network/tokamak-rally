@@ -383,34 +383,28 @@ export class RaceScene extends Phaser.Scene {
           const nnx = nxi/nl, nny = nyi/nl;
 
           const isBlue = bannerIdx % 2 === 0;
-          for (const side of [-1, 1]) {
-            const bx = px + nnx*side*BDIST;
-            const by = py + nny*side*BDIST;
-            // Banner background (graphics rect — always works)
-            const bg = this.add.graphics().setDepth(5);
-            bg.fillStyle(isBlue ? 0x2a6ddb : 0xffffff, 0.95);
-            bg.fillRect(-BW/2, -BH/2, BW, BH);
-            bg.x = bx; bg.y = by; bg.rotation = segAngle;
-            // Logo overlay (safe — skip if texture missing)
-            try {
-              const logoTex = isBlue ? 'tokamak_logo_white' : 'tokamak_logo';
-              if (this.textures.exists(logoTex)) {
-                this.add.image(bx, by, logoTex)
-                  .setDepth(5.5).setDisplaySize(BW*0.88, BH*0.68)
-                  .setOrigin(0.5).setRotation(segAngle);
-              }
-            } catch(e) {}
+          // Only place banner every 4th segment
+          if (bannerIdx % 4 === 0) {
+            for (const side of [-1, 1]) {
+              const bx = px + nnx*side*BDIST;
+              const by = py + nny*side*BDIST;
+              // Banner background — colored banners only, no logos
+              const bg = this.add.graphics().setDepth(5);
+              bg.fillStyle(isBlue ? 0x2a6ddb : 0xffffff, 0.95);
+              bg.fillRect(-BW/2, -BH/2, BW, BH);
+              bg.x = bx; bg.y = by; bg.rotation = segAngle;
 
-            // Dense crowd behind banners — 5 rows deep
-            for (let row = 0; row < 5; row++) {
-              const crowdD = CROWD_START + row * 11;
-              for (let j = 0; j < 3; j++) {
-                const along = (j - 1) * 12 + (Math.random()-0.5)*6;
-                const cx = px + nnx*side*crowdD + Math.cos(segAngle)*along;
-                const cy = py + nny*side*crowdD + Math.sin(segAngle)*along;
-                const ci = Math.floor(Math.random()*7);
-                const tex = Math.random()>0.4 ? `crowd_cheer_${ci}` : `crowd_${ci}`;
-                this.add.sprite(cx, cy, tex).setDepth(4).setScale(1.4+Math.random()*0.3);
+              // Sparse crowd behind banners — max 2 rows deep
+              for (let row = 0; row < 2; row++) {
+                const crowdD = CROWD_START + row * 11;
+                for (let j = 0; j < 2; j++) {
+                  const along = (j - 0.5) * 12 + (Math.random()-0.5)*6;
+                  const cx = px + nnx*side*crowdD + Math.cos(segAngle)*along;
+                  const cy = py + nny*side*crowdD + Math.sin(segAngle)*along;
+                  const ci = Math.floor(Math.random()*7);
+                  const tex = Math.random()>0.4 ? `crowd_cheer_${ci}` : `crowd_${ci}`;
+                  this.add.sprite(cx, cy, tex).setDepth(4).setScale(1.4+Math.random()*0.3);
+                }
               }
             }
           }
@@ -426,7 +420,6 @@ export class RaceScene extends Phaser.Scene {
     for (const side of [-1, 1]) {
       const bDist = 75; // perpendicular distance from track center
       for (let j = -3; j <= 3; j++) {
-        // Place banners along road direction (fux/fuy), offset perpendicular (fnx/fny)
         const bx = wLast[0] + fnx*side*bDist + fux*j*FBW;
         const by = wLast[1] + fny*side*bDist + fuy*j*FBW;
         const isBlue = (j + 4) % 2 === 0;
@@ -434,23 +427,15 @@ export class RaceScene extends Phaser.Scene {
         bg.fillStyle(isBlue ? 0x2a6ddb : 0xffffff, 0.95);
         bg.fillRect(-FBW/2, -FBH/2, FBW, FBH);
         bg.x = bx; bg.y = by; bg.rotation = finRoadAngle;
-        try {
-          const logoTex = isBlue ? 'tokamak_logo_white' : 'tokamak_logo';
-          if (this.textures.exists(logoTex)) {
-            this.add.image(bx, by, logoTex)
-              .setDepth(5.5).setDisplaySize(FBW*0.88, FBH*0.68)
-              .setOrigin(0.5).setRotation(finRoadAngle);
-          }
-        } catch(e) {}
       }
     }
 
-    // Finish crowd behind banners (further out than banners)
+    // Finish crowd behind banners — reduced density
     for (let side of [-1, 1]) {
-      for (let row = 0; row < 4; row++) {
-        const baseDist = 92 + row * 14; // start behind banners (75 + 17)
-        for (let j = 0; j < 12; j++) {
-          const along = (j - 5.5) * 16 + (Math.random()-0.5)*6;
+      for (let row = 0; row < 2; row++) {
+        const baseDist = 92 + row * 14;
+        for (let j = 0; j < 5; j++) {
+          const along = (j - 2) * 20 + (Math.random()-0.5)*6;
           const cx = wLast[0] + fnx*side*baseDist + fux*along;
           const cy = wLast[1] + fny*side*baseDist + fuy*along;
           const isCheer = Math.random() > 0.35;
@@ -527,7 +512,7 @@ export class RaceScene extends Phaser.Scene {
           const d = halfW + 80 + Math.random()*60;
           const sx = x1+dx*t + nx*side*d;
           const sy = y1+dy*t + ny*side*d;
-          this.add.sprite(sx, sy, 'canyon_wall').setDepth(1).setScale(0.6+Math.random()*0.3).setAlpha(0.6);
+          this.add.sprite(sx, sy, 'canyon_wall').setDepth(1).setScale(0.4+Math.random()*0.2).setAlpha(0.5);
         }
       }
     }
@@ -560,6 +545,25 @@ export class RaceScene extends Phaser.Scene {
       for (let i=0;i<14;i++) {
         const a=Math.random()*Math.PI*2, d=80+Math.random()*100;
         this.add.sprite(cp3[0]+Math.cos(a)*d,cp3[1]+Math.sin(a)*d,'palm').setDepth(2);
+      }
+    }
+
+    // Sprint zone — grandstands along track edges
+    const spZone = this.track.zones.find(z => z.name === 'sprint');
+    if (spZone) {
+      for (let i = spZone.fromWP; i < Math.min(spZone.toWP, wp.length-1); i += 4) {
+        const [x1,y1]=wp[i],[x2,y2]=wp[i+1];
+        const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
+        if (len<1) continue;
+        const nx=-dy/len, ny=dx/len;
+        const halfW = (spZone.trackWidth||100)/2;
+        for (let side of [-1, 1]) {
+          const t = Math.random();
+          const d = halfW + 90 + Math.random()*40;
+          const segAngle = Math.atan2(dy, dx);
+          this.add.sprite(x1+dx*t+nx*side*d, y1+dy*t+ny*side*d, 'grandstand')
+            .setDepth(2).setScale(1.5+Math.random()*0.5).setRotation(segAngle);
+        }
       }
     }
 
@@ -615,10 +619,10 @@ export class RaceScene extends Phaser.Scene {
       obs_rock_slide: 0.45, obs_pothole: 0.65,
     };
     const radiusMap = {
-      obs_tokamak: 11, obs_sand_pile: 10, obs_tumbleweed: 8,
-      obs_fallen_rock: 13, obs_rock_debris: 12, obs_small_rock: 9,
-      obs_puddle: 14, obs_mud_patch: 15, obs_log: 11,
-      obs_rock_slide: 18, obs_pothole: 10,
+      obs_tokamak: 9, obs_sand_pile: 8, obs_tumbleweed: 6,
+      obs_fallen_rock: 10, obs_rock_debris: 10, obs_small_rock: 7,
+      obs_puddle: 11, obs_mud_patch: 12, obs_log: 9,
+      obs_rock_slide: 14, obs_pothole: 8,
     };
 
     for (const zone of this.track.zones) {
@@ -633,10 +637,10 @@ export class RaceScene extends Phaser.Scene {
         if (len<1) continue;
         const nx=-dy/len,ny=dx/len;
         const hw=(zone.trackWidth||100)/2;
-        const off=(rng()-0.5)*hw*1.0;
-        const ox=bx+nx*off, oy=by+ny*off;
+        const edgeBias = (rng() > 0.5 ? 1 : -1) * (0.3 + rng() * 0.4) * hw;
+        const ox=bx+nx*edgeBias, oy=by+ny*edgeBias;
         const type=cfg.types[Math.floor(rng()*cfg.types.length)];
-        const sprite=this.add.sprite(ox,oy,type).setDepth(5);
+        const sprite=this.add.sprite(ox,oy,type).setDepth(5).setScale(0.7);
         this.obstacles.push({x:ox,y:oy,radius:radiusMap[type]||9,type,penalty:penaltyMap[type]||0.6,sprite});
       }
     }
