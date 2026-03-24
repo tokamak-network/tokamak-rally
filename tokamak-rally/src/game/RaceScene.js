@@ -589,8 +589,26 @@ export class RaceScene extends Phaser.Scene {
   placeScenery() {
     const wp = this.track.waypoints;
 
-    // Object scale map
+    // Object scale map — v3 assets (pixel art, already appropriately sized)
     const scaleMap = {
+      // Desert
+      'v3_desert_cactus': 1.0, 'v3_desert_scrub': 1.0, 'v3_desert_rock_sm': 1.0,
+      'v3_desert_rock_lg': 1.0, 'v3_desert_cow': 1.0, 'v3_desert_hut': 1.0,
+      'v3_desert_fence': 1.0, 'v3_desert_skull': 1.0,
+      // Canyon
+      'v3_canyon_cliff': 1.0, 'v3_canyon_pillar': 1.0, 'v3_canyon_debris': 1.0,
+      'v3_canyon_arch': 1.0, 'v3_canyon_bush': 1.0,
+      // Riverbed
+      'v3_riverbed_tree': 1.0, 'v3_riverbed_bush': 1.0, 'v3_riverbed_reeds': 1.0,
+      'v3_riverbed_boulder': 1.0, 'v3_riverbed_bridge': 1.0,
+      // Mountain
+      'v3_mountain_pine': 1.0, 'v3_mountain_cabin': 1.0, 'v3_mountain_rock': 1.0,
+      'v3_mountain_snowman': 1.0, 'v3_mountain_pole': 1.0,
+      // Sprint
+      'v3_sprint_building_tall': 1.0, 'v3_sprint_building_low': 1.0,
+      'v3_sprint_lamp': 1.0, 'v3_sprint_tire_wall': 1.0,
+      'v3_sprint_grandstand': 1.0, 'v3_sprint_ad_board': 1.0, 'v3_sprint_billboard': 1.0,
+      // Legacy v2 (fallback)
       'v2_mountain_cabin': 1.0, 'v2_mountain_pine': 0.9, 'v2_mountain_rock': 0.7,
       'v2_mountain_snowman': 0.28, 'v2_mountain_turbine': 1.2,
       'v2_desert_hut': 0.8, 'v2_desert_cow': 0.85, 'v2_desert_cactus': 0.7,
@@ -621,9 +639,9 @@ export class RaceScene extends Phaser.Scene {
         const ox = bx + nx*side*dist, oy = by + ny*side*dist;
         let tex = items[Math.floor(Math.random()*items.length)];
 
-        // Limit turbines to 2 total
+        // Limit turbines to 2 total (legacy)
         if (tex === 'v2_mountain_turbine') {
-          if (turbineCount >= 2) { tex = 'v2_mountain_pine'; }
+          if (turbineCount >= 2) { tex = 'v3_mountain_pine'; }
           else { turbineCount++; }
         }
 
@@ -631,7 +649,7 @@ export class RaceScene extends Phaser.Scene {
         const spr = this.add.sprite(ox, oy, tex).setDepth(2).setScale(sc);
 
         // Track cows for animation
-        if (tex === 'v2_desert_cow') {
+        if (tex === 'v3_desert_cow' || tex === 'v2_desert_cow') {
           const dir = Math.random() > 0.5 ? 1 : -1;
           spr.setFlipX(dir < 0);
           this._animals.push({ type: 'cow', sprite: spr, baseX: ox, baseY: oy, dir, offset: Math.random() * Math.PI * 2 });
@@ -654,13 +672,13 @@ export class RaceScene extends Phaser.Scene {
           const d = halfW + 45 + Math.random()*25;
           const sx = x1+dx*t + nx*side*d;
           const sy = y1+dy*t + ny*side*d;
-          this.add.sprite(sx, sy, 'v2_canyon_cliff').setDepth(2).setScale(0.9+Math.random()*0.3);
+          this.add.sprite(sx, sy, 'v3_canyon_cliff').setDepth(2).setScale(0.9+Math.random()*0.3);
           // Canyon pillars on top of cliff walls (every other waypoint)
           if (i % 2 === 0) {
             const pd = d + 30 + Math.random()*20;
             const px2 = x1+dx*t + nx*side*pd;
             const py2 = y1+dy*t + ny*side*pd;
-            this.add.sprite(px2, py2, 'v2_canyon_pillar').setDepth(2).setScale(0.7+Math.random()*0.3);
+            this.add.sprite(px2, py2, 'v3_canyon_pillar').setDepth(2).setScale(0.7+Math.random()*0.3);
           }
         }
       }
@@ -710,7 +728,7 @@ export class RaceScene extends Phaser.Scene {
           const t = Math.random();
           const d = halfW + 90 + Math.random()*40;
           const segAngle = Math.atan2(dy, dx);
-          this.add.sprite(x1+dx*t+nx*side*d, y1+dy*t+ny*side*d, 'grandstand')
+          this.add.sprite(x1+dx*t+nx*side*d, y1+dy*t+ny*side*d, 'v3_sprint_grandstand')
             .setDepth(2).setScale(1.5+Math.random()*0.5).setRotation(segAngle);
         }
       }
@@ -737,12 +755,12 @@ export class RaceScene extends Phaser.Scene {
             const ni = spNormals[i - spS];
             const bx = wp[i][0] + ni[0] * side * rowDist;
             const by = wp[i][1] + ni[1] * side * rowDist;
-            const objs = ['v2_sprint_building','v2_sprint_lamp','v2_sprint_billboard'];
+            const objs = ['v3_sprint_building_tall','v3_sprint_building_low','v3_sprint_lamp','v3_sprint_billboard','v3_sprint_ad_board'];
             const tex = objs[Math.floor(Math.random()*objs.length)];
             const sc = 0.85 + Math.random() * 0.25;
             this.add.sprite(bx, by, tex).setDepth(1).setScale(sc);
             // Rooftop Tokamak logo on buildings
-            if (tex === 'v2_sprint_building') {
+            if (tex === 'v3_sprint_building_tall' || tex === 'v3_sprint_building_low') {
               this.add.sprite(bx, by - 8, 'tokamak_logo_white')
                 .setDepth(2).setScale(0.03).setAlpha(0.8);
             }
@@ -766,14 +784,14 @@ export class RaceScene extends Phaser.Scene {
             const t = j/2 + Math.random()*0.4;
             if (t > 1) continue;
             const d = halfW + 60 + Math.random()*50;
-            this.add.sprite(x1+dx*t+nx*side*d, y1+dy*t+ny*side*d, 'pine_tree')
+            this.add.sprite(x1+dx*t+nx*side*d, y1+dy*t+ny*side*d, 'v3_mountain_pine')
               .setDepth(2).setScale(0.6+Math.random()*0.3);
           }
           // Background tree (further out, subtle)
           if (Math.random() > 0.5) {
             const t2 = Math.random();
             const d2 = halfW + 120 + Math.random()*60;
-            this.add.sprite(x1+dx*t2+nx*side*d2, y1+dy*t2+ny*side*d2, 'pine_tree')
+            this.add.sprite(x1+dx*t2+nx*side*d2, y1+dy*t2+ny*side*d2, 'v3_mountain_pine')
               .setDepth(1).setScale(0.8+Math.random()*0.3).setAlpha(0.5);
           }
         }
