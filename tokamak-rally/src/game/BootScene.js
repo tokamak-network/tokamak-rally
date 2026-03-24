@@ -85,6 +85,8 @@ export class BootScene extends Phaser.Scene {
     // Canyon
     this.load.image('v4_canyon_pillar', '/assets/v4/objects/canyon/pillar.png');
     this.load.image('v4_canyon_wall', '/assets/v4/objects/canyon/wall_long.png');
+    this.load.image('v4_canyon_cliff_v', '/assets/v4/objects/canyon/cliff_wall_v.png');
+    this.load.image('v4_canyon_cliff_rock_v', '/assets/v4/objects/canyon/cliff_rock_v.png');
     this.load.image('v4_canyon_rock', '/assets/v4/objects/canyon/rock_cluster.png');
     this.load.image('v4_canyon_arch', '/assets/v4/objects/canyon/arch.png');
     this.load.image('v4_canyon_debris_sm', '/assets/v4/objects/canyon/debris_small.png');

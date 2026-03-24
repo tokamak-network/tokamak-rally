@@ -621,10 +621,11 @@ export class RaceScene extends Phaser.Scene {
       'v4_desert_bush': 0.14, 'v4_desert_tumbleweed': 0.14,
       'v4_desert_hut': 0.15, 'v4_desert_fence': 0.15,
       'v4_desert_cow': 0.15, 'v4_desert_dry_grass': 0.12,
-      'v4_canyon_pillar': 0.18, 'v4_canyon_debris_sm': 0.14,
+      'v4_canyon_pillar': 0.14, 'v4_canyon_debris_sm': 0.14,
       'v4_canyon_wall': 0.18, 'v4_canyon_arch': 0.16,
       'v4_canyon_dead_bush': 0.14, 'v4_canyon_rock': 0.15,
       'v4_canyon_debris_lg': 0.14, 'v4_canyon_barrier': 0.15,
+      'v4_canyon_cliff_v': 0.12, 'v4_canyon_cliff_rock_v': 0.10,
       'v4_riverbed_tree': 0.18, 'v4_riverbed_bush': 0.15,
       'v4_riverbed_reeds': 0.16, 'v4_riverbed_rock': 0.15,
       'v4_riverbed_puddle': 0.15, 'v4_riverbed_log': 0.15,
@@ -683,7 +684,8 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // === CANYON — Thrash Rally style: narrow gorge with continuous cliff walls ===
+    // === CANYON — Thrash Rally style: continuous cliff walls forming narrow gorge ===
+    // Right side cliffs flipped for symmetry. No objects between road and cliffs.
     const canyonZone = this.track.zones.find(z => z.name === 'canyon');
     if (canyonZone) {
       const cS = canyonZone.fromWP, cE = Math.min(canyonZone.toWP, wp.length-1);
@@ -699,14 +701,13 @@ export class RaceScene extends Phaser.Scene {
         cNormals.push([nx/l, ny/l]);
       }
 
-      const wallScale = scaleMap['v4_canyon_wall'] || 0.18;
-      const rockScale = scaleMap['v4_canyon_rock'] || 0.15;
-      const pillarScale = scaleMap['v4_canyon_pillar'] || 0.18;
-      const archScale = scaleMap['v4_canyon_arch'] || 0.16;
+      const cliffScale = 0.12;
+      const rockScale = 0.10;
+      const pillarScale = 0.14;
       const debrisScale = scaleMap['v4_canyon_debris_sm'] || 0.14;
       const bushScale = scaleMap['v4_canyon_dead_bush'] || 0.14;
 
-      // Layer 1: Continuous cliff wall — tight against road, both sides, every WP
+      // Continuous cliff walls — every WP, both sides, comfortable gap from road
       for (let i = cS; i < cE; i++) {
         const [x1,y1] = wp[i], [x2,y2] = wp[i+1];
         const dx = x2-x1, dy = y2-y1, segLen = Math.sqrt(dx*dx+dy*dy);
@@ -715,61 +716,55 @@ export class RaceScene extends Phaser.Scene {
         const ni = cNormals[i - cS];
 
         for (const side of [-1, 1]) {
-          // Row 1: wall directly at road edge
-          const wallDist = cHalfW + 8;
-          const wx = x1 + ni[0]*side*wallDist + dx*0.5;
-          const wy = y1 + ni[1]*side*wallDist + dy*0.5;
-          this.add.sprite(wx, wy, 'v4_canyon_wall')
-            .setDepth(2).setRotation(segAngle).setScale(wallScale);
+          // Row 1: main cliff wall — gap from road
+          const cliffDist = cHalfW + 25;
+          const cx = x1 + ni[0]*side*cliffDist + dx*0.5;
+          const cy = y1 + ni[1]*side*cliffDist + dy*0.5;
+          const cliff = this.add.sprite(cx, cy, 'v4_canyon_cliff_v')
+            .setDepth(2).setRotation(segAngle).setScale(cliffScale);
+          if (side === 1) cliff.setFlipX(true); // right side mirrored
 
-          // Row 2: rock layer behind wall
-          const rockDist = cHalfW + 22;
+          // Row 2: rock backing
+          const rockDist = cHalfW + 40;
           const rx = x1 + ni[0]*side*rockDist + dx*0.5;
           const ry = y1 + ni[1]*side*rockDist + dy*0.5;
-          this.add.sprite(rx, ry, 'v4_canyon_rock')
-            .setDepth(1).setScale(rockScale);
+          const rock = this.add.sprite(rx, ry, 'v4_canyon_cliff_rock_v')
+            .setDepth(1).setRotation(segAngle).setScale(rockScale);
+          if (side === 1) rock.setFlipX(true);
 
-          // Row 3: outer cliff layer for depth
-          const outerDist = cHalfW + 36;
+          // Row 3: distant cliff — darker for depth
+          const outerDist = cHalfW + 55;
           const ox = x1 + ni[0]*side*outerDist + dx*0.5;
           const oy = y1 + ni[1]*side*outerDist + dy*0.5;
-          this.add.sprite(ox, oy, 'v4_canyon_wall')
-            .setDepth(0).setRotation(segAngle + 0.15*side).setScale(wallScale * 1.1)
-            .setTint(0x8a6a50); // darker tint for depth
+          const outer = this.add.sprite(ox, oy, 'v4_canyon_cliff_v')
+            .setDepth(0).setRotation(segAngle).setScale(cliffScale * 1.2)
+            .setTint(0x6a4a30);
+          if (side === 1) outer.setFlipX(true);
         }
       }
 
-      // Layer 2: Pillars — every 5 WPs, alternating sides, on top of wall
-      for (let i = cS; i < cE; i += 5) {
+      // Pillars — every 6 WPs, both sides, on cliff line
+      for (let i = cS; i < cE; i += 6) {
         const ni = cNormals[i - cS];
         for (const side of [-1, 1]) {
-          const pd = cHalfW + 15;
+          const pd = cHalfW + 30;
           const px = wp[i][0] + ni[0]*side*pd;
           const py = wp[i][1] + ni[1]*side*pd;
           this.add.sprite(px, py, 'v4_canyon_pillar').setDepth(3).setScale(pillarScale);
         }
       }
 
-      // Layer 3: Arch every ~10 waypoints — spanning road or decorative
-      for (let i = cS + 5; i < cE - 5; i += 10) {
-        const ni = cNormals[i - cS];
-        const side = (Math.floor((i - cS) / 10) % 2 === 0) ? 1 : -1;
-        const ad = cHalfW + 12;
-        this.add.sprite(wp[i][0] + ni[0]*side*ad, wp[i][1] + ni[1]*side*ad, 'v4_canyon_arch')
-          .setDepth(3).setScale(archScale);
-      }
-
-      // Layer 4: Debris/dead bush — sparse scatter beyond outer wall
+      // Debris/dead bush — ONLY behind cliffs (beyond outer row)
       for (let i = cS; i < cE; i += 3) {
         const ni = cNormals[i - cS];
         for (const side of [-1, 1]) {
-          if (Math.random() > 0.4) {
-            const dd = cHalfW + 45 + Math.random()*20;
+          if (Math.random() > 0.5) {
+            const dd = cHalfW + 65 + Math.random()*25;
             const isBush = Math.random() > 0.5;
             const tex = isBush ? 'v4_canyon_dead_bush' : 'v4_canyon_debris_sm';
             const sc = isBush ? bushScale : debrisScale;
             this.add.sprite(wp[i][0] + ni[0]*side*dd, wp[i][1] + ni[1]*side*dd, tex)
-              .setDepth(2).setScale(sc);
+              .setDepth(0).setScale(sc);
           }
         }
       }
