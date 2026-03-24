@@ -8,12 +8,26 @@ export class BootScene extends Phaser.Scene {
     this.load.image('tokamak_logo', '/tokamak-logo-cropped.png');
     this.load.image('tokamak_logo_white', '/tokamak-logo-white.png');
 
-    // v2 배경 타일
+    // v2 배경 타일 (legacy)
     this.load.image('v2_bg_desert', '/assets/v2/tiles/bg_desert.png');
     this.load.image('v2_bg_canyon', '/assets/v2/tiles/bg_canyon.png');
     this.load.image('v2_bg_riverbed', '/assets/v2/tiles/bg_riverbed.png');
     this.load.image('v2_bg_mountain', '/assets/v2/tiles/bg_mountain.png');
     this.load.image('v2_bg_sprint', '/assets/v2/tiles/bg_sprint.png');
+
+    // v3 배경 타일 (프로그래매틱 픽셀아트)
+    this.load.image('v3_bg_desert', '/assets/v3/tiles/bg_desert.png');
+    this.load.image('v3_bg_canyon', '/assets/v3/tiles/bg_canyon.png');
+    this.load.image('v3_bg_riverbed', '/assets/v3/tiles/bg_riverbed.png');
+    this.load.image('v3_bg_mountain', '/assets/v3/tiles/bg_mountain.png');
+    this.load.image('v3_bg_sprint', '/assets/v3/tiles/bg_sprint.png');
+
+    // v3 배리어
+    this.load.image('v3_barrier_desert', '/assets/v3/barriers/barrier_desert.png');
+    this.load.image('v3_barrier_canyon', '/assets/v3/barriers/barrier_canyon.png');
+    this.load.image('v3_barrier_riverbed', '/assets/v3/barriers/barrier_riverbed.png');
+    this.load.image('v3_barrier_mountain', '/assets/v3/barriers/barrier_mountain.png');
+    this.load.image('v3_barrier_sprint', '/assets/v3/barriers/barrier_sprint.png');
 
     // v2 차량 (Cars.js ID에 맞춤)
     this.load.image('v2_car_alpine_white', '/assets/v2/cars/car_alpine_white.png');
