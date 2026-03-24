@@ -85,7 +85,7 @@ export class RaceScene extends Phaser.Scene {
     };
 
     this.cameras.main.startFollow(this.player, true, 0.12, 0.12);
-    this.cameras.main.setZoom(1.5);
+    this.cameras.main.setZoom(2.3);
     this.cameras.main.setFollowOffset(0, 0); // will be updated dynamically
 
     this.cursors = this.input.keyboard.createCursorKeys();
