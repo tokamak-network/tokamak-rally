@@ -856,27 +856,21 @@ export class RaceScene extends Phaser.Scene {
         }
       }
 
-      // L4: Buildings — every 3 WPs (buildings are bigger, don't need every segment)
+      // L4: Buildings — every WP for seamless wall, both sides
       const bldgPool = ['v4_sprint_office','v4_sprint_hotel','v4_sprint_apartment','v4_sprint_restaurant','v4_sprint_shopping'];
       const skyPool = ['v4_sprint_skyscraper','v4_sprint_skyscraper_sm','v4_sprint_office'];
-      for (let i = spS; i < spE; i += 3) {
+      for (let i = spS; i < spE; i++) {
         const ni = spNormals[i - spS];
         for (const side of [-1, 1]) {
-          // Front row
+          // Front row — seamless wall of buildings
           const tex1 = bldgPool[(i + (side>0?0:2)) % bldgPool.length];
           this.add.sprite(wp[i][0]+ni[0]*side*dBldg1, wp[i][1]+ni[1]*side*dBldg1, tex1)
             .setDepth(2).setScale(scaleMap[tex1]||0.15);
-          // Back row
+          // Back row — seamless
           const tex2 = skyPool[(i + (side>0?1:0)) % skyPool.length];
           this.add.sprite(wp[i][0]+ni[0]*side*dBldg2, wp[i][1]+ni[1]*side*dBldg2, tex2)
             .setDepth(1).setScale(scaleMap[tex2]||0.12);
-        }
-      }
-
-      // L5: Far skyline — every 5 WPs
-      for (let i = spS; i < spE; i += 5) {
-        const ni = spNormals[i - spS];
-        for (const side of [-1, 1]) {
+          // Far skyline row — seamless
           this.add.sprite(wp[i][0]+ni[0]*side*dSkyline, wp[i][1]+ni[1]*side*dSkyline, 'v4_sprint_skyscraper')
             .setDepth(0).setScale(scaleMap['v4_sprint_skyscraper']||0.097);
         }
