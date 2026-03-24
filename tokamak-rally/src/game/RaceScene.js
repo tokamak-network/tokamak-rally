@@ -416,7 +416,7 @@ export class RaceScene extends Phaser.Scene {
           const isCheer = Math.random() > 0.35;
           const ci = Math.floor(Math.random()*7);
           const tex = isCheer ? `crowd_cheer_${ci}` : `crowd_${ci}`;
-          this.add.sprite(cx, cy, tex).setDepth(4).setScale(1.8+Math.random()*0.6);
+          this.add.sprite(cx, cy, tex).setDepth(4).setScale(2.0);
         }
       }
     }
@@ -615,15 +615,32 @@ export class RaceScene extends Phaser.Scene {
       'v3_sprint_building_tall': 1.0, 'v3_sprint_building_low': 1.0,
       'v3_sprint_lamp': 1.0, 'v3_sprint_tire_wall': 1.0,
       'v3_sprint_grandstand': 1.0, 'v3_sprint_ad_board': 1.0, 'v3_sprint_billboard': 1.0,
-      // Legacy v2 (fallback)
-      'v2_mountain_cabin': 1.0, 'v2_mountain_pine': 0.9, 'v2_mountain_rock': 0.7,
-      'v2_mountain_snowman': 0.28, 'v2_mountain_turbine': 1.2,
-      'v2_desert_hut': 0.8, 'v2_desert_cow': 0.85, 'v2_desert_cactus': 0.7,
-      'v2_desert_scrub': 0.5, 'v2_desert_rock': 0.6,
-      'v2_canyon_pillar': 0.9, 'v2_canyon_debris': 0.6, 'v2_canyon_reflector': 0.5, 'v2_canyon_cliff': 1.0,
-      'v2_riverbed_reeds': 0.7, 'v2_riverbed_boulder': 0.6, 'v2_riverbed_bridge': 0.9,
-      'v2_sprint_building': 1.0, 'v2_sprint_lamp': 0.7, 'v2_sprint_billboard': 0.9,
-      'v2_sprint_tires': 0.6, 'v2_sprint_grandstand': 1.0,
+      // v4 assets — fixed scale per type (no random variation)
+      'v4_desert_cactus_tall': 1.0, 'v4_desert_cactus_barrel': 0.8,
+      'v4_desert_rock_sm': 0.7, 'v4_desert_rock_lg': 0.9,
+      'v4_desert_bush': 0.7, 'v4_desert_tumbleweed': 0.6,
+      'v4_desert_hut': 0.9, 'v4_desert_fence': 0.8,
+      'v4_desert_cow': 0.8, 'v4_desert_dry_grass': 0.5,
+      'v4_canyon_pillar': 1.0, 'v4_canyon_debris_sm': 0.7,
+      'v4_canyon_wall': 1.0, 'v4_canyon_arch': 1.0,
+      'v4_canyon_dead_bush': 0.7, 'v4_canyon_rock': 0.8,
+      'v4_canyon_debris_lg': 0.6, 'v4_canyon_barrier': 0.8,
+      'v4_riverbed_tree': 1.0, 'v4_riverbed_bush': 0.8,
+      'v4_riverbed_reeds': 0.7, 'v4_riverbed_rock': 0.7,
+      'v4_riverbed_puddle': 0.8, 'v4_riverbed_log': 0.8,
+      'v4_riverbed_bird': 0.5,
+      'v4_mountain_pine': 1.0, 'v4_mountain_rock_snow': 0.8,
+      'v4_mountain_cabin': 1.0, 'v4_mountain_snowman': 0.7,
+      'v4_mountain_bush': 0.7, 'v4_mountain_sign': 0.6,
+      'v4_mountain_sign_arrow': 0.6, 'v4_mountain_rock_flat': 0.7,
+      'v4_mountain_snow_pile': 0.6, 'v4_mountain_stone_wall': 0.8,
+      'v4_sprint_office': 1.0, 'v4_sprint_hotel': 1.0,
+      'v4_sprint_apartment': 1.0, 'v4_sprint_skyscraper': 1.2,
+      'v4_sprint_restaurant': 0.8, 'v4_sprint_cones': 0.5,
+      'v4_sprint_tires': 0.6, 'v4_sprint_generator': 0.7,
+      'v4_sprint_light': 0.8, 'v4_sprint_grandstand': 1.0,
+      'v4_sprint_jersey': 0.8, 'v4_sprint_catch_fence': 0.9,
+      'v4_sprint_banner': 1.0, 'v4_sprint_tire_stack': 0.7,
     };
 
     let turbineCount = 0; // limit turbines
@@ -701,7 +718,7 @@ export class RaceScene extends Phaser.Scene {
           const w2x = x1 + ni[0]*side*wall2Dist + dx*0.5;
           const w2y = y1 + ni[1]*side*wall2Dist + dy*0.5;
           this.add.sprite(w2x, w2y, 'v4_canyon_rock')
-            .setDepth(1).setScale(0.9 + Math.random()*0.2);
+            .setDepth(1).setScale(0.9);
         }
       }
 
@@ -732,7 +749,7 @@ export class RaceScene extends Phaser.Scene {
             const dd = cHalfW + 60 + Math.random()*40;
             const tex = Math.random() > 0.5 ? 'v4_canyon_debris_sm' : 'v4_canyon_dead_bush';
             this.add.sprite(wp[i][0] + ni[0]*side*dd, wp[i][1] + ni[1]*side*dd, tex)
-              .setDepth(2).setScale(0.8 + Math.random()*0.3);
+              .setDepth(2).setScale(0.8);
           }
         }
       }
@@ -753,7 +770,7 @@ export class RaceScene extends Phaser.Scene {
             const d = 100/2 + 35 + Math.random()*50;
             const tex = Math.random() > 0.4 ? 'bush_green' : 'rock_grey';
             this.add.sprite(x1+dx*t+nx*side*d, y1+dy*t+ny*side*d, tex)
-              .setDepth(2).setScale(0.8+Math.random()*0.4);
+              .setDepth(2).setScale(0.8);
           }
         }
       }
@@ -903,14 +920,14 @@ export class RaceScene extends Phaser.Scene {
             if (t > 1) continue;
             const d = halfW + 60 + Math.random()*50;
             this.add.sprite(x1+dx*t+nx*side*d, y1+dy*t+ny*side*d, 'v4_mountain_pine')
-              .setDepth(2).setScale(0.6+Math.random()*0.3);
+              .setDepth(2).setScale(0.7);
           }
           // Background tree (further out, subtle)
           if (Math.random() > 0.5) {
             const t2 = Math.random();
             const d2 = halfW + 120 + Math.random()*60;
             this.add.sprite(x1+dx*t2+nx*side*d2, y1+dy*t2+ny*side*d2, 'v4_mountain_pine')
-              .setDepth(1).setScale(0.8+Math.random()*0.3).setAlpha(0.5);
+              .setDepth(1).setScale(0.8).setAlpha(0.5);
           }
         }
       }
