@@ -18,7 +18,7 @@ async function save(canvas, ...parts) {
 }
 
 // Remove near-black pixels → transparent
-function removeBlackBg(ctx, w, h, threshold = 35) {
+function removeBlackBg(ctx, w, h, threshold = 15) {
   const id = ctx.getImageData(0, 0, w, h);
   const d = id.data;
   for (let i = 0; i < d.length; i += 4) {
@@ -55,7 +55,7 @@ async function cropSprite(img, region, targetW, targetH, ...outPath) {
   ctx1.drawImage(img, region.x, region.y, region.w, region.h, 0, 0, region.w, region.h);
   
   // Remove black background
-  removeBlackBg(ctx1, region.w, region.h, 38);
+  removeBlackBg(ctx1, region.w, region.h, 15);
   
   // Find tight bounds
   const bounds = findBounds(ctx1, region.w, region.h);
