@@ -1,0 +1,192 @@
+============================================================
+TOKAMAK NETWORK — INTERNAL DEMO PRESENTATION SCRIPT
+============================================================
+Presenter: Jaden
+Duration: ~10 minutes
+Language: English (simple and clear)
+============================================================
+
+
+[SLIDE 1 — TITLE]
+----------------------------------------------------------
+
+"Hi everyone. Today I will show you two things I have been working on.
+First is the Tokamak Hiring System, and second is TOKAMAK Rally —
+a blockchain racing game. Let's get started."
+
+
+[SLIDE 2 — AGENDA]
+----------------------------------------------------------
+
+"We have three sections today.
+Number one: Tokamak Hiring System — how we find talent using GitHub.
+Number two: TOKAMAK Rally — our open-source racing game.
+And number three: Next steps and future plans."
+
+
+[SLIDE 3 — DEVELOPER SOURCING SYSTEM]
+----------------------------------------------------------
+
+"So, the Tokamak Hiring System.
+
+Let me explain how it works.
+
+First, we have a GitHub Scan system. This system checks
+who outside our team has done something on the
+Tokamak Network GitHub. For example, if someone gives
+a star to our repo, or does other actions — not just once,
+but multiple times — we think this person could be
+a potential candidate. That is why we built this system.
+
+But honestly, most of the people we find right now
+are our former colleagues. That is a bit unfortunate.
+Still, we plan to keep scanning and hope to find
+potential new Tokamak members over time.
+
+In addition to the scan, we also do active outreach.
+Using the GitHub API and LinkedIn, we search for
+developers with blockchain experience.
+On LinkedIn, I can sent the messages. But if someone is not a
+first-degree connection, we need a paid plan.
+With the paid plan, we can send 30 InMail messages
+per month. Our target is 8 to 10 outreach messages
+per week.
+
+Here is our current status. We contacted 9 candidates so far.
+4 of them declined. 5 are still waiting to respond.
+If they don't respond within 15 days, we count it as a decline.
+
+So honestly, no big results yet. But that is expected.
+
+I want to be clear about the purpose of this work.
+This is NOT about filling open positions because we are short on people.
+The industry is changing fast. New tools, new technologies,
+new ways of building things. What we want is to keep a door open.
+Even if the chance is small, we want to be ready to meet
+promising talent when they appear. It is a long-term effort,
+and we will keep doing it."
+
+
+[SLIDE 4 — TOKAMAK RALLY OVERVIEW]
+----------------------------------------------------------
+
+"Now, let me talk about TOKAMAK Rally.
+Let me show you the game while I explain.
+
+This is an open-source racing game built with blockchain integration.
+It runs in the web browser using Phaser.js and Vite.
+
+    >>> [DEMO] Open the game in browser. Show the menu screen.
+    >>> Show the 5 car options. Select TOKAMAK GT.
+
+The game has 5 zones — Sand, Canyon, Riverbed, Mountain, and Sprint.
+There are 5 cars to choose from, including TOKAMAK GT which is
+our team car with Tokamak Blue color.
+
+    >>> [DEMO] Start a race. Let the audience see the Sand zone.
+    >>> Show the HUD — timer, speed, zone name.
+
+It is a time-attack format.
+Players need to reach checkpoints before time runs out.
+The difficulty is high on purpose. Average users will
+struggle to finish. That is the challenge.
+
+    >>> [DEMO] Drive through Sand → Canyon transition.
+    >>> Show different zone visuals, obstacles, dust particles.
+
+All obstacles are deterministic — every player sees the exact
+same course layout. The track is a single line, no loops or forks.
+
+    >>> [DEMO] Try a drift. Show the drift mechanic and sound.
+    >>> Point out the particle effects and procedural audio.
+
+One interesting thing — all sound is procedural.
+There are no audio files in the project. Everything is
+generated using Web Audio API. Engine sound, drift screech,
+offroad friction, and even a Eurobeat background music
+at 170 BPM.
+
+    >>> [DEMO] Reach the Sprint zone if possible.
+    >>> Show the Tokamak banner walls and crowd.
+
+The sprint zone has Tokamak Network banner walls on both sides
+with a crowd behind them. The banners are actual walls —
+if you hit them, your car bounces back.
+
+    >>> [DEMO] Show MetaMask wallet connect button on menu.
+
+For blockchain, we use MetaMask wallet connection and the leaderboard
+is on Sepolia testnet. But you don't need a wallet to play.
+Guest play is fully supported. Wallet is only needed if you
+want to submit your time to the leaderboard.
+
+The game is open-source — Tokamak publishes the code,
+but does not operate the service.
+
+    >>> [DEMO] End the demo. Return to slides.
+
+
+[SLIDE 5 — TOKAMAK RALLY FUTURE PLANS]
+----------------------------------------------------------
+
+"For future plans.
+
+In the short term, we will deploy on Vercel so our team
+can test it. That is about 14 members.
+We collect feedback and adjust the game balance.
+
+For new features, we are planning new courses with
+different themes and layouts. Also a map editor tool
+so we can create custom tracks easily.
+We may add more cars and maybe a ghost race mode
+where you race against other players' recorded times.
+
+For the tournament system, we have some early ideas
+but the tokenomics part still needs more work.
+We need to think more carefully about entry fees,
+prize distribution, and how TOKAMAK token fits in.
+So the plan is — first, I will work on the tokenomics
+design quickly, and then prepare a tournament test
+with our team members. It will be both a test session
+and a small internal tournament at the same time.
+
+Long term, we want to migrate from Sepolia to Titan L2
+and run proper tournaments with TOKAMAK token.
+Since it is open-source, anyone can fork it
+and run their own version."
+
+
+[SLIDE 6 — NEXT STEPS]
+----------------------------------------------------------
+
+"To wrap up the next steps.
+
+For Tokamak Hiring, we continue the weekly outreach
+at 8 to 10 messages per week. We will track the
+response rates and improve our messaging over time.
+
+
+For TOKAMAK Rally, the priority is completing the
+Vercel deployment and running a playtesting session
+with the team. After that, we work on new courses
+and the map editor.
+
+The key takeaway is this:
+Tokamak Hiring is a low-cost, long-term effort.
+We are not in a hurry. We just want to stay connected
+with good people in a changing world.
+
+TOKAMAK Rally is a fun way to put our name out there.
+It is open-source, it uses our token, and it will be
+ready for team testing very soon."
+
+
+[SLIDE 7 — Q&A]
+----------------------------------------------------------
+
+"That is everything from my side. Do you have any questions?"
+
+
+============================================================
+END OF SCRIPT
+============================================================

@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Track C — Savanna Circuit</title>
+<style>
+body { margin: 0; background: #1a1a2e; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Segoe UI', Arial, sans-serif; }
+canvas { border: 1px solid #333; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1200" height="900"></canvas>
+<script>
+const ctx = document.getElementById('c').getContext('2d');
+const W = 1200, H = 900;
+
+const zones = [
+  { name: 'Savanna Plains', color: '#4CAF50', straightRatio: '55:45', type: '초원 평지' },
+  { name: 'Lakeside Bend', color: '#1E88E5', straightRatio: '35:65', type: '호수변 굴곡' },
+  { name: 'Desert Stretch', color: '#FF9800', straightRatio: '50:50', type: '사막 구간' },
+  { name: 'Coastal Run', color: '#4FC3F7', straightRatio: '45:55', type: '해안 도로' },
+];
+
+const trackName = 'Savanna Circuit';
+const fullThrottle = 45;
+
+const waypoints = [
+  // Zone 0: Savanna Plains
+  [{x:100,y:350},{x:160,y:320},{x:230,y:300},{x:300,y:310},{x:350,y:340},
+   {x:380,y:380},{x:370,y:430}],
+  // Zone 1: Lakeside Bend
+  [{x:340,y:470},{x:300,y:500},{x:260,y:520},{x:230,y:560},{x:250,y:600},
+   {x:300,y:620},{x:350,y:610},{x:390,y:580},{x:420,y:540},{x:460,y:510}],
+  // Zone 2: Desert Stretch
+  [{x:500,y:490},{x:550,y:460},{x:600,y:440},{x:660,y:450},{x:700,y:480},
+   {x:720,y:520},{x:710,y:570},{x:680,y:600},{x:720,y:630},{x:770,y:620}],
+  // Zone 3: Coastal Run
+  [{x:810,y:590},{x:840,y:550},{x:860,y:500},{x:850,y:450},{x:820,y:410},
+   {x:850,y:370},{x:890,y:350},{x:920,y:370}],
+];
+
+const allPts = waypoints.flat();
+const totalWP = allPts.length;
+
+ctx.fillStyle = '#1a1a2e';
+ctx.fillRect(0, 0, W, H);
+
+// Decorative savanna grass patches
+for (let i = 0; i < 30; i++) {
+  ctx.beginPath();
+  const gx = 50 + Math.random()*500, gy = 200 + Math.random()*200;
+  ctx.ellipse(gx, gy, 15+Math.random()*20, 8+Math.random()*10, Math.random(), 0, Math.PI*2);
+  ctx.fillStyle = 'rgba(76,175,80,0.06)';
+  ctx.fill();
+}
+
+// Lake decoration
+ctx.beginPath();
+ctx.ellipse(290, 560, 80, 50, 0.3, 0, Math.PI*2);
+ctx.fillStyle = 'rgba(30,136,229,0.12)';
+ctx.fill();
+
+function drawSegment(pts, color) {
+  if (pts.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) {
+    const prev = pts[i-1], cur = pts[i];
+    ctx.quadraticCurveTo(prev.x, prev.y, (prev.x+cur.x)/2, (prev.y+cur.y)/2);
+  }
+  ctx.lineTo(pts[pts.length-1].x, pts[pts.length-1].y);
+  ctx.strokeStyle = color; ctx.lineWidth = 14;
+  ctx.lineCap = 'round'; ctx.lineJoin = 'round'; ctx.stroke();
+}
+
+for (let z = 0; z < waypoints.length; z++) {
+  let pts = [...waypoints[z]];
+  if (z > 0) pts = [waypoints[z-1][waypoints[z-1].length-1], ...pts];
+  drawSegment(pts, zones[z].color);
+}
+
+ctx.setLineDash([8,12]); ctx.lineWidth=1.5; ctx.strokeStyle='rgba(255,255,255,0.3)';
+ctx.beginPath(); ctx.moveTo(allPts[0].x,allPts[0].y);
+for(let i=1;i<allPts.length;i++){const p=allPts[i-1],c=allPts[i];ctx.quadraticCurveTo(p.x,p.y,(p.x+c.x)/2,(p.y+c.y)/2);}
+ctx.stroke(); ctx.setLineDash([]);
+
+const cpIndices=[]; let cumIdx=0;
+for(let z=0;z<waypoints.length-1;z++){cumIdx+=waypoints[z].length;cpIndices.push(cumIdx-1);}
+cpIndices.forEach((idx,i)=>{
+  const p=allPts[idx];
+  ctx.beginPath();ctx.arc(p.x,p.y,8,0,Math.PI*2);ctx.fillStyle='#FFD700';ctx.fill();
+  ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();
+  ctx.fillStyle='#000';ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('CP'+(i+1),p.x,p.y);
+});
+
+function getAngle(a,b,c){const v1={x:a.x-b.x,y:a.y-b.y},v2={x:c.x-b.x,y:c.y-b.y};const d=v1.x*v2.x+v1.y*v2.y;const m1=Math.sqrt(v1.x*v1.x+v1.y*v1.y),m2=Math.sqrt(v2.x*v2.x+v2.y*v2.y);if(!m1||!m2)return Math.PI;return Math.acos(Math.min(1,Math.max(-1,d/(m1*m2))));}
+for(let i=1;i<allPts.length-1;i++){if(getAngle(allPts[i-1],allPts[i],allPts[i+1])<2.4){ctx.beginPath();ctx.arc(allPts[i].x,allPts[i].y,4,0,Math.PI*2);ctx.fillStyle='#ff4081';ctx.fill();}}
+
+for(let i=3;i<allPts.length-1;i+=5){const p=allPts[i],n=allPts[i+1];const ang=Math.atan2(n.y-p.y,n.x-p.x);const mx=(p.x+n.x)/2,my=(p.y+n.y)/2;ctx.save();ctx.translate(mx,my);ctx.rotate(ang);ctx.beginPath();ctx.moveTo(8,0);ctx.lineTo(-5,-5);ctx.lineTo(-5,5);ctx.closePath();ctx.fillStyle='rgba(255,255,255,0.7)';ctx.fill();ctx.restore();}
+
+ctx.beginPath();ctx.arc(allPts[0].x,allPts[0].y,12,0,Math.PI*2);ctx.fillStyle='#4CAF50';ctx.fill();ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.stroke();ctx.fillStyle='#fff';ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('S',allPts[0].x,allPts[0].y);
+
+const fin=allPts[allPts.length-1];ctx.fillStyle='#f44336';ctx.fillRect(fin.x-12,fin.y-12,24,24);for(let r=0;r<4;r++)for(let c=0;c<4;c++){if((r+c)%2===0){ctx.fillStyle='#fff';ctx.fillRect(fin.x-12+c*6,fin.y-12+r*6,6,6);}}ctx.strokeStyle='#fff';ctx.lineWidth=2;ctx.strokeRect(fin.x-12,fin.y-12,24,24);
+
+const lx=960,ly=30,lw=220,lh=350;
+ctx.fillStyle='rgba(0,0,0,0.7)';ctx.strokeStyle='#555';ctx.lineWidth=1;ctx.beginPath();ctx.roundRect(lx,ly,lw,lh,8);ctx.fill();ctx.stroke();
+ctx.fillStyle='#fff';ctx.font='bold 18px sans-serif';ctx.textAlign='left';ctx.fillText(trackName,lx+12,ly+28);
+ctx.font='12px sans-serif';ctx.fillStyle='#aaa';ctx.fillText(`Full Throttle: ~${fullThrottle}%`,lx+12,ly+50);ctx.fillText(`Total Waypoints: ${totalWP}`,lx+12,ly+68);
+
+let yOff=ly+95;
+zones.forEach((z,i)=>{ctx.fillStyle=z.color;ctx.fillRect(lx+12,yOff-8,14,14);ctx.fillStyle='#fff';ctx.font='bold 13px sans-serif';ctx.fillText(z.name,lx+32,yOff+3);ctx.font='11px sans-serif';ctx.fillStyle='#bbb';ctx.fillText(`직선:곡선 ${z.straightRatio} | ${z.type}`,lx+32,yOff+18);ctx.fillText(`WP: ${waypoints[i].length}`,lx+32,yOff+32);yOff+=52;});
+
+yOff+=10;
+ctx.fillStyle='#4CAF50';ctx.beginPath();ctx.arc(lx+20,yOff,5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ccc';ctx.font='11px sans-serif';ctx.fillText('START',lx+32,yOff+4);yOff+=18;
+ctx.fillStyle='#f44336';ctx.fillRect(lx+15,yOff-5,10,10);ctx.fillStyle='#ccc';ctx.fillText('FINISH',lx+32,yOff+4);yOff+=18;
+ctx.fillStyle='#FFD700';ctx.beginPath();ctx.arc(lx+20,yOff,5,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ccc';ctx.fillText('Checkpoint',lx+32,yOff+4);yOff+=18;
+ctx.fillStyle='#ff4081';ctx.beginPath();ctx.arc(lx+20,yOff,4,0,Math.PI*2);ctx.fill();ctx.fillStyle='#ccc';ctx.fillText('Corner Apex',lx+32,yOff+4);
+</script>
+</body>
+</html>

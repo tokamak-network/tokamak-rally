@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Track B — Coastal Switchback</title>
+<style>
+body { margin: 0; background: #1a1a2e; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Segoe UI', Arial, sans-serif; }
+canvas { border: 1px solid #333; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1200" height="900"></canvas>
+<script>
+const ctx = document.getElementById('c').getContext('2d');
+const W = 1200, H = 900;
+
+const zones = [
+  { name: 'Lake Departure', color: '#2196F3', straightRatio: '30:70', type: '호수변 출발' },
+  { name: 'Desert Valley', color: '#E65100', straightRatio: '25:75', type: '사막 계곡' },
+  { name: 'Cliff Switchbacks', color: '#795548', straightRatio: '15:85', type: '절벽 스위치백' },
+  { name: 'Coastal Highway', color: '#4FC3F7', straightRatio: '50:50', type: '해안 도로' },
+  { name: 'Beach Finish', color: '#80DEEA', straightRatio: '45:55', type: '해변 마무리' },
+];
+
+const trackName = 'Coastal Switchback';
+const fullThrottle = 35;
+
+const waypoints = [
+  // Zone 0: Lake Departure
+  [{x:80,y:200},{x:120,y:230},{x:160,y:280},{x:180,y:330},{x:170,y:380},{x:140,y:420},{x:160,y:460}],
+  // Zone 1: Desert Valley
+  [{x:200,y:480},{x:250,y:470},{x:300,y:440},{x:340,y:400},{x:370,y:360},{x:350,y:310},{x:310,y:290},{x:280,y:320},{x:290,y:370},{x:330,y:390}],
+  // Zone 2: Cliff Switchbacks — tight hairpins
+  [{x:370,y:410},{x:420,y:440},{x:460,y:480},{x:440,y:530},{x:400,y:550},
+   {x:440,y:590},{x:490,y:610},{x:530,y:580},{x:510,y:540},{x:480,y:510},
+   {x:520,y:480},{x:570,y:500},{x:600,y:540},{x:580,y:590},{x:550,y:630},
+   {x:590,y:670},{x:640,y:680},{x:680,y:650}],
+  // Zone 3: Coastal Highway
+  [{x:710,y:620},{x:740,y:580},{x:770,y:540},{x:810,y:520},{x:850,y:530},{x:880,y:560}],
+  // Zone 4: Beach Finish
+  [{x:900,y:580},{x:910,y:540},{x:890,y:500},{x:870,y:470},{x:890,y:440},{x:920,y:430}],
+];
+
+const allPts = waypoints.flat();
+const totalWP = allPts.length;
+
+ctx.fillStyle = '#1a1a2e';
+ctx.fillRect(0, 0, W, H);
+
+// Decorative ocean area
+ctx.beginPath();
+ctx.moveTo(600, 900);
+ctx.quadraticCurveTo(750, 750, 950, 900);
+ctx.fillStyle = 'rgba(79,195,247,0.1)';
+ctx.fill();
+
+// Cliff edge hint
+ctx.beginPath();
+ctx.moveTo(380, 400);
+ctx.quadraticCurveTo(500, 700, 700, 700);
+ctx.strokeStyle = 'rgba(121,85,72,0.2)';
+ctx.lineWidth = 40;
+ctx.stroke();
+
+function drawSegment(pts, color) {
+  if (pts.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) {
+    const prev = pts[i-1], cur = pts[i];
+    ctx.quadraticCurveTo(prev.x, prev.y, (prev.x+cur.x)/2, (prev.y+cur.y)/2);
+  }
+  ctx.lineTo(pts[pts.length-1].x, pts[pts.length-1].y);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 13;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+}
+
+for (let z = 0; z < waypoints.length; z++) {
+  let pts = [...waypoints[z]];
+  if (z > 0) pts = [waypoints[z-1][waypoints[z-1].length-1], ...pts];
+  drawSegment(pts, zones[z].color);
+}
+
+// Center line
+ctx.setLineDash([8, 12]);
+ctx.lineWidth = 1.5;
+ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+ctx.beginPath();
+ctx.moveTo(allPts[0].x, allPts[0].y);
+for (let i = 1; i < allPts.length; i++) {
+  const prev = allPts[i-1], cur = allPts[i];
+  ctx.quadraticCurveTo(prev.x, prev.y, (prev.x+cur.x)/2, (prev.y+cur.y)/2);
+}
+ctx.stroke();
+ctx.setLineDash([]);
+
+// Checkpoints
+const cpIndices = [];
+let cumIdx = 0;
+for (let z = 0; z < waypoints.length - 1; z++) {
+  cumIdx += waypoints[z].length;
+  cpIndices.push(cumIdx - 1);
+}
+cpIndices.forEach((idx, i) => {
+  const p = allPts[idx];
+  ctx.beginPath(); ctx.arc(p.x, p.y, 8, 0, Math.PI*2);
+  ctx.fillStyle = '#FFD700'; ctx.fill();
+  ctx.strokeStyle = '#fff'; ctx.lineWidth = 2; ctx.stroke();
+  ctx.fillStyle = '#000'; ctx.font = 'bold 10px sans-serif';
+  ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+  ctx.fillText('CP'+(i+1), p.x, p.y);
+});
+
+// Corner apex
+function getAngle(a, b, c) {
+  const v1={x:a.x-b.x,y:a.y-b.y}, v2={x:c.x-b.x,y:c.y-b.y};
+  const dot=v1.x*v2.x+v1.y*v2.y;
+  const m1=Math.sqrt(v1.x*v1.x+v1.y*v1.y), m2=Math.sqrt(v2.x*v2.x+v2.y*v2.y);
+  if(!m1||!m2) return Math.PI;
+  return Math.acos(Math.min(1,Math.max(-1,dot/(m1*m2))));
+}
+for (let i=1;i<allPts.length-1;i++) {
+  if (getAngle(allPts[i-1],allPts[i],allPts[i+1])<2.4) {
+    ctx.beginPath(); ctx.arc(allPts[i].x,allPts[i].y,4,0,Math.PI*2);
+    ctx.fillStyle='#ff4081'; ctx.fill();
+  }
+}
+
+// Direction arrows
+for (let i=3;i<allPts.length-1;i+=5) {
+  const p=allPts[i],n=allPts[i+1];
+  const ang=Math.atan2(n.y-p.y,n.x-p.x);
+  const mx=(p.x+n.x)/2,my=(p.y+n.y)/2;
+  ctx.save(); ctx.translate(mx,my); ctx.rotate(ang);
+  ctx.beginPath(); ctx.moveTo(8,0); ctx.lineTo(-5,-5); ctx.lineTo(-5,5); ctx.closePath();
+  ctx.fillStyle='rgba(255,255,255,0.7)'; ctx.fill(); ctx.restore();
+}
+
+// START
+ctx.beginPath(); ctx.arc(allPts[0].x,allPts[0].y,12,0,Math.PI*2);
+ctx.fillStyle='#4CAF50'; ctx.fill();
+ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.stroke();
+ctx.fillStyle='#fff'; ctx.font='bold 10px sans-serif';
+ctx.textAlign='center'; ctx.textBaseline='middle';
+ctx.fillText('S',allPts[0].x,allPts[0].y);
+
+// FINISH
+const fin=allPts[allPts.length-1];
+ctx.fillStyle='#f44336'; ctx.fillRect(fin.x-12,fin.y-12,24,24);
+for(let r=0;r<4;r++) for(let c=0;c<4;c++) {
+  if((r+c)%2===0){ctx.fillStyle='#fff';ctx.fillRect(fin.x-12+c*6,fin.y-12+r*6,6,6);}
+}
+ctx.strokeStyle='#fff'; ctx.lineWidth=2; ctx.strokeRect(fin.x-12,fin.y-12,24,24);
+
+// Legend
+const lx=960,ly=30,lw=220,lh=380;
+ctx.fillStyle='rgba(0,0,0,0.7)'; ctx.strokeStyle='#555'; ctx.lineWidth=1;
+ctx.beginPath(); ctx.roundRect(lx,ly,lw,lh,8); ctx.fill(); ctx.stroke();
+
+ctx.fillStyle='#fff'; ctx.font='bold 18px sans-serif'; ctx.textAlign='left';
+ctx.fillText(trackName,lx+12,ly+28);
+ctx.font='12px sans-serif'; ctx.fillStyle='#aaa';
+ctx.fillText(`Full Throttle: ~${fullThrottle}%`,lx+12,ly+50);
+ctx.fillText(`Total Waypoints: ${totalWP}`,lx+12,ly+68);
+
+let yOff=ly+95;
+zones.forEach((z,i)=>{
+  ctx.fillStyle=z.color; ctx.fillRect(lx+12,yOff-8,14,14);
+  ctx.fillStyle='#fff'; ctx.font='bold 13px sans-serif';
+  ctx.fillText(z.name,lx+32,yOff+3);
+  ctx.font='11px sans-serif'; ctx.fillStyle='#bbb';
+  ctx.fillText(`직선:곡선 ${z.straightRatio} | ${z.type}`,lx+32,yOff+18);
+  ctx.fillText(`WP: ${waypoints[i].length}`,lx+32,yOff+32);
+  yOff+=52;
+});
+
+yOff+=10;
+ctx.fillStyle='#4CAF50'; ctx.beginPath(); ctx.arc(lx+20,yOff,5,0,Math.PI*2); ctx.fill();
+ctx.fillStyle='#ccc'; ctx.font='11px sans-serif'; ctx.fillText('START',lx+32,yOff+4);
+yOff+=18;
+ctx.fillStyle='#f44336'; ctx.fillRect(lx+15,yOff-5,10,10);
+ctx.fillStyle='#ccc'; ctx.fillText('FINISH',lx+32,yOff+4);
+yOff+=18;
+ctx.fillStyle='#FFD700'; ctx.beginPath(); ctx.arc(lx+20,yOff,5,0,Math.PI*2); ctx.fill();
+ctx.fillStyle='#ccc'; ctx.fillText('Checkpoint',lx+32,yOff+4);
+yOff+=18;
+ctx.fillStyle='#ff4081'; ctx.beginPath(); ctx.arc(lx+20,yOff,4,0,Math.PI*2); ctx.fill();
+ctx.fillStyle='#ccc'; ctx.fillText('Corner Apex',lx+32,yOff+4);
+</script>
+</body>
+</html>

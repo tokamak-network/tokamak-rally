@@ -15,12 +15,12 @@ export class BootScene extends Phaser.Scene {
     this.load.image('v2_bg_mountain', '/assets/v2/tiles/bg_mountain.png');
     this.load.image('v2_bg_sprint', '/assets/v2/tiles/bg_sprint.png');
 
-    // v2 차량
+    // v2 차량 (Cars.js ID에 맞춤)
     this.load.image('v2_car_alpine_white', '/assets/v2/cars/car_alpine_white.png');
-    this.load.image('v2_car_desert_fox', '/assets/v2/cars/car_desert_fox.png');
-    this.load.image('v2_car_canyon_red', '/assets/v2/cars/car_canyon_red.png');
-    this.load.image('v2_car_river_blue', '/assets/v2/cars/car_river_blue.png');
-    this.load.image('v2_car_tundra_x', '/assets/v2/cars/car_tundra_x.png');
+    this.load.image('v2_car_hyper_blue', '/assets/v2/cars/car_hyper_blue.png');
+    this.load.image('v2_car_puma_orange', '/assets/v2/cars/car_puma_orange.png');
+    this.load.image('v2_car_tundra_red', '/assets/v2/cars/car_tundra_red.png');
+    this.load.image('v2_car_volt_green', '/assets/v2/cars/car_volt_green.png');
 
     // v2 배리어
     this.load.image('v2_barrier_desert', '/assets/v2/barriers/barrier_desert.png');

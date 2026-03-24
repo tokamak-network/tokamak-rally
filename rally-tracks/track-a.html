@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>Track A — Lakeside Serpentine</title>
+<style>
+body { margin: 0; background: #1a1a2e; display: flex; justify-content: center; align-items: center; min-height: 100vh; font-family: 'Segoe UI', Arial, sans-serif; }
+canvas { border: 1px solid #333; }
+</style>
+</head>
+<body>
+<canvas id="c" width="1200" height="900"></canvas>
+<script>
+const ctx = document.getElementById('c').getContext('2d');
+const W = 1200, H = 900;
+
+// Zone definitions
+const zones = [
+  { name: 'Lakeside Start', color: '#2196F3', straightRatio: '35:65', type: '호수변 자갈길' },
+  { name: 'Lake S-Curves', color: '#1565C0', straightRatio: '25:75', type: '호수 S커브' },
+  { name: 'Desert Crossing', color: '#FF9800', straightRatio: '50:50', type: '사막 직선+커브' },
+  { name: 'Canyon Descent', color: '#795548', straightRatio: '40:60', type: '계곡 하강로' },
+  { name: 'Coastal Finish', color: '#4FC3F7', straightRatio: '55:45', type: '해안 도로' },
+];
+
+const trackName = 'Lakeside Serpentine';
+const fullThrottle = 40;
+
+// Waypoints per zone
+const waypoints = [
+  // Zone 0: Lakeside Start
+  [
+    {x:80,y:450},{x:110,y:400},{x:150,y:360},{x:200,y:340},{x:250,y:350},{x:280,y:380},
+  ],
+  // Zone 1: Lake S-Curves
+  [
+    {x:300,y:420},{x:280,y:470},{x:260,y:520},{x:280,y:570},{x:320,y:590},
+    {x:360,y:570},{x:380,y:530},{x:370,y:480},{x:350,y:440},{x:370,y:400},
+    {x:410,y:380},{x:450,y:400},{x:470,y:440},{x:460,y:490},{x:440,y:530},
+    {x:460,y:570},{x:500,y:590},{x:540,y:560},
+  ],
+  // Zone 2: Desert Crossing
+  [
+    {x:570,y:520},{x:600,y:470},{x:640,y:430},{x:690,y:420},{x:740,y:430},
+    {x:770,y:460},{x:780,y:500},
+  ],
+  // Zone 3: Canyon Descent
+  [
+    {x:780,y:540},{x:770,y:580},{x:740,y:620},{x:700,y:640},{x:660,y:630},
+    {x:640,y:600},{x:650,y:560},{x:680,y:530},{x:720,y:520},{x:750,y:540},
+    {x:770,y:580},{x:790,y:620},{x:820,y:650},{x:860,y:660},
+  ],
+  // Zone 4: Coastal Finish
+  [
+    {x:900,y:650},{x:940,y:630},{x:960,y:590},{x:950,y:550},{x:920,y:530},
+    {x:890,y:540},{x:870,y:510},{x:880,y:470},{x:910,y:450},
+  ],
+];
+
+// Flatten for total count
+const allPts = waypoints.flat();
+const totalWP = allPts.length;
+
+// Draw background
+ctx.fillStyle = '#1a1a2e';
+ctx.fillRect(0, 0, W, H);
+
+// Draw decorative lake
+ctx.beginPath();
+ctx.ellipse(320, 480, 100, 70, 0, 0, Math.PI*2);
+ctx.fillStyle = 'rgba(33,150,243,0.15)';
+ctx.fill();
+ctx.strokeStyle = 'rgba(33,150,243,0.3)';
+ctx.lineWidth = 1;
+ctx.stroke();
+
+// Draw track zone by zone
+function drawSegment(pts, color) {
+  if (pts.length < 2) return;
+  ctx.beginPath();
+  ctx.moveTo(pts[0].x, pts[0].y);
+  for (let i = 1; i < pts.length; i++) {
+    const prev = pts[i-1];
+    const cur = pts[i];
+    const cpx = (prev.x + cur.x)/2;
+    const cpy = (prev.y + cur.y)/2;
+    ctx.quadraticCurveTo(prev.x, prev.y, cpx, cpy);
+  }
+  const last = pts[pts.length-1];
+  ctx.lineTo(last.x, last.y);
+  ctx.strokeStyle = color;
+  ctx.lineWidth = 14;
+  ctx.lineCap = 'round';
+  ctx.lineJoin = 'round';
+  ctx.stroke();
+}
+
+// Connect zones seamlessly
+for (let z = 0; z < waypoints.length; z++) {
+  let pts = [...waypoints[z]];
+  if (z > 0) pts = [waypoints[z-1][waypoints[z-1].length-1], ...pts];
+  drawSegment(pts, zones[z].color);
+}
+
+// Draw center line (dashed)
+ctx.setLineDash([8, 12]);
+ctx.lineWidth = 1.5;
+ctx.strokeStyle = 'rgba(255,255,255,0.3)';
+ctx.beginPath();
+ctx.moveTo(allPts[0].x, allPts[0].y);
+for (let i = 1; i < allPts.length; i++) {
+  const prev = allPts[i-1], cur = allPts[i];
+  ctx.quadraticCurveTo(prev.x, prev.y, (prev.x+cur.x)/2, (prev.y+cur.y)/2);
+}
+ctx.stroke();
+ctx.setLineDash([]);
+
+// Checkpoints (at zone boundaries)
+const cpIndices = [];
+let cumIdx = 0;
+for (let z = 0; z < waypoints.length - 1; z++) {
+  cumIdx += waypoints[z].length;
+  cpIndices.push(cumIdx - 1);
+}
+cpIndices.forEach((idx, i) => {
+  const p = allPts[idx];
+  ctx.beginPath();
+  ctx.arc(p.x, p.y, 8, 0, Math.PI*2);
+  ctx.fillStyle = '#FFD700';
+  ctx.fill();
+  ctx.strokeStyle = '#fff';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+  ctx.fillStyle = '#000';
+  ctx.font = 'bold 10px sans-serif';
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('CP'+(i+1), p.x, p.y);
+});
+
+// Corner apex dots
+function getAngle(a, b, c) {
+  const v1 = {x: a.x-b.x, y: a.y-b.y};
+  const v2 = {x: c.x-b.x, y: c.y-b.y};
+  const dot = v1.x*v2.x + v1.y*v2.y;
+  const m1 = Math.sqrt(v1.x*v1.x+v1.y*v1.y);
+  const m2 = Math.sqrt(v2.x*v2.x+v2.y*v2.y);
+  if (m1===0||m2===0) return Math.PI;
+  return Math.acos(Math.min(1, Math.max(-1, dot/(m1*m2))));
+}
+
+for (let i = 1; i < allPts.length-1; i++) {
+  const angle = getAngle(allPts[i-1], allPts[i], allPts[i+1]);
+  if (angle < 2.4) {
+    ctx.beginPath();
+    ctx.arc(allPts[i].x, allPts[i].y, 4, 0, Math.PI*2);
+    ctx.fillStyle = '#ff4081';
+    ctx.fill();
+  }
+}
+
+// Direction arrows
+for (let i = 4; i < allPts.length-1; i += 6) {
+  const p = allPts[i], n = allPts[i+1];
+  const ang = Math.atan2(n.y-p.y, n.x-p.x);
+  const mx = (p.x+n.x)/2, my = (p.y+n.y)/2;
+  ctx.save();
+  ctx.translate(mx, my);
+  ctx.rotate(ang);
+  ctx.beginPath();
+  ctx.moveTo(8, 0);
+  ctx.lineTo(-5, -5);
+  ctx.lineTo(-5, 5);
+  ctx.closePath();
+  ctx.fillStyle = 'rgba(255,255,255,0.7)';
+  ctx.fill();
+  ctx.restore();
+}
+
+// START marker
+ctx.beginPath();
+ctx.arc(allPts[0].x, allPts[0].y, 12, 0, Math.PI*2);
+ctx.fillStyle = '#4CAF50';
+ctx.fill();
+ctx.strokeStyle = '#fff';
+ctx.lineWidth = 2;
+ctx.stroke();
+ctx.fillStyle = '#fff';
+ctx.font = 'bold 10px sans-serif';
+ctx.textAlign = 'center';
+ctx.textBaseline = 'middle';
+ctx.fillText('S', allPts[0].x, allPts[0].y);
+
+// FINISH marker
+const fin = allPts[allPts.length-1];
+ctx.beginPath();
+ctx.rect(fin.x-12, fin.y-12, 24, 24);
+ctx.fillStyle = '#f44336';
+ctx.fill();
+// Checker pattern
+for (let r = 0; r < 4; r++) for (let c = 0; c < 4; c++) {
+  if ((r+c)%2===0) {
+    ctx.fillStyle = '#fff';
+    ctx.fillRect(fin.x-12+c*6, fin.y-12+r*6, 6, 6);
+  }
+}
+ctx.strokeStyle = '#fff';
+ctx.lineWidth = 2;
+ctx.strokeRect(fin.x-12, fin.y-12, 24, 24);
+
+// Legend
+const lx = 960, ly = 30, lw = 220, lh = 380;
+ctx.fillStyle = 'rgba(0,0,0,0.7)';
+ctx.strokeStyle = '#555';
+ctx.lineWidth = 1;
+ctx.beginPath();
+ctx.roundRect(lx, ly, lw, lh, 8);
+ctx.fill();
+ctx.stroke();
+
+ctx.fillStyle = '#fff';
+ctx.font = 'bold 18px sans-serif';
+ctx.textAlign = 'left';
+ctx.fillText(trackName, lx+12, ly+28);
+
+ctx.font = '12px sans-serif';
+ctx.fillStyle = '#aaa';
+ctx.fillText(`Full Throttle: ~${fullThrottle}%`, lx+12, ly+50);
+ctx.fillText(`Total Waypoints: ${totalWP}`, lx+12, ly+68);
+
+let yOff = ly + 95;
+zones.forEach((z, i) => {
+  ctx.fillStyle = z.color;
+  ctx.fillRect(lx+12, yOff-8, 14, 14);
+  ctx.fillStyle = '#fff';
+  ctx.font = 'bold 13px sans-serif';
+  ctx.fillText(z.name, lx+32, yOff+3);
+  ctx.font = '11px sans-serif';
+  ctx.fillStyle = '#bbb';
+  ctx.fillText(`직선:곡선 ${z.straightRatio} | ${z.type}`, lx+32, yOff+18);
+  ctx.fillText(`WP: ${waypoints[i].length}`, lx+32, yOff+32);
+  yOff += 52;
+});
+
+// Symbols legend
+yOff += 10;
+ctx.fillStyle = '#4CAF50';
+ctx.beginPath(); ctx.arc(lx+20, yOff, 5, 0, Math.PI*2); ctx.fill();
+ctx.fillStyle = '#ccc'; ctx.font = '11px sans-serif';
+ctx.fillText('START', lx+32, yOff+4);
+yOff += 18;
+ctx.fillStyle = '#f44336';
+ctx.fillRect(lx+15, yOff-5, 10, 10);
+ctx.fillStyle = '#ccc';
+ctx.fillText('FINISH', lx+32, yOff+4);
+yOff += 18;
+ctx.fillStyle = '#FFD700';
+ctx.beginPath(); ctx.arc(lx+20, yOff, 5, 0, Math.PI*2); ctx.fill();
+ctx.fillStyle = '#ccc';
+ctx.fillText('Checkpoint', lx+32, yOff+4);
+yOff += 18;
+ctx.fillStyle = '#ff4081';
+ctx.beginPath(); ctx.arc(lx+20, yOff, 4, 0, Math.PI*2); ctx.fill();
+ctx.fillStyle = '#ccc';
+ctx.fillText('Corner Apex', lx+32, yOff+4);
+</script>
+</body>
+</html>
