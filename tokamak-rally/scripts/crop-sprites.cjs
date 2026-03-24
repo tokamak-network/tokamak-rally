@@ -74,12 +74,19 @@ async function cropSprite(img, region, targetW, targetH, ...outPath) {
   const ctx2 = c2.getContext('2d');
   ctx2.drawImage(c1, bx, by, bw, bh, 0, 0, bw, bh);
   
-  // Resize to target
+  // Resize to target — preserve aspect ratio, center with transparent padding
+  const scaleX = targetW / bw;
+  const scaleY = targetH / bh;
+  const scale = Math.min(scaleX, scaleY); // fit inside target
+  const fitW = Math.round(bw * scale);
+  const fitH = Math.round(bh * scale);
+  const offX = Math.floor((targetW - fitW) / 2);
+  const offY = Math.floor((targetH - fitH) / 2);
   const c3 = createCanvas(targetW, targetH);
   const ctx3 = c3.getContext('2d');
   ctx3.imageSmoothingEnabled = true;
   ctx3.imageSmoothingQuality = 'high';
-  ctx3.drawImage(c2, 0, 0, bw, bh, 0, 0, targetW, targetH);
+  ctx3.drawImage(c2, 0, 0, bw, bh, offX, offY, fitW, fitH);
   
   await save(c3, ...outPath);
 }
