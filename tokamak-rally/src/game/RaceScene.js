@@ -916,57 +916,7 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // === Mountain→Sprint tunnel ===
-    const tunnelZone = this.track.zones.find(z => z.name === 'trans_mountain_sprint');
-    if (tunnelZone) {
-      const tunnelG = this.add.graphics().setDepth(15);
-      for (let i = tunnelZone.fromWP; i < Math.min(tunnelZone.toWP, wp.length-1); i++) {
-        const [x1t,y1t] = wp[i], [x2t,y2t] = wp[i+1];
-        const tdx = x2t-x1t, tdy = y2t-y1t;
-        const tlen = Math.sqrt(tdx*tdx+tdy*tdy) || 1;
-        const tnx = -tdy/tlen, tny = tdx/tlen;
-        const tw = 60;
-        // Progress for fading (darker at start, lighter at exit)
-        const progress = (i - tunnelZone.fromWP) / (tunnelZone.toWP - tunnelZone.fromWP);
-        const alpha = 0.7 * (1 - progress * 0.6);
-        tunnelG.fillStyle(0x111111, alpha);
-        tunnelG.fillTriangle(
-          x1t + tnx*tw, y1t + tny*tw,
-          x1t - tnx*tw, y1t - tny*tw,
-          x2t + tnx*tw, y2t + tny*tw
-        );
-        tunnelG.fillTriangle(
-          x1t - tnx*tw, y1t - tny*tw,
-          x2t + tnx*tw, y2t + tny*tw,
-          x2t - tnx*tw, y2t - tny*tw
-        );
-        // Ceiling lights
-        if (i % 2 === 0) {
-          const mx = (x1t+x2t)/2, my = (y1t+y2t)/2;
-          const lightG = this.add.graphics().setDepth(16);
-          lightG.fillStyle(0xffee88, 0.4 + progress * 0.3);
-          lightG.fillCircle(mx, my, 3);
-          lightG.fillStyle(0xffffcc, 0.2);
-          lightG.fillCircle(mx, my, 8);
-        }
-      }
-      // Tunnel entrance arch
-      const entryWP = wp[tunnelZone.fromWP];
-      const archG = this.add.graphics().setDepth(14);
-      archG.fillStyle(0x444444, 1);
-      archG.fillRoundedRect(-40, -30, 80, 60, 20);
-      archG.fillStyle(0x222222, 1);
-      archG.fillRoundedRect(-35, -25, 70, 50, 18);
-      archG.x = entryWP[0]; archG.y = entryWP[1];
-      // Tunnel exit arch
-      const exitWP = wp[Math.min(tunnelZone.toWP, wp.length-1)];
-      const archG2 = this.add.graphics().setDepth(14);
-      archG2.fillStyle(0x555555, 1);
-      archG2.fillRoundedRect(-40, -30, 80, 60, 20);
-      archG2.fillStyle(0x888888, 1);
-      archG2.fillRoundedRect(-35, -25, 70, 50, 18);
-      archG2.x = exitWP[0]; archG2.y = exitWP[1];
-    }
+    // Mountain→Sprint tunnel removed — smooth zone transition only
 
     // === Finish area — press center + podium ===
     const finWP = wp[wp.length-1];
@@ -1091,7 +1041,7 @@ export class RaceScene extends Phaser.Scene {
     this.checkZoneChange();
 
     this.player.x=this.carState.x; this.player.y=this.carState.y;
-    this.player.angle=this.carState.angle+90;
+    this.player.angle=this.carState.angle-90;
 
     // Camera look-ahead: offset toward movement direction at high speed
     const spd = Math.abs(this.carState.speed);
@@ -1373,7 +1323,7 @@ export class RaceScene extends Phaser.Scene {
     const z=getZoneByIndex(p.index,this.track.zones);
     if(z.name!==this.currentZoneName){
       this.currentZoneName=z.name;
-      const labels={desert:'🏜️ DESERT',canyon:'🪨 ROCKY CANYON',riverbed:'🏞️ DRIED RIVERBED',mountain:'⛰️ MOUNTAIN PASS',sprint:'🏁 FINAL SPRINT',trans_desert_canyon:'🏜️→🪨 ENTERING CANYON',trans_canyon_riverbed:'🪨→🏞️ RIVERBED APPROACH',trans_riverbed_mountain:'🏞️→⛰️ MOUNTAIN CLIMB',trans_mountain_sprint:'⛰️→🏁 TUNNEL TO CITY'};
+      const labels={desert:'🏜️ DESERT',canyon:'🪨 ROCKY CANYON',riverbed:'🏞️ DRIED RIVERBED',mountain:'⛰️ MOUNTAIN PASS',sprint:'🏁 FINAL SPRINT',trans_desert_canyon:'🏜️→🪨 ENTERING CANYON',trans_canyon_riverbed:'🪨→🏞️ RIVERBED APPROACH',trans_riverbed_mountain:'🏞️→⛰️ MOUNTAIN CLIMB',trans_mountain_sprint:'⛰️→🏁 CITY APPROACH'};
       const cp = this.selectedCar.physics;
       const maxSpd = Math.floor((cp.roadMaxSpeed[z.roadType] || 400) * 0.38);
       const roadLabels = this.track.roadPhysics[z.roadType] ? this.track.roadPhysics[z.roadType].label : z.roadType;

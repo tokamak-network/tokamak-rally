@@ -64,17 +64,22 @@ async function cropSprite(img, region, targetW, targetH, ...outPath) {
     return;
   }
   
-  // Crop to tight bounds
-  const c2 = createCanvas(bounds.w, bounds.h);
+  // Crop to bounds with padding (4px min)
+  const pad = 4;
+  const bx = Math.max(0, bounds.x - pad);
+  const by = Math.max(0, bounds.y - pad);
+  const bw = Math.min(region.w - bx, bounds.w + pad * 2);
+  const bh = Math.min(region.h - by, bounds.h + pad * 2);
+  const c2 = createCanvas(bw, bh);
   const ctx2 = c2.getContext('2d');
-  ctx2.drawImage(c1, bounds.x, bounds.y, bounds.w, bounds.h, 0, 0, bounds.w, bounds.h);
+  ctx2.drawImage(c1, bx, by, bw, bh, 0, 0, bw, bh);
   
   // Resize to target
   const c3 = createCanvas(targetW, targetH);
   const ctx3 = c3.getContext('2d');
   ctx3.imageSmoothingEnabled = true;
   ctx3.imageSmoothingQuality = 'high';
-  ctx3.drawImage(c2, 0, 0, bounds.w, bounds.h, 0, 0, targetW, targetH);
+  ctx3.drawImage(c2, 0, 0, bw, bh, 0, 0, targetW, targetH);
   
   await save(c3, ...outPath);
 }
@@ -133,14 +138,21 @@ async function main() {
     { name: 'tumbleweed', targetW: 28, targetH: 28 },
     { name: 'hut', targetW: 40, targetH: 36 },
     { name: 'fence', targetW: 40, targetH: 24 },
-    { name: 'cow_stand', targetW: 36, targetH: 28 },
-    { name: 'cow_rest', targetW: 36, targetH: 24 },
+    { name: 'cow_stand', targetW: 48, targetH: 40 },
+    { name: 'cow_rest', targetW: 48, targetH: 36 },
     { name: 'dry_grass', targetW: 24, targetH: 24 },
   ];
+  // Process non-cow desert objects normally
   for (let i = 0; i < Math.min(desertObjs.length, grid211.length); i++) {
+    if (desertObjs[i].name === 'cow_stand' || desertObjs[i].name === 'cow_rest') continue;
     await cropSprite(img211, grid211[i], desertObjs[i].targetW, desertObjs[i].targetH,
       'objects', 'desert', `${desertObjs[i].name}.png`);
   }
+  // Cows need manual regions — heads extend above grid cell boundary
+  await cropSprite(img211, { x: 80, y: 560, w: 220, h: 200 }, 52, 44,
+    'objects', 'desert', 'cow_stand.png');
+  await cropSprite(img211, { x: 400, y: 560, w: 220, h: 200 }, 52, 40,
+    'objects', 'desert', 'cow_rest.png');
 
   // ========== file_212: Canyon objects 7-pack (roughly 3×3, 2 empty) ==========
   console.log('\nCanyon Objects (file_212):');

@@ -40,7 +40,7 @@ export class MenuScene extends Phaser.Scene {
 
     // Car preview sprite (1.75x scale, clear of text)
     const previewTex0 = this.textures.exists(`v2_car_${CARS[0].id}`) ? `v2_car_${CARS[0].id}` : `car_${CARS[0].id}`;
-    this.carPreview = this.add.sprite(cx, 230, previewTex0).setScale(0.98).setDepth(5);
+    this.carPreview = this.add.sprite(cx, 230, previewTex0).setScale(0.98).setDepth(5).setFlipY(true);
 
     // Car name (below sprite with gap)
     this.carNameText = this.add.text(cx, 290, '', {
