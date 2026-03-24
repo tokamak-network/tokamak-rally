@@ -28,7 +28,7 @@ export class RaceScene extends Phaser.Scene {
 
     const carTexture = this.textures.exists(`v2_car_${this.selectedCarId}`) ? `v2_car_${this.selectedCarId}` : `car_${this.selectedCarId}`;
     this.player = this.add.sprite(this.track.startX, this.track.startY, carTexture)
-      .setOrigin(0.5).setDepth(10).setScale(0.49);
+      .setOrigin(0.5).setDepth(10).setScale(0.85);
 
     this.dustEmitter = this.add.particles(0, 0, 'dust_particle', {
       speed: { min: 20, max: 70 },
@@ -112,6 +112,10 @@ export class RaceScene extends Phaser.Scene {
     this._currentRoadLabel = 'SAND';
     this._currentZone = this.track.zones[0];
     this._currentRoadType = 'sand';
+
+    // Animal tracking
+    this._animals = [];
+    this._birdTimer = 5000 + Math.random() * 8000;
 
     this.startCountdown();
 
@@ -394,16 +398,10 @@ export class RaceScene extends Phaser.Scene {
             bg.fillStyle(isBlue ? 0x2a72e5 : 0xffffff, 0.95);
             bg.fillRect(-BW/2, -BH/2, BW, BH);
             bg.x = bx; bg.y = by; bg.rotation = segAngle;
-            // Tokamak logo on blue banners
+            // Tokamak logo on blue banners only; white banners stay clean
             if (isBlue) {
-              const logo = this.add.sprite(bx, by, 'tokamak_logo_white')
-                .setDepth(6).setRotation(segAngle).setScale(0.12).setAlpha(0.9);
-            } else {
-              // White banners get "TOKAMAK" text
-              this.add.text(bx, by, 'TOKAMAK', {
-                fontSize: '7px', fontFamily: 'monospace', color: '#2a72e5',
-                fontStyle: 'bold',
-              }).setOrigin(0.5).setDepth(6).setRotation(segAngle);
+              this.add.sprite(bx, by, 'tokamak_logo_white')
+                .setDepth(6).setRotation(segAngle).setScale(0.06).setAlpha(0.95);
             }
 
             // Dense crowd behind banners — 5 rows, packed
@@ -465,25 +463,58 @@ export class RaceScene extends Phaser.Scene {
       const s = Math.max(0, zone.fromWP);
       const e = Math.min(zone.toWP + 1, wp.length);
       const halfW = (zone.trackWidth || 100) / 2;
-      const barrierDist = halfW + 15;
+      const barrierDist = halfW + 10;
 
-      for (let i = s; i < e - 1; i++) {
-        const [x1, y1] = wp[i], [x2, y2] = wp[i + 1];
-        const dx = x2 - x1, dy = y2 - y1;
-        const len = Math.sqrt(dx * dx + dy * dy);
-        if (len < 1) continue;
-        const nx = -dy / len, ny = dx / len;
-        const segAngle = Math.atan2(dy, dx);
+      // Compute smoothed normals
+      const normals = [];
+      for (let i = s; i < e; i++) {
+        let nx = 0, ny = 0;
+        if (i > s) {
+          const dx = wp[i][0]-wp[i-1][0], dy = wp[i][1]-wp[i-1][1];
+          const l = Math.sqrt(dx*dx+dy*dy) || 1;
+          nx += -dy/l; ny += dx/l;
+        }
+        if (i < e-1) {
+          const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1];
+          const l = Math.sqrt(dx*dx+dy*dy) || 1;
+          nx += -dy/l; ny += dx/l;
+        }
+        const l = Math.sqrt(nx*nx+ny*ny) || 1;
+        normals.push([nx/l, ny/l]);
+      }
 
-        for (let d = 0; d < len; d += 32) {
-          const t = d / len;
-          const px = x1 + dx * t, py = y1 + dy * t;
+      const colors = {
+        desert: 0x8a6a30, canyon: 0x6a4a30, riverbed: 0x6a5a30,
+        mountain: 0x8a8a80, sprint: 0x888888
+      };
+      const barrierColor = colors[zone.name] || 0x888888;
 
-          for (const side of [-1, 1]) {
-            const bx = px + nx * side * barrierDist;
-            const by = py + ny * side * barrierDist;
-            this.add.sprite(bx, by, zone.barrierTile)
-              .setDepth(2).setRotation(segAngle).setOrigin(0.5);
+      for (const side of [-1, 1]) {
+        const g = this.add.graphics().setDepth(2);
+        g.lineStyle(8, barrierColor, 0.9);
+        g.beginPath();
+        const n0 = normals[0];
+        g.moveTo(wp[s][0]+n0[0]*side*barrierDist, wp[s][1]+n0[1]*side*barrierDist);
+        for (let i = s+1; i < e; i++) {
+          const ni = normals[i-s];
+          g.lineTo(wp[i][0]+ni[0]*side*barrierDist, wp[i][1]+ni[1]*side*barrierDist);
+        }
+        g.strokePath();
+
+        // Post markers every 60px
+        let dist = 0;
+        for (let i = s; i < e-1; i++) {
+          const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1];
+          const segLen = Math.sqrt(dx*dx+dy*dy);
+          dist += segLen;
+          if (dist >= 60) {
+            dist = 0;
+            const ni = normals[Math.min(i+1-s, normals.length-1)];
+            const px = wp[i+1][0]+ni[0]*side*barrierDist;
+            const py = wp[i+1][1]+ni[1]*side*barrierDist;
+            const post = this.add.graphics().setDepth(2);
+            post.fillStyle(barrierColor, 1);
+            post.fillCircle(px, py, 3);
           }
         }
       }
@@ -519,6 +550,21 @@ export class RaceScene extends Phaser.Scene {
 
   placeScenery() {
     const wp = this.track.waypoints;
+
+    // Object scale map
+    const scaleMap = {
+      'v2_mountain_cabin': 1.0, 'v2_mountain_pine': 0.9, 'v2_mountain_rock': 0.7,
+      'v2_mountain_snowman': 0.28, 'v2_mountain_turbine': 1.2,
+      'v2_desert_hut': 0.8, 'v2_desert_cow': 0.5, 'v2_desert_cactus': 0.7,
+      'v2_desert_scrub': 0.5, 'v2_desert_rock': 0.6,
+      'v2_canyon_pillar': 0.9, 'v2_canyon_debris': 0.6, 'v2_canyon_reflector': 0.5, 'v2_canyon_cliff': 1.0,
+      'v2_riverbed_reeds': 0.7, 'v2_riverbed_boulder': 0.6, 'v2_riverbed_bridge': 0.9,
+      'v2_sprint_building': 1.0, 'v2_sprint_lamp': 0.7, 'v2_sprint_billboard': 0.9,
+      'v2_sprint_tires': 0.6, 'v2_sprint_grandstand': 1.0,
+    };
+
+    let turbineCount = 0; // limit turbines
+
     // Place scenery WELL OUTSIDE road — minimum gap = halfW + 50
     for (let i=0; i<wp.length-1; i++) {
       const zone = getZoneByIndex(i, this.track.zones);
@@ -528,15 +574,28 @@ export class RaceScene extends Phaser.Scene {
       const count = zone.sceneryDensity||3;
       const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
       if (len<1) continue;
-      const nx=-dy/len, ny=dx/len; // perpendicular to road
+      const nx=-dy/len, ny=dx/len;
       for (let j=0;j<count;j++) {
         const t=Math.random();
         const bx=x1+dx*t, by=y1+dy*t;
-        // Place on left or right side of road, guaranteed outside
         const side = Math.random() > 0.5 ? 1 : -1;
         const dist = halfW + 70 + Math.random()*150;
         const ox = bx + nx*side*dist, oy = by + ny*side*dist;
-        this.add.sprite(ox, oy, items[Math.floor(Math.random()*items.length)]).setDepth(2);
+        let tex = items[Math.floor(Math.random()*items.length)];
+
+        // Limit turbines to 2 total
+        if (tex === 'v2_mountain_turbine') {
+          if (turbineCount >= 2) { tex = 'v2_mountain_pine'; }
+          else { turbineCount++; }
+        }
+
+        const sc = scaleMap[tex] || 0.8;
+        const spr = this.add.sprite(ox, oy, tex).setDepth(2).setScale(sc);
+
+        // Track cows for animation
+        if (tex === 'v2_desert_cow') {
+          this._animals.push({ type: 'cow', sprite: spr, baseX: ox, offset: Math.random() * Math.PI * 2 });
+        }
       }
     }
 
@@ -606,6 +665,35 @@ export class RaceScene extends Phaser.Scene {
           const segAngle = Math.atan2(dy, dx);
           this.add.sprite(x1+dx*t+nx*side*d, y1+dy*t+ny*side*d, 'grandstand')
             .setDepth(2).setScale(1.5+Math.random()*0.5).setRotation(segAngle);
+        }
+      }
+    }
+
+    // Sprint dense city backdrop — buildings behind banners in rows
+    if (spZone) {
+      const spS = spZone.fromWP, spE = Math.min(spZone.toWP, wp.length-1);
+      const spHalfW = (spZone.trackWidth||100)/2;
+      const spBarrierDist = spHalfW + 10;
+      // Compute normals for sprint zone
+      const spNormals = [];
+      for (let i = spS; i <= spE; i++) {
+        let nnx = 0, nny = 0;
+        if (i > spS) { const dx = wp[i][0]-wp[i-1][0], dy = wp[i][1]-wp[i-1][1]; const l = Math.sqrt(dx*dx+dy*dy)||1; nnx += -dy/l; nny += dx/l; }
+        if (i < spE) { const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1]; const l = Math.sqrt(dx*dx+dy*dy)||1; nnx += -dy/l; nny += dx/l; }
+        const l = Math.sqrt(nnx*nnx+nny*nny)||1;
+        spNormals.push([nnx/l, nny/l]);
+      }
+      for (let row = 0; row < 3; row++) {
+        const rowDist = spBarrierDist + 50 + row * 35;
+        for (let i = spS; i < spE; i += 2) {
+          for (const side of [-1, 1]) {
+            const ni = spNormals[i - spS];
+            const bx = wp[i][0] + ni[0] * side * rowDist;
+            const by = wp[i][1] + ni[1] * side * rowDist;
+            const objs = ['v2_sprint_building','v2_sprint_lamp','v2_sprint_billboard'];
+            const tex = objs[Math.floor(Math.random()*objs.length)];
+            this.add.sprite(bx, by, tex).setDepth(1).setScale(0.8+Math.random()*0.4);
+          }
         }
       }
     }
@@ -778,6 +866,33 @@ export class RaceScene extends Phaser.Scene {
       );
     } else {
       this.snowEmitter.emitting = false;
+    }
+
+    // Cow animation — gentle sin wave lateral movement
+    if (this._animals) {
+      for (const a of this._animals) {
+        if (a.type === 'cow') {
+          a.sprite.x = a.baseX + Math.sin(time * 0.001 + a.offset) * 8;
+        }
+      }
+    }
+
+    // Bird flight — periodic diagonal fly-across in riverbed zone
+    if (this._birdTimer !== undefined && this.currentZoneName === 'riverbed') {
+      this._birdTimer -= delta;
+      if (this._birdTimer <= 0) {
+        this._birdTimer = 8000 + Math.random() * 12000;
+        const cam = this.cameras.main;
+        const bx = cam.scrollX - 100;
+        const by = cam.scrollY + Math.random() * 600;
+        if (this.textures.exists('v2_riverbed_bird')) {
+          const bird = this.add.sprite(bx, by, 'v2_riverbed_bird').setDepth(20).setScale(0.8);
+          this.tweens.add({
+            targets: bird, x: bx + 1000, y: by - 300,
+            duration: 4000, onComplete: () => bird.destroy()
+          });
+        }
+      }
     }
 
     this.obstacles.forEach(o=>{if(o.type==='obs_tokamak')o.sprite.angle+=2;});

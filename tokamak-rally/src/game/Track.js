@@ -173,7 +173,7 @@ export const TRACK_CONFIG = {
   zones: [
     {
       name: 'desert', fromWP: 0, toWP: 25,
-      bgTile: 'v2_bg_desert',
+      bgTile: 'bg_desert',
       roadType: 'sand',
       roadColor: 0xb89060, roadBorder: 0x9a7040,
       trackWidth: 110,
@@ -197,7 +197,7 @@ export const TRACK_CONFIG = {
       roadType: 'dirt',
       roadColor: 0x7a6a50, roadBorder: 0x5a4a35,
       trackWidth: 100,
-      scenery: ['v2_riverbed_reeds','v2_riverbed_boulder','v2_riverbed_bird'],
+      scenery: ['v2_riverbed_reeds','v2_riverbed_boulder'],
       sceneryDensity: 2,
       barrierTile: 'v2_barrier_riverbed',
     },
@@ -207,7 +207,7 @@ export const TRACK_CONFIG = {
       roadType: 'rocky',
       roadColor: 0x7a5538, roadBorder: 0x5a3a22,
       trackWidth: 80,
-      scenery: ['v2_mountain_pine','v2_mountain_rock','v2_mountain_cabin','v2_mountain_snowman','v2_mountain_turbine'],
+      scenery: ['v2_mountain_pine','v2_mountain_rock','v2_mountain_cabin','v2_mountain_snowman','v2_mountain_pine','v2_mountain_rock'],
       sceneryDensity: 4,
       barrierTile: 'v2_barrier_mountain',
     },

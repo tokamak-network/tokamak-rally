@@ -39,7 +39,8 @@ export class MenuScene extends Phaser.Scene {
     }).setOrigin(0.5);
 
     // Car preview sprite (1.75x scale, clear of text)
-    this.carPreview = this.add.sprite(cx, 230, `car_${CARS[0].id}`).setScale(0.98).setDepth(5);
+    const previewTex0 = this.textures.exists(`v2_car_${CARS[0].id}`) ? `v2_car_${CARS[0].id}` : `car_${CARS[0].id}`;
+    this.carPreview = this.add.sprite(cx, 230, previewTex0).setScale(0.98).setDepth(5);
 
     // Car name (below sprite with gap)
     this.carNameText = this.add.text(cx, 290, '', {
@@ -173,7 +174,8 @@ export class MenuScene extends Phaser.Scene {
 
   updateCarDisplay() {
     const car = CARS[this.selectedCar];
-    this.carPreview.setTexture(`car_${car.id}`);
+    const texKey = this.textures.exists(`v2_car_${car.id}`) ? `v2_car_${car.id}` : `car_${car.id}`;
+    this.carPreview.setTexture(texKey);
     this.carNameText.setText(car.name).setColor(car.color);
     this.carTeamText.setText(car.team);
     this.carDescText.setText(car.desc);
