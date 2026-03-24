@@ -64,8 +64,8 @@ async function cropSprite(img, region, targetW, targetH, ...outPath) {
     return;
   }
   
-  // Crop to bounds with padding (4px min)
-  const pad = 4;
+  // Crop to bounds with padding (8px min)
+  const pad = 8;
   const bx = Math.max(0, bounds.x - pad);
   const by = Math.max(0, bounds.y - pad);
   const bw = Math.min(region.w - bx, bounds.w + pad * 2);
@@ -148,10 +148,12 @@ async function main() {
     await cropSprite(img211, grid211[i], desertObjs[i].targetW, desertObjs[i].targetH,
       'objects', 'desert', `${desertObjs[i].name}.png`);
   }
-  // Cows need manual regions — heads extend above grid cell boundary
-  await cropSprite(img211, { x: 80, y: 560, w: 220, h: 200 }, 52, 44,
+  // Cows need manual regions — heads extend beyond grid cell
+  // cow_stand head is at x~80 in source, need to start from x:0
+  await cropSprite(img211, { x: 0, y: 520, w: 310, h: 310 }, 52, 44,
     'objects', 'desert', 'cow_stand.png');
-  await cropSprite(img211, { x: 400, y: 560, w: 220, h: 200 }, 52, 40,
+  // cow_rest in col 1 (x starts at 320)
+  await cropSprite(img211, { x: 320, y: 520, w: 310, h: 310 }, 52, 40,
     'objects', 'desert', 'cow_rest.png');
 
   // ========== file_212: Canyon objects 7-pack (roughly 3×3, 2 empty) ==========

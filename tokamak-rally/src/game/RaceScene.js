@@ -918,42 +918,7 @@ export class RaceScene extends Phaser.Scene {
 
     // Mountain→Sprint tunnel removed — smooth zone transition only
 
-    // === Finish area — press center + podium ===
-    const finWP = wp[wp.length-1];
-    const finPrev = wp[wp.length-2];
-    const fdx2 = finWP[0]-finPrev[0], fdy2 = finWP[1]-finPrev[1];
-    const flen2 = Math.sqrt(fdx2*fdx2+fdy2*fdy2)||1;
-    const fnx2 = -fdy2/flen2, fny2 = fdx2/flen2;
-    const fux2 = fdx2/flen2, fuy2 = fdy2/flen2;
-
-    // Press center booths
-    for (const side of [-1, 1]) {
-      for (let j = 0; j < 3; j++) {
-        const px = finWP[0] + fnx2*side*100 + fux2*(j*40 - 40);
-        const py = finWP[1] + fny2*side*100 + fuy2*(j*40 - 40);
-        const booth = this.add.graphics().setDepth(5);
-        booth.fillStyle(0xeeeeee, 0.9);
-        booth.fillRect(-18, -12, 36, 24);
-        booth.fillStyle(0x333333, 0.9);
-        booth.fillRect(-16, -10, 32, 4);
-        booth.x = px; booth.y = py;
-        this.add.text(px, py+6, 'PRESS', {
-          fontSize: '5px', fontFamily: 'monospace', color: '#333',
-        }).setOrigin(0.5).setDepth(5);
-      }
-    }
-
-    // Podium
-    const podX = finWP[0] + fux2*80;
-    const podY = finWP[1] + fuy2*80;
-    const podium = this.add.graphics().setDepth(5);
-    podium.fillStyle(0xffd700, 1); podium.fillRect(-12, -20, 24, 20);
-    podium.fillStyle(0xc0c0c0, 1); podium.fillRect(-36, -14, 24, 14);
-    podium.fillStyle(0xcd7f32, 1); podium.fillRect(12, -10, 24, 10);
-    podium.x = podX; podium.y = podY;
-    this.add.text(podX, podY-10, '1', {fontSize:'8px',fontFamily:'monospace',color:'#000',fontStyle:'bold'}).setOrigin(0.5).setDepth(5);
-    this.add.text(podX-24, podY-7, '2', {fontSize:'7px',fontFamily:'monospace',color:'#000',fontStyle:'bold'}).setOrigin(0.5).setDepth(5);
-    this.add.text(podX+24, podY-5, '3', {fontSize:'7px',fontFamily:'monospace',color:'#000',fontStyle:'bold'}).setOrigin(0.5).setDepth(5);
+    // Podium/press removed — finish line banner only
   }
 
   // Seeded PRNG (mulberry32) — ensures identical obstacle layout every attempt
