@@ -807,13 +807,14 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // === SPRINT ZONE REWORK — structured city environment ===
+    // === SPRINT — Layered city: barrier → fence → grandstand → buildings ===
+    // Per Jaden feedback: strict layer order, seamless, both sides symmetric
     const spZone = this.track.zones.find(z => z.name === 'sprint');
     if (spZone) {
       const spS = spZone.fromWP, spE = Math.min(spZone.toWP, wp.length-1);
-      const spHalfW = (spZone.trackWidth||100)/2;
+      const spHalfW = (spZone.trackWidth||120)/2;
 
-      // Compute normals for sprint zone
+      // Compute normals
       const spNormals = [];
       for (let i = spS; i <= spE; i++) {
         let nnx = 0, nny = 0;
@@ -823,86 +824,84 @@ export class RaceScene extends Phaser.Scene {
         spNormals.push([nnx/l, nny/l]);
       }
 
-      // === Sprint layered city: Road → Barrier → Fence → Grandstand → Buildings ===
+      // Layer distances from road center (in px from center):
+      const dBarrier   = spHalfW + 5;   // jersey barrier right at edge
+      const dFence     = spHalfW + 15;  // catch fence behind barrier
+      const dGrand     = spHalfW + 28;  // grandstand behind fence
+      const dBldg1     = spHalfW + 48;  // front building row
+      const dBldg2     = spHalfW + 72;  // back building row
+      const dSkyline   = spHalfW + 100; // far skyline
 
-      // L1: Jersey barriers — continuous wall at road edge
       for (let i = spS; i < spE; i++) {
         const [x1,y1] = wp[i], [x2,y2] = wp[i+1];
         const dx = x2-x1, dy = y2-y1;
-        if (Math.sqrt(dx*dx+dy*dy) < 1) continue;
+        const segLen = Math.sqrt(dx*dx+dy*dy);
+        if (segLen < 1) continue;
         const segAngle = Math.atan2(dy, dx);
         const ni = spNormals[i - spS];
+        const mx = x1+dx*0.5, my = y1+dy*0.5; // midpoint
+
         for (const side of [-1, 1]) {
-          const bd = spHalfW + 12;
-          this.add.sprite(x1+ni[0]*side*bd+dx*0.5, y1+ni[1]*side*bd+dy*0.5, 'v4_sprint_jersey')
-            .setDepth(4).setRotation(segAngle).setScale(scaleMap['v4_sprint_jersey']||0.058);
+          // L1: Jersey barrier — continuous, every segment
+          this.add.sprite(mx+ni[0]*side*dBarrier, my+ni[1]*side*dBarrier, 'v4_sprint_jersey')
+            .setDepth(5).setRotation(segAngle).setScale(scaleMap['v4_sprint_jersey']||0.058);
+
+          // L2: Catch fence — continuous, every segment
+          this.add.sprite(mx+ni[0]*side*dFence, my+ni[1]*side*dFence, 'v4_sprint_fence')
+            .setDepth(4).setRotation(segAngle).setScale(scaleMap['v4_sprint_fence']||0.059);
+
+          // L3: Grandstand — continuous, every segment
+          this.add.sprite(mx+ni[0]*side*dGrand, my+ni[1]*side*dGrand, 'v4_sprint_grandstand')
+            .setDepth(3).setRotation(segAngle).setScale(scaleMap['v4_sprint_grandstand']||0.120);
         }
       }
 
-      // L2: Catch fence — continuous behind barriers
-      for (let i = spS; i < spE; i++) {
-        const [x1,y1] = wp[i], [x2,y2] = wp[i+1];
-        const segAngle = Math.atan2(y2-y1, x2-x1);
-        const ni = spNormals[i - spS];
-        for (const side of [-1, 1]) {
-          this.add.sprite(x1+ni[0]*side*(spHalfW+25)+(x2-x1)*0.5, y1+ni[1]*side*(spHalfW+25)+(y2-y1)*0.5, 'v4_sprint_fence')
-            .setDepth(3).setRotation(segAngle).setScale(scaleMap['v4_sprint_fence']||0.059);
-        }
-      }
-
-      // L3: Grandstands — every 5 WPs, alternating sides
-      for (let i = spS; i < spE; i += 5) {
-        const ni = spNormals[i - spS];
-        const [x1,y1] = wp[i], [x2,y2] = wp[Math.min(i+1, spE)];
-        const segAngle = Math.atan2(y2-y1, x2-x1);
-        const side = (Math.floor((i-spS)/5) % 2 === 0) ? 1 : -1;
-        this.add.sprite(wp[i][0]+ni[0]*side*(spHalfW+42), wp[i][1]+ni[1]*side*(spHalfW+42), 'v4_sprint_grandstand')
-          .setDepth(2).setRotation(segAngle).setScale(scaleMap['v4_sprint_grandstand']||0.120);
-      }
-
-      // L4: Street lights — both sides, every 3 WPs
+      // L4: Buildings — every 3 WPs (buildings are bigger, don't need every segment)
+      const bldgPool = ['v4_sprint_office','v4_sprint_hotel','v4_sprint_apartment','v4_sprint_restaurant','v4_sprint_shopping'];
+      const skyPool = ['v4_sprint_skyscraper','v4_sprint_skyscraper_sm','v4_sprint_office'];
       for (let i = spS; i < spE; i += 3) {
         const ni = spNormals[i - spS];
         for (const side of [-1, 1]) {
-          this.add.sprite(wp[i][0]+ni[0]*side*(spHalfW+35), wp[i][1]+ni[1]*side*(spHalfW+35), 'v4_sprint_light')
-            .setDepth(3).setScale(scaleMap['v4_sprint_light']||0.095);
+          // Front row
+          const tex1 = bldgPool[(i + (side>0?0:2)) % bldgPool.length];
+          this.add.sprite(wp[i][0]+ni[0]*side*dBldg1, wp[i][1]+ni[1]*side*dBldg1, tex1)
+            .setDepth(2).setScale(scaleMap[tex1]||0.15);
+          // Back row
+          const tex2 = skyPool[(i + (side>0?1:0)) % skyPool.length];
+          this.add.sprite(wp[i][0]+ni[0]*side*dBldg2, wp[i][1]+ni[1]*side*dBldg2, tex2)
+            .setDepth(1).setScale(scaleMap[tex2]||0.12);
         }
       }
 
-      // L5: Buildings — GRID ALIGNED in rows, both sides
-      const bldgFront = ['v4_sprint_office','v4_sprint_hotel','v4_sprint_apartment','v4_sprint_restaurant','v4_sprint_shopping'];
-      const bldgBack = ['v4_sprint_skyscraper','v4_sprint_skyscraper_sm','v4_sprint_office','v4_sprint_apartment'];
-      for (const side of [-1, 1]) {
-        // Row 1: front row — every WP, tight (like a street wall)
-        for (let i = spS; i < spE; i++) {
-          const ni = spNormals[i - spS];
-          const tex = bldgFront[(i + (side>0?0:3)) % bldgFront.length];
-          this.add.sprite(wp[i][0]+ni[0]*side*(spHalfW+70), wp[i][1]+ni[1]*side*(spHalfW+70), tex)
-            .setDepth(1).setScale(scaleMap[tex]||0.15);
-        }
-        // Row 2: behind front row
-        for (let i = spS; i < spE; i++) {
-          const ni = spNormals[i - spS];
-          const tex = bldgBack[(i + (side>0?1:2)) % bldgBack.length];
-          this.add.sprite(wp[i][0]+ni[0]*side*(spHalfW+120), wp[i][1]+ni[1]*side*(spHalfW+120), tex)
-            .setDepth(0.5).setScale(scaleMap[tex]||0.12);
-        }
-        // Row 3: far skyline — sparser
-        for (let i = spS; i < spE; i += 2) {
-          const ni = spNormals[i - spS];
-          this.add.sprite(wp[i][0]+ni[0]*side*(spHalfW+170), wp[i][1]+ni[1]*side*(spHalfW+170), 'v4_sprint_skyscraper')
+      // L5: Far skyline — every 5 WPs
+      for (let i = spS; i < spE; i += 5) {
+        const ni = spNormals[i - spS];
+        for (const side of [-1, 1]) {
+          this.add.sprite(wp[i][0]+ni[0]*side*dSkyline, wp[i][1]+ni[1]*side*dSkyline, 'v4_sprint_skyscraper')
             .setDepth(0).setScale(scaleMap['v4_sprint_skyscraper']||0.097);
         }
       }
 
-      // L6: Banner arches over road — every 8 WPs
-      for (let i = spS+3; i < spE-3; i += 8) {
-        const [x1,y1] = wp[i], [x2,y2] = wp[Math.min(i+1, spE)];
-        this.add.sprite(wp[i][0], wp[i][1], 'v4_sprint_banner')
-          .setDepth(8).setRotation(Math.atan2(y2-y1, x2-x1) + Math.PI/2).setScale(scaleMap['v4_sprint_banner']||0.104);
+      // L6: Street lights — every 4 WPs, both sides, between fence and grandstand
+      for (let i = spS; i < spE; i += 4) {
+        const ni = spNormals[i - spS];
+        for (const side of [-1, 1]) {
+          this.add.sprite(wp[i][0]+ni[0]*side*(dFence+3), wp[i][1]+ni[1]*side*(dFence+3), 'v4_sprint_light')
+            .setDepth(4).setScale(scaleMap['v4_sprint_light']||0.095);
+        }
       }
 
-      // L7: Tire stacks at sharp corners
+      // L7: Banner arches over road — every 10 WPs, scale to trackWidth
+      const bannerScale = (spZone.trackWidth||120) / (483 * (scaleMap['v4_sprint_banner']||0.104));
+      // Use banner original width 483px; we want displayed width = trackWidth
+      const bScale = (spZone.trackWidth||120) / 483;
+      for (let i = spS+5; i < spE-5; i += 10) {
+        const [x1,y1] = wp[i], [x2,y2] = wp[Math.min(i+1, spE)];
+        this.add.sprite(wp[i][0], wp[i][1], 'v4_sprint_banner')
+          .setDepth(8).setRotation(Math.atan2(y2-y1, x2-x1) + Math.PI/2).setScale(bScale);
+      }
+
+      // L8: Tire stacks at sharp corners only
       for (let i = spS+1; i < spE-1; i++) {
         const [xp,yp] = wp[i-1], [xc,yc] = wp[i], [xn,yn] = wp[i+1];
         const cross = (xc-xp)*(yn-yc) - (yc-yp)*(xn-xc);
@@ -910,18 +909,9 @@ export class RaceScene extends Phaser.Scene {
         if (mag > 0 && Math.abs(cross/mag) > 0.12) {
           const ni = spNormals[i-spS];
           const ts = cross > 0 ? -1 : 1;
-          this.add.sprite(xc+ni[0]*ts*(spHalfW+16), yc+ni[1]*ts*(spHalfW+16), 'v4_sprint_tires')
-            .setDepth(4).setScale(scaleMap['v4_sprint_tires']||0.082);
+          this.add.sprite(xc+ni[0]*ts*(spHalfW+8), yc+ni[1]*ts*(spHalfW+8), 'v4_sprint_tires')
+            .setDepth(5).setScale(scaleMap['v4_sprint_tires']||0.082);
         }
-      }
-
-      // L8: Cones/generators between fence and grandstand
-      for (let i = spS; i < spE; i += 4) {
-        const ni = spNormals[i-spS];
-        const side = (i%8<4) ? 1 : -1;
-        const tex = Math.random() > 0.6 ? 'v4_sprint_cones' : 'v4_sprint_generator';
-        this.add.sprite(wp[i][0]+ni[0]*side*(spHalfW+52), wp[i][1]+ni[1]*side*(spHalfW+52), tex)
-          .setDepth(2).setScale(scaleMap[tex]||0.074);
       }
     }
 
