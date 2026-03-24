@@ -60,7 +60,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('v3_mountain_snowman', '/assets/v3/objects/mountain/snowman.png');
     this.load.image('v3_mountain_pole', '/assets/v3/objects/mountain/pole.png');
 
-    // v3 오브젝트 — sprint
+    // v3 오브젝트 — sprint (legacy small)
     this.load.image('v3_sprint_building_tall', '/assets/v3/objects/sprint/building_tall.png');
     this.load.image('v3_sprint_building_low', '/assets/v3/objects/sprint/building_low.png');
     this.load.image('v3_sprint_lamp', '/assets/v3/objects/sprint/lamp.png');
@@ -68,6 +68,19 @@ export class BootScene extends Phaser.Scene {
     this.load.image('v3_sprint_grandstand', '/assets/v3/objects/sprint/grandstand.png');
     this.load.image('v3_sprint_ad_board', '/assets/v3/objects/sprint/ad_board.png');
     this.load.image('v3_sprint_billboard', '/assets/v3/objects/sprint/billboard.png');
+
+    // Sprint rework — high-detail assets
+    this.load.image('sp_road_tile', '/assets/v3/objects/sprint/road_tile.png');
+    this.load.image('sp_building_office', '/assets/v3/objects/sprint/building_office.png');
+    this.load.image('sp_building_shop', '/assets/v3/objects/sprint/building_shop.png');
+    this.load.image('sp_building_apt', '/assets/v3/objects/sprint/building_apt.png');
+    this.load.image('sp_grandstand_lg', '/assets/v3/objects/sprint/grandstand_lg.png');
+    this.load.image('sp_banner_arch', '/assets/v3/objects/sprint/banner_arch.png');
+    this.load.image('sp_jersey_barrier', '/assets/v3/objects/sprint/jersey_barrier.png');
+    this.load.image('sp_catch_fence', '/assets/v3/objects/sprint/catch_fence.png');
+    this.load.image('sp_street_light', '/assets/v3/objects/sprint/street_light.png');
+    this.load.image('sp_tire_stack', '/assets/v3/objects/sprint/tire_stack.png');
+    this.load.image('sp_curb_strip', '/assets/v3/objects/sprint/curb_strip.png');
 
     // v2 차량 (Cars.js ID에 맞춤)
     this.load.image('v2_car_alpine_white', '/assets/v2/cars/car_alpine_white.png');

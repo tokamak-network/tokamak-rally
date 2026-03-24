@@ -23,6 +23,7 @@ export class RaceScene extends Phaser.Scene {
 
     this.drawBackground();
     this.drawTrack();
+    this.drawSprintOverlay();
     this.placeBarriers();
     this.placeScenery();
     this.placeCheckpoints();
@@ -363,19 +364,12 @@ export class RaceScene extends Phaser.Scene {
     const fnx = -fdy/flen, fny = fdx/flen; // perpendicular to road
     const fux = fdx/flen, fuy = fdy/flen; // along road direction
 
-    // Sprint zone: banner wall + dense crowd on both sides (same style as finish)
-    // Banners act as physical barriers — car cannot pass through
+    // Sprint zone: barrier collision data (visuals now handled by drawSprintOverlay + placeScenery)
     const sprintZone = this.track.zones.find(z => z.name === 'sprint');
-    this._sprintBarrierSegments = []; // for wall collision
+    this._sprintBarrierSegments = [];
     if (sprintZone) {
-      const BW = 50, BH = 14;
-      const BDIST = 75; // banner distance from track center (halfW~60 + 15px gap)
-      const CROWD_START = BDIST + BH/2 + 6;
-
-      const sWps = [];
-      const sNorms = [];
+      const BDIST = 75;
       for (let i = sprintZone.fromWP; i <= Math.min(sprintZone.toWP, wp.length-1); i++) {
-        sWps.push(wp[i]);
         let nx = 0, ny = 0;
         if (i > sprintZone.fromWP && i < wp.length) {
           const dx1 = wp[i][0]-wp[i-1][0], dy1 = wp[i][1]-wp[i-1][1];
@@ -388,75 +382,9 @@ export class RaceScene extends Phaser.Scene {
           nx -= dy2/l2; ny += dx2/l2;
         }
         const l = Math.sqrt(nx*nx+ny*ny) || 1;
-        sNorms.push([nx/l, ny/l]);
-      }
-
-      // Store barrier wall positions for each waypoint (both sides)
-      for (let si = 0; si < sWps.length; si++) {
-        const [px, py] = sWps[si];
-        const [nnx, nny] = sNorms[si];
         this._sprintBarrierSegments.push({
-          x: px, y: py, nx: nnx, ny: nny, dist: BDIST
+          x: wp[i][0], y: wp[i][1], nx: nx/l, ny: ny/l, dist: BDIST
         });
-      }
-
-      // Walk along path placing banners seamlessly
-      let bannerIdx = 0;
-      for (let si = 0; si < sWps.length-1; si++) {
-        const [x1,y1] = sWps[si], [x2,y2] = sWps[si+1];
-        const dx = x2-x1, dy = y2-y1;
-        const segLen = Math.sqrt(dx*dx+dy*dy);
-        if (segLen < 1) continue;
-        const segAngle = Math.atan2(dy, dx);
-
-        for (let d = 0; d < segLen; d += BW) {
-          const t = d / segLen;
-          const px = x1+dx*t, py = y1+dy*t;
-          const n1 = sNorms[si], n2 = sNorms[si+1];
-          const nxi = n1[0]*(1-t) + n2[0]*t;
-          const nyi = n1[1]*(1-t) + n2[1]*t;
-          const nl = Math.sqrt(nxi*nxi+nyi*nyi) || 1;
-          const nnx = nxi/nl, nny = nyi/nl;
-
-          const isBlue = bannerIdx % 2 === 0;
-          // Place banner every segment — dense wall of banners
-          for (const side of [-1, 1]) {
-            const bx = px + nnx*side*BDIST;
-            const by = py + nny*side*BDIST;
-            // Banner background with Tokamak branding
-            const bg = this.add.graphics().setDepth(5);
-            bg.fillStyle(isBlue ? 0x2a72e5 : 0xffffff, 0.95);
-            bg.fillRect(-BW/2, -BH/2, BW, BH);
-            bg.x = bx; bg.y = by; bg.rotation = segAngle;
-            // Tokamak logo on blue banners only; white banners stay clean
-            if (isBlue) {
-              this.add.sprite(bx, by, 'tokamak_logo_white')
-                .setDepth(6).setRotation(segAngle).setScale(0.06).setAlpha(0.95);
-            } else {
-              // White banner: Tokamak logo in blue + text
-              this.add.sprite(bx, by, 'tokamak_logo')
-                .setDepth(6).setRotation(segAngle).setScale(0.04).setTint(0x2a72e5);
-              this.add.text(bx + Math.cos(segAngle)*12, by + Math.sin(segAngle)*12, 'TOKAMAK\nNETWORK', {
-                fontSize: '4px', fontFamily: 'monospace', color: '#000000',
-                fontStyle: 'bold', align: 'center',
-              }).setOrigin(0.5).setDepth(6).setRotation(segAngle);
-            }
-
-            // Dense crowd behind banners — 5 rows, packed
-            for (let row = 0; row < 5; row++) {
-              const crowdD = CROWD_START + row * 10;
-              for (let j = 0; j < 4; j++) {
-                const along = (j - 1.5) * 10 + (Math.random()-0.5)*5;
-                const cx = px + nnx*side*crowdD + Math.cos(segAngle)*along;
-                const cy = py + nny*side*crowdD + Math.sin(segAngle)*along;
-                const ci = Math.floor(Math.random()*7);
-                const tex = Math.random()>0.4 ? `crowd_cheer_${ci}` : `crowd_${ci}`;
-                this.add.sprite(cx, cy, tex).setDepth(4).setScale(1.4+Math.random()*0.3);
-              }
-            }
-          }
-          bannerIdx++;
-        }
       }
     }
 
@@ -490,6 +418,85 @@ export class RaceScene extends Phaser.Scene {
           const tex = isCheer ? `crowd_cheer_${ci}` : `crowd_${ci}`;
           this.add.sprite(cx, cy, tex).setDepth(4).setScale(1.8+Math.random()*0.6);
         }
+      }
+    }
+  }
+
+  drawSprintOverlay() {
+    // Sprint zone: additional road surface detail (curb strips, shoulder texture)
+    const wp = this.track.waypoints;
+    const spZone = this.track.zones.find(z => z.name === 'sprint');
+    if (!spZone) return;
+
+    const spS = spZone.fromWP, spE = Math.min(spZone.toWP, wp.length-1);
+    const w = spZone.trackWidth || 120;
+    const halfW = w / 2;
+    const g = this.add.graphics().setDepth(1.5);
+
+    // Compute normals
+    const normals = [];
+    for (let i = spS; i <= spE; i++) {
+      let nx = 0, ny = 0;
+      if (i > spS) { const dx = wp[i][0]-wp[i-1][0], dy = wp[i][1]-wp[i-1][1]; const l = Math.sqrt(dx*dx+dy*dy)||1; nx += -dy/l; ny += dx/l; }
+      if (i < spE) { const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1]; const l = Math.sqrt(dx*dx+dy*dy)||1; nx += -dy/l; ny += dx/l; }
+      const l = Math.sqrt(nx*nx+ny*ny)||1;
+      normals.push([nx/l, ny/l]);
+    }
+
+    // Curb strips (red-white) at road edges
+    for (let i = spS; i < spE; i++) {
+      const [x1,y1] = wp[i], [x2,y2] = wp[i+1];
+      const dx = x2-x1, dy = y2-y1, segLen = Math.sqrt(dx*dx+dy*dy);
+      if (segLen < 1) continue;
+      const ux = dx/segLen, uy = dy/segLen;
+      const ni = normals[i - spS];
+
+      // Draw red-white curb dashes at edges
+      for (const side of [-1, 1]) {
+        const edgeDist = halfW + 2;
+        let d = 0;
+        while (d < segLen) {
+          const step = Math.min(8, segLen - d);
+          const isRed = Math.floor(d / 8) % 2 === 0;
+          g.lineStyle(6, isRed ? 0xCC2222 : 0xEEEEEE, 0.8);
+          const sx = x1 + ux*d + ni[0]*side*edgeDist;
+          const sy = y1 + uy*d + ni[1]*side*edgeDist;
+          const ex = x1 + ux*(d+step) + ni[0]*side*edgeDist;
+          const ey = y1 + uy*(d+step) + ni[1]*side*edgeDist;
+          g.beginPath(); g.moveTo(sx, sy); g.lineTo(ex, ey); g.strokePath();
+          d += step;
+        }
+      }
+
+      // Shoulder (grey strip between curb and barrier)
+      for (const side of [-1, 1]) {
+        g.lineStyle(12, 0x555558, 0.4);
+        const sd = halfW + 8;
+        g.beginPath();
+        g.moveTo(x1 + ni[0]*side*sd, y1 + ni[1]*side*sd);
+        g.lineTo(x2 + normals[i+1-spS][0]*side*sd, y2 + normals[i+1-spS][1]*side*sd);
+        g.strokePath();
+      }
+    }
+
+    // Pit lane markings (dashed white lines on road surface)
+    g.lineStyle(2, 0xDDDDDD, 0.3);
+    for (let i = spS; i < spE; i++) {
+      const [x1,y1] = wp[i], [x2,y2] = wp[i+1];
+      const dx = x2-x1, dy = y2-y1, segLen = Math.sqrt(dx*dx+dy*dy);
+      if (segLen < 1) continue;
+      const ux = dx/segLen, uy = dy/segLen;
+      // Dashed center line
+      let d = 0;
+      while (d < segLen) {
+        const step = Math.min(10, segLen - d);
+        if (Math.floor(d / 10) % 2 === 0) {
+          g.beginPath();
+          g.moveTo(x1 + ux*d, y1 + uy*d);
+          g.lineTo(x1 + ux*(d+step), y1 + uy*(d+step));
+          g.strokePath();
+        }
+        d += step;
       }
     }
   }
@@ -715,30 +722,12 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // Sprint zone — grandstands along track edges
+    // === SPRINT ZONE REWORK — structured city environment ===
     const spZone = this.track.zones.find(z => z.name === 'sprint');
-    if (spZone) {
-      for (let i = spZone.fromWP; i < Math.min(spZone.toWP, wp.length-1); i += 4) {
-        const [x1,y1]=wp[i],[x2,y2]=wp[i+1];
-        const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
-        if (len<1) continue;
-        const nx=-dy/len, ny=dx/len;
-        const halfW = (spZone.trackWidth||100)/2;
-        for (let side of [-1, 1]) {
-          const t = Math.random();
-          const d = halfW + 90 + Math.random()*40;
-          const segAngle = Math.atan2(dy, dx);
-          this.add.sprite(x1+dx*t+nx*side*d, y1+dy*t+ny*side*d, 'v3_sprint_grandstand')
-            .setDepth(2).setScale(1.5+Math.random()*0.5).setRotation(segAngle);
-        }
-      }
-    }
-
-    // Sprint dense city backdrop — buildings behind banners in rows
     if (spZone) {
       const spS = spZone.fromWP, spE = Math.min(spZone.toWP, wp.length-1);
       const spHalfW = (spZone.trackWidth||100)/2;
-      const spBarrierDist = spHalfW + 10;
+
       // Compute normals for sprint zone
       const spNormals = [];
       for (let i = spS; i <= spE; i++) {
@@ -748,23 +737,103 @@ export class RaceScene extends Phaser.Scene {
         const l = Math.sqrt(nnx*nnx+nny*nny)||1;
         spNormals.push([nnx/l, nny/l]);
       }
-      for (let row = 0; row < 5; row++) {
-        const rowDist = spBarrierDist + 50 + row * 30;
-        for (let i = spS; i < spE; i += 1) {
+
+      // --- Layer 1: Jersey barriers immediately at road edge ---
+      for (let i = spS; i < spE; i++) {
+        const [x1,y1] = wp[i], [x2,y2] = wp[i+1];
+        const dx = x2-x1, dy = y2-y1, segLen = Math.sqrt(dx*dx+dy*dy);
+        if (segLen < 1) continue;
+        const segAngle = Math.atan2(dy, dx);
+        const ni = spNormals[i - spS];
+        for (const side of [-1, 1]) {
+          const bd = spHalfW + 14;
+          const bx = x1 + ni[0]*side*bd + dx*0.5;
+          const by = y1 + ni[1]*side*bd + dy*0.5;
+          this.add.sprite(bx, by, 'sp_jersey_barrier')
+            .setDepth(3).setRotation(segAngle).setScale(1.0);
+        }
+      }
+
+      // --- Layer 2: Catch fence behind barriers ---
+      for (let i = spS; i < spE; i += 2) {
+        const ni = spNormals[i - spS];
+        const [x1,y1] = wp[i], [x2,y2] = wp[i+1];
+        const segAngle = Math.atan2(y2-y1, x2-x1);
+        for (const side of [-1, 1]) {
+          const fd = spHalfW + 28;
+          const fx = x1 + ni[0]*side*fd + (x2-x1)*0.5;
+          const fy = y1 + ni[1]*side*fd + (y2-y1)*0.5;
+          this.add.sprite(fx, fy, 'sp_catch_fence')
+            .setDepth(2).setRotation(segAngle).setScale(1.0);
+        }
+      }
+
+      // --- Layer 3: Street lights — evenly spaced along road edges ---
+      for (let i = spS; i < spE; i += 3) {
+        const ni = spNormals[i - spS];
+        for (const side of [-1, 1]) {
+          const ld = spHalfW + 40;
+          const lx = wp[i][0] + ni[0]*side*ld;
+          const ly = wp[i][1] + ni[1]*side*ld;
+          this.add.sprite(lx, ly, 'sp_street_light').setDepth(3).setScale(1.0);
+        }
+      }
+
+      // --- Layer 4: Grandstands — every 6 waypoints, one side ---
+      for (let i = spS; i < spE; i += 6) {
+        const ni = spNormals[i - spS];
+        const [x1,y1] = wp[i], [x2,y2] = wp[Math.min(i+1, spE)];
+        const segAngle = Math.atan2(y2-y1, x2-x1);
+        // Alternate sides
+        const side = (Math.floor((i - spS) / 6) % 2 === 0) ? 1 : -1;
+        const gd = spHalfW + 55;
+        const gx = wp[i][0] + ni[0]*side*gd;
+        const gy = wp[i][1] + ni[1]*side*gd;
+        this.add.sprite(gx, gy, 'sp_grandstand_lg')
+          .setDepth(2).setRotation(segAngle).setScale(1.0);
+      }
+
+      // --- Layer 5: Buildings — grid-aligned rows behind barriers ---
+      const buildingTextures = ['sp_building_office', 'sp_building_shop', 'sp_building_apt'];
+      for (let row = 0; row < 4; row++) {
+        const rowDist = spHalfW + 80 + row * 50;
+        for (let i = spS; i < spE; i += (row < 2 ? 1 : 2)) {
+          const ni = spNormals[i - spS];
           for (const side of [-1, 1]) {
-            const ni = spNormals[i - spS];
             const bx = wp[i][0] + ni[0] * side * rowDist;
             const by = wp[i][1] + ni[1] * side * rowDist;
-            const objs = ['v3_sprint_building_tall','v3_sprint_building_low','v3_sprint_lamp','v3_sprint_billboard','v3_sprint_ad_board'];
-            const tex = objs[Math.floor(Math.random()*objs.length)];
-            const sc = 0.85 + Math.random() * 0.25;
-            this.add.sprite(bx, by, tex).setDepth(1).setScale(sc);
-            // Rooftop Tokamak logo on buildings
-            if (tex === 'v3_sprint_building_tall' || tex === 'v3_sprint_building_low') {
-              this.add.sprite(bx, by - 8, 'tokamak_logo_white')
-                .setDepth(2).setScale(0.03).setAlpha(0.8);
-            }
+            // Closer rows = taller buildings, farther = variety
+            let tex;
+            if (row === 0) tex = buildingTextures[Math.floor(Math.random() * buildingTextures.length)];
+            else if (row === 1) tex = Math.random() > 0.4 ? 'sp_building_office' : 'sp_building_apt';
+            else tex = Math.random() > 0.5 ? 'sp_building_apt' : 'sp_building_office';
+            this.add.sprite(bx, by, tex).setDepth(1).setScale(1.0);
           }
+        }
+      }
+
+      // --- Layer 6: Banner arches — span across road every 8 waypoints ---
+      for (let i = spS + 2; i < spE - 2; i += 8) {
+        const [x1,y1] = wp[i], [x2,y2] = wp[Math.min(i+1, spE)];
+        const segAngle = Math.atan2(y2-y1, x2-x1);
+        // Place arch centered on road
+        this.add.sprite(wp[i][0], wp[i][1], 'sp_banner_arch')
+          .setDepth(8).setRotation(segAngle + Math.PI/2).setScale(1.0);
+      }
+
+      // --- Layer 7: Tire stacks at corners (where curvature is high) ---
+      for (let i = spS + 1; i < spE - 1; i++) {
+        const [xp,yp] = wp[i-1], [xc,yc] = wp[i], [xn,yn] = wp[i+1];
+        const dx1 = xc-xp, dy1 = yc-yp, dx2 = xn-xc, dy2 = yn-yc;
+        const cross = dx1*dy2 - dy1*dx2;
+        const mag = Math.sqrt(dx1*dx1+dy1*dy1) * Math.sqrt(dx2*dx2+dy2*dy2);
+        const curvature = mag > 0 ? Math.abs(cross / mag) : 0;
+        if (curvature > 0.15) {
+          const ni = spNormals[i - spS];
+          const turnSide = cross > 0 ? -1 : 1;
+          const td = spHalfW + 18;
+          this.add.sprite(xc + ni[0]*turnSide*td, yc + ni[1]*turnSide*td, 'sp_tire_stack')
+            .setDepth(3).setScale(1.0);
         }
       }
     }
