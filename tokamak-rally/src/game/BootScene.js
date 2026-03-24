@@ -72,24 +72,24 @@ export class BootScene extends Phaser.Scene {
     // ======= V4 DALL-E assets =======
     // Desert
     this.load.image('v4_desert_cactus_tall', '/assets/v4/objects/desert/cactus_tall.png');
-    this.load.image('v4_desert_cactus_barrel', '/assets/v4/objects/desert/cactus_barrel.png');
-    this.load.image('v4_desert_rock_lg', '/assets/v4/objects/desert/rock_lg.png');
-    this.load.image('v4_desert_rock_sm', '/assets/v4/objects/desert/rock_sm.png');
+    this.load.image('v4_desert_cactus_barrel', '/assets/v4/objects/desert/barrel_cactus.png');
+    this.load.image('v4_desert_rock_lg', '/assets/v4/objects/desert/rock_large.png');
+    this.load.image('v4_desert_rock_sm', '/assets/v4/objects/desert/rock_small.png');
     this.load.image('v4_desert_bush', '/assets/v4/objects/desert/bush.png');
     this.load.image('v4_desert_tumbleweed', '/assets/v4/objects/desert/tumbleweed.png');
     this.load.image('v4_desert_hut', '/assets/v4/objects/desert/hut.png');
     this.load.image('v4_desert_fence', '/assets/v4/objects/desert/fence.png');
-    this.load.image('v4_desert_cow', '/assets/v4/objects/desert/cow_stand.png');
-    this.load.image('v4_desert_cow_rest', '/assets/v4/objects/desert/cow_rest.png');
+    this.load.image('v4_desert_cow', '/assets/v4/objects/desert/cow_lying1.png');
+    this.load.image('v4_desert_cow_rest', '/assets/v4/objects/desert/cow_lying2.png');
     this.load.image('v4_desert_dry_grass', '/assets/v4/objects/desert/dry_grass.png');
     // Canyon
     this.load.image('v4_canyon_pillar', '/assets/v4/objects/canyon/pillar.png');
     this.load.image('v4_canyon_wall', '/assets/v4/objects/canyon/wall_long.png');
     this.load.image('v4_canyon_rock', '/assets/v4/objects/canyon/rock_cluster.png');
     this.load.image('v4_canyon_arch', '/assets/v4/objects/canyon/arch.png');
-    this.load.image('v4_canyon_debris_sm', '/assets/v4/objects/canyon/debris_sm.png');
+    this.load.image('v4_canyon_debris_sm', '/assets/v4/objects/canyon/debris_small.png');
     this.load.image('v4_canyon_barrier', '/assets/v4/objects/canyon/barrier.png');
-    this.load.image('v4_canyon_debris_lg', '/assets/v4/objects/canyon/debris_lg.png');
+    this.load.image('v4_canyon_debris_lg', '/assets/v4/objects/canyon/debris_large.png');
     this.load.image('v4_canyon_dead_bush', '/assets/v4/objects/canyon/dead_bush.png');
     // Mountain
     this.load.image('v4_mountain_bush', '/assets/v4/objects/mountain/bush_green.png');
@@ -97,10 +97,10 @@ export class BootScene extends Phaser.Scene {
     this.load.image('v4_mountain_rock_snow', '/assets/v4/objects/mountain/rock_snow.png');
     this.load.image('v4_mountain_cabin', '/assets/v4/objects/mountain/cabin.png');
     this.load.image('v4_mountain_snowman', '/assets/v4/objects/mountain/snowman.png');
-    this.load.image('v4_mountain_sign', '/assets/v4/objects/mountain/sign_post.png');
-    this.load.image('v4_mountain_sign_arrow', '/assets/v4/objects/mountain/sign_arrow.png');
+    this.load.image('v4_mountain_sign', '/assets/v4/objects/mountain/sign_post1.png');
+    this.load.image('v4_mountain_sign_arrow', '/assets/v4/objects/mountain/sign_post2.png');
     this.load.image('v4_mountain_rock_flat', '/assets/v4/objects/mountain/rock_flat.png');
-    this.load.image('v4_mountain_wall', '/assets/v4/objects/mountain/stone_wall.png');
+    this.load.image('v4_mountain_stone_wall', '/assets/v4/objects/mountain/stone_wall.png');
     this.load.image('v4_mountain_snow_pile', '/assets/v4/objects/mountain/snow_pile.png');
     // Riverbed
     this.load.image('v4_riverbed_tree', '/assets/v4/objects/riverbed/tree.png');
@@ -109,6 +109,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('v4_riverbed_fence', '/assets/v4/objects/riverbed/fence.png');
     this.load.image('v4_riverbed_puddle', '/assets/v4/objects/riverbed/puddle.png');
     this.load.image('v4_riverbed_bush', '/assets/v4/objects/riverbed/bush_wide.png');
+    this.load.image('v4_riverbed_bush_low', '/assets/v4/objects/riverbed/bush_low.png');
     this.load.image('v4_riverbed_log', '/assets/v4/objects/riverbed/log_moss.png');
     this.load.image('v4_riverbed_log2', '/assets/v4/objects/riverbed/log_plain.png');
     this.load.image('v4_riverbed_bird', '/assets/v4/objects/riverbed/bird.png');
@@ -117,7 +118,7 @@ export class BootScene extends Phaser.Scene {
     this.load.image('v4_sprint_hotel', '/assets/v4/objects/sprint/hotel.png');
     this.load.image('v4_sprint_shopping', '/assets/v4/objects/sprint/shopping_center.png');
     this.load.image('v4_sprint_apartment', '/assets/v4/objects/sprint/apartment.png');
-    this.load.image('v4_sprint_skyscraper', '/assets/v4/objects/sprint/skyscraper.png');
+    this.load.image('v4_sprint_skyscraper', '/assets/v4/objects/sprint/skyscraper_tall.png');
     this.load.image('v4_sprint_skyscraper_sm', '/assets/v4/objects/sprint/skyscraper_sm.png');
     this.load.image('v4_sprint_restaurant', '/assets/v4/objects/sprint/restaurant.png');
     this.load.image('v4_sprint_grandstand', '/assets/v4/objects/sprint/grandstand.png');
@@ -126,8 +127,10 @@ export class BootScene extends Phaser.Scene {
     this.load.image('v4_sprint_light', '/assets/v4/objects/sprint/street_light.png');
     this.load.image('v4_sprint_banner', '/assets/v4/objects/sprint/banner_arch.png');
     this.load.image('v4_sprint_tires', '/assets/v4/objects/sprint/tire_stack.png');
+    this.load.image('v4_sprint_tires_flat', '/assets/v4/objects/sprint/tires_flat.png');
     this.load.image('v4_sprint_cones', '/assets/v4/objects/sprint/cones.png');
     this.load.image('v4_sprint_generator', '/assets/v4/objects/sprint/generator.png');
+    this.load.image('v4_sprint_generator_sm', '/assets/v4/objects/sprint/generator_sm.png');
 
     // Sprint rework — high-detail assets (v3 programmatic, kept as fallback)
     this.load.image('sp_road_tile', '/assets/v3/objects/sprint/road_tile.png');
