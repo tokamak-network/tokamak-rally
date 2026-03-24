@@ -683,7 +683,7 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // === CANYON — continuous cliff walls along road edges ===
+    // === CANYON — Thrash Rally style: narrow gorge with continuous cliff walls ===
     const canyonZone = this.track.zones.find(z => z.name === 'canyon');
     if (canyonZone) {
       const cS = canyonZone.fromWP, cE = Math.min(canyonZone.toWP, wp.length-1);
@@ -699,7 +699,14 @@ export class RaceScene extends Phaser.Scene {
         cNormals.push([nx/l, ny/l]);
       }
 
-      // Layer 1: Continuous cliff wall — seamless, every segment both sides
+      const wallScale = scaleMap['v4_canyon_wall'] || 0.18;
+      const rockScale = scaleMap['v4_canyon_rock'] || 0.15;
+      const pillarScale = scaleMap['v4_canyon_pillar'] || 0.18;
+      const archScale = scaleMap['v4_canyon_arch'] || 0.16;
+      const debrisScale = scaleMap['v4_canyon_debris_sm'] || 0.14;
+      const bushScale = scaleMap['v4_canyon_dead_bush'] || 0.14;
+
+      // Layer 1: Continuous cliff wall — tight against road, both sides, every WP
       for (let i = cS; i < cE; i++) {
         const [x1,y1] = wp[i], [x2,y2] = wp[i+1];
         const dx = x2-x1, dy = y2-y1, segLen = Math.sqrt(dx*dx+dy*dy);
@@ -708,50 +715,61 @@ export class RaceScene extends Phaser.Scene {
         const ni = cNormals[i - cS];
 
         for (const side of [-1, 1]) {
-          // Wall base: directly at road edge + small gap
-          const wallDist = cHalfW + 20;
+          // Row 1: wall directly at road edge
+          const wallDist = cHalfW + 8;
           const wx = x1 + ni[0]*side*wallDist + dx*0.5;
           const wy = y1 + ni[1]*side*wallDist + dy*0.5;
           this.add.sprite(wx, wy, 'v4_canyon_wall')
-            .setDepth(2).setRotation(segAngle).setScale(1.0);
+            .setDepth(2).setRotation(segAngle).setScale(wallScale);
 
-          // Second wall row (slightly farther, slightly higher depth for layering)
-          const wall2Dist = cHalfW + 50;
-          const w2x = x1 + ni[0]*side*wall2Dist + dx*0.5;
-          const w2y = y1 + ni[1]*side*wall2Dist + dy*0.5;
-          this.add.sprite(w2x, w2y, 'v4_canyon_rock')
-            .setDepth(1).setScale(0.9);
+          // Row 2: rock layer behind wall
+          const rockDist = cHalfW + 22;
+          const rx = x1 + ni[0]*side*rockDist + dx*0.5;
+          const ry = y1 + ni[1]*side*rockDist + dy*0.5;
+          this.add.sprite(rx, ry, 'v4_canyon_rock')
+            .setDepth(1).setScale(rockScale);
+
+          // Row 3: outer cliff layer for depth
+          const outerDist = cHalfW + 36;
+          const ox = x1 + ni[0]*side*outerDist + dx*0.5;
+          const oy = y1 + ni[1]*side*outerDist + dy*0.5;
+          this.add.sprite(ox, oy, 'v4_canyon_wall')
+            .setDepth(0).setRotation(segAngle + 0.15*side).setScale(wallScale * 1.1)
+            .setTint(0x8a6a50); // darker tint for depth
         }
       }
 
-      // Layer 2: Pillars on top of walls — every 3 waypoints
-      for (let i = cS; i < cE; i += 3) {
-        const ni = cNormals[i - cS];
-        const side = (Math.floor((i - cS) / 3) % 2 === 0) ? 1 : -1;
-        const pd = cHalfW + 35;
-        const px = wp[i][0] + ni[0]*side*pd;
-        const py = wp[i][1] + ni[1]*side*pd;
-        this.add.sprite(px, py, 'v4_canyon_pillar').setDepth(3).setScale(1.0);
-      }
-
-      // Layer 3: Arch every ~8 waypoints (spanning or decorative)
-      for (let i = cS + 4; i < cE - 4; i += 8) {
-        const ni = cNormals[i - cS];
-        const side = (Math.floor((i - cS) / 8) % 2 === 0) ? 1 : -1;
-        const ad = cHalfW + 45;
-        this.add.sprite(wp[i][0] + ni[0]*side*ad, wp[i][1] + ni[1]*side*ad, 'v4_canyon_arch')
-          .setDepth(3).setScale(1.0);
-      }
-
-      // Layer 4: Debris/dead bush in gaps — small scatter between walls
-      for (let i = cS; i < cE; i += 2) {
+      // Layer 2: Pillars — every 5 WPs, alternating sides, on top of wall
+      for (let i = cS; i < cE; i += 5) {
         const ni = cNormals[i - cS];
         for (const side of [-1, 1]) {
-          if (Math.random() > 0.5) {
-            const dd = cHalfW + 60 + Math.random()*40;
-            const tex = Math.random() > 0.5 ? 'v4_canyon_debris_sm' : 'v4_canyon_dead_bush';
+          const pd = cHalfW + 15;
+          const px = wp[i][0] + ni[0]*side*pd;
+          const py = wp[i][1] + ni[1]*side*pd;
+          this.add.sprite(px, py, 'v4_canyon_pillar').setDepth(3).setScale(pillarScale);
+        }
+      }
+
+      // Layer 3: Arch every ~10 waypoints — spanning road or decorative
+      for (let i = cS + 5; i < cE - 5; i += 10) {
+        const ni = cNormals[i - cS];
+        const side = (Math.floor((i - cS) / 10) % 2 === 0) ? 1 : -1;
+        const ad = cHalfW + 12;
+        this.add.sprite(wp[i][0] + ni[0]*side*ad, wp[i][1] + ni[1]*side*ad, 'v4_canyon_arch')
+          .setDepth(3).setScale(archScale);
+      }
+
+      // Layer 4: Debris/dead bush — sparse scatter beyond outer wall
+      for (let i = cS; i < cE; i += 3) {
+        const ni = cNormals[i - cS];
+        for (const side of [-1, 1]) {
+          if (Math.random() > 0.4) {
+            const dd = cHalfW + 45 + Math.random()*20;
+            const isBush = Math.random() > 0.5;
+            const tex = isBush ? 'v4_canyon_dead_bush' : 'v4_canyon_debris_sm';
+            const sc = isBush ? bushScale : debrisScale;
             this.add.sprite(wp[i][0] + ni[0]*side*dd, wp[i][1] + ni[1]*side*dd, tex)
-              .setDepth(2).setScale(0.8);
+              .setDepth(2).setScale(sc);
           }
         }
       }
