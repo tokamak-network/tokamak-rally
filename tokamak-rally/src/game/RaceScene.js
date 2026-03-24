@@ -391,12 +391,18 @@ export class RaceScene extends Phaser.Scene {
             const bg = this.add.graphics().setDepth(5);
             bg.fillStyle(isBlue ? 0x2a72e5 : 0xffffff, 0.95);
             bg.fillRect(-BW/2, -BH/2, BW, BH);
-            // Tokamak logo text on blue banners
-            if (isBlue) {
-              bg.fillStyle(0xffffff, 0.9);
-              bg.fillRect(-BW/2+4, -2, BW-8, 4);
-            }
             bg.x = bx; bg.y = by; bg.rotation = segAngle;
+            // Tokamak logo on blue banners
+            if (isBlue) {
+              const logo = this.add.sprite(bx, by, 'tokamak_logo_white')
+                .setDepth(6).setRotation(segAngle).setScale(0.12).setAlpha(0.9);
+            } else {
+              // White banners get "TOKAMAK" text
+              this.add.text(bx, by, 'TOKAMAK', {
+                fontSize: '7px', fontFamily: 'monospace', color: '#2a72e5',
+                fontStyle: 'bold',
+              }).setOrigin(0.5).setDepth(6).setRotation(segAngle);
+            }
 
             // Dense crowd behind banners — 5 rows, packed
             for (let row = 0; row < 5; row++) {
