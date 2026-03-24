@@ -664,28 +664,75 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // Canyon walls — dense, close to road for deep canyon feel
+    // === CANYON — continuous cliff walls along road edges ===
     const canyonZone = this.track.zones.find(z => z.name === 'canyon');
     if (canyonZone) {
-      for (let i = canyonZone.fromWP; i < Math.min(canyonZone.toWP, wp.length-1); i += 1) {
-        const [x1,y1]=wp[i],[x2,y2]=wp[i+1];
-        const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
-        if (len<1) continue;
-        const nx=-dy/len, ny=dx/len;
-        const halfW = 75/2;
-        for (let side of [-1, 1]) {
-          // Cliff walls close to road edge — continuous wall feel
-          const t = Math.random() * 0.8 + 0.1;
-          const d = halfW + 45 + Math.random()*25;
-          const sx = x1+dx*t + nx*side*d;
-          const sy = y1+dy*t + ny*side*d;
-          this.add.sprite(sx, sy, 'v4_canyon_wall').setDepth(2).setScale(0.9+Math.random()*0.3);
-          // Canyon pillars on top of cliff walls (every other waypoint)
-          if (i % 2 === 0) {
-            const pd = d + 30 + Math.random()*20;
-            const px2 = x1+dx*t + nx*side*pd;
-            const py2 = y1+dy*t + ny*side*pd;
-            this.add.sprite(px2, py2, 'v4_canyon_pillar').setDepth(2).setScale(0.7+Math.random()*0.3);
+      const cS = canyonZone.fromWP, cE = Math.min(canyonZone.toWP, wp.length-1);
+      const cHalfW = (canyonZone.trackWidth || 75) / 2;
+
+      // Compute normals
+      const cNormals = [];
+      for (let i = cS; i <= cE; i++) {
+        let nx = 0, ny = 0;
+        if (i > cS) { const dx = wp[i][0]-wp[i-1][0], dy = wp[i][1]-wp[i-1][1]; const l = Math.sqrt(dx*dx+dy*dy)||1; nx += -dy/l; ny += dx/l; }
+        if (i < cE) { const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1]; const l = Math.sqrt(dx*dx+dy*dy)||1; nx += -dy/l; ny += dx/l; }
+        const l = Math.sqrt(nx*nx+ny*ny)||1;
+        cNormals.push([nx/l, ny/l]);
+      }
+
+      // Layer 1: Continuous cliff wall — seamless, every segment both sides
+      for (let i = cS; i < cE; i++) {
+        const [x1,y1] = wp[i], [x2,y2] = wp[i+1];
+        const dx = x2-x1, dy = y2-y1, segLen = Math.sqrt(dx*dx+dy*dy);
+        if (segLen < 1) continue;
+        const segAngle = Math.atan2(dy, dx);
+        const ni = cNormals[i - cS];
+
+        for (const side of [-1, 1]) {
+          // Wall base: directly at road edge + small gap
+          const wallDist = cHalfW + 20;
+          const wx = x1 + ni[0]*side*wallDist + dx*0.5;
+          const wy = y1 + ni[1]*side*wallDist + dy*0.5;
+          this.add.sprite(wx, wy, 'v4_canyon_wall')
+            .setDepth(2).setRotation(segAngle).setScale(1.0);
+
+          // Second wall row (slightly farther, slightly higher depth for layering)
+          const wall2Dist = cHalfW + 50;
+          const w2x = x1 + ni[0]*side*wall2Dist + dx*0.5;
+          const w2y = y1 + ni[1]*side*wall2Dist + dy*0.5;
+          this.add.sprite(w2x, w2y, 'v4_canyon_rock')
+            .setDepth(1).setScale(0.9 + Math.random()*0.2);
+        }
+      }
+
+      // Layer 2: Pillars on top of walls — every 3 waypoints
+      for (let i = cS; i < cE; i += 3) {
+        const ni = cNormals[i - cS];
+        const side = (Math.floor((i - cS) / 3) % 2 === 0) ? 1 : -1;
+        const pd = cHalfW + 35;
+        const px = wp[i][0] + ni[0]*side*pd;
+        const py = wp[i][1] + ni[1]*side*pd;
+        this.add.sprite(px, py, 'v4_canyon_pillar').setDepth(3).setScale(1.0);
+      }
+
+      // Layer 3: Arch every ~8 waypoints (spanning or decorative)
+      for (let i = cS + 4; i < cE - 4; i += 8) {
+        const ni = cNormals[i - cS];
+        const side = (Math.floor((i - cS) / 8) % 2 === 0) ? 1 : -1;
+        const ad = cHalfW + 45;
+        this.add.sprite(wp[i][0] + ni[0]*side*ad, wp[i][1] + ni[1]*side*ad, 'v4_canyon_arch')
+          .setDepth(3).setScale(1.0);
+      }
+
+      // Layer 4: Debris/dead bush in gaps — small scatter between walls
+      for (let i = cS; i < cE; i += 2) {
+        const ni = cNormals[i - cS];
+        for (const side of [-1, 1]) {
+          if (Math.random() > 0.5) {
+            const dd = cHalfW + 60 + Math.random()*40;
+            const tex = Math.random() > 0.5 ? 'v4_canyon_debris_sm' : 'v4_canyon_dead_bush';
+            this.add.sprite(wp[i][0] + ni[0]*side*dd, wp[i][1] + ni[1]*side*dd, tex)
+              .setDepth(2).setScale(0.8 + Math.random()*0.3);
           }
         }
       }
@@ -738,103 +785,105 @@ export class RaceScene extends Phaser.Scene {
         spNormals.push([nnx/l, nny/l]);
       }
 
-      // --- Layer 1: Jersey barriers immediately at road edge ---
+      // === Sprint layered city: Road → Barrier → Fence → Grandstand → Buildings ===
+
+      // L1: Jersey barriers — continuous wall at road edge
       for (let i = spS; i < spE; i++) {
         const [x1,y1] = wp[i], [x2,y2] = wp[i+1];
-        const dx = x2-x1, dy = y2-y1, segLen = Math.sqrt(dx*dx+dy*dy);
-        if (segLen < 1) continue;
+        const dx = x2-x1, dy = y2-y1;
+        if (Math.sqrt(dx*dx+dy*dy) < 1) continue;
         const segAngle = Math.atan2(dy, dx);
         const ni = spNormals[i - spS];
         for (const side of [-1, 1]) {
-          const bd = spHalfW + 14;
-          const bx = x1 + ni[0]*side*bd + dx*0.5;
-          const by = y1 + ni[1]*side*bd + dy*0.5;
-          this.add.sprite(bx, by, 'v4_sprint_jersey')
+          const bd = spHalfW + 12;
+          this.add.sprite(x1+ni[0]*side*bd+dx*0.5, y1+ni[1]*side*bd+dy*0.5, 'v4_sprint_jersey')
+            .setDepth(4).setRotation(segAngle).setScale(1.0);
+        }
+      }
+
+      // L2: Catch fence — continuous behind barriers
+      for (let i = spS; i < spE; i++) {
+        const [x1,y1] = wp[i], [x2,y2] = wp[i+1];
+        const segAngle = Math.atan2(y2-y1, x2-x1);
+        const ni = spNormals[i - spS];
+        for (const side of [-1, 1]) {
+          this.add.sprite(x1+ni[0]*side*(spHalfW+25)+(x2-x1)*0.5, y1+ni[1]*side*(spHalfW+25)+(y2-y1)*0.5, 'v4_sprint_fence')
             .setDepth(3).setRotation(segAngle).setScale(1.0);
         }
       }
 
-      // --- Layer 2: Catch fence behind barriers ---
-      for (let i = spS; i < spE; i += 2) {
-        const ni = spNormals[i - spS];
-        const [x1,y1] = wp[i], [x2,y2] = wp[i+1];
-        const segAngle = Math.atan2(y2-y1, x2-x1);
-        for (const side of [-1, 1]) {
-          const fd = spHalfW + 28;
-          const fx = x1 + ni[0]*side*fd + (x2-x1)*0.5;
-          const fy = y1 + ni[1]*side*fd + (y2-y1)*0.5;
-          this.add.sprite(fx, fy, 'v4_sprint_fence')
-            .setDepth(2).setRotation(segAngle).setScale(1.0);
-        }
-      }
-
-      // --- Layer 3: Street lights — evenly spaced along road edges ---
-      for (let i = spS; i < spE; i += 3) {
-        const ni = spNormals[i - spS];
-        for (const side of [-1, 1]) {
-          const ld = spHalfW + 40;
-          const lx = wp[i][0] + ni[0]*side*ld;
-          const ly = wp[i][1] + ni[1]*side*ld;
-          this.add.sprite(lx, ly, 'v4_sprint_light').setDepth(3).setScale(1.0);
-        }
-      }
-
-      // --- Layer 4: Grandstands — every 6 waypoints, one side ---
-      for (let i = spS; i < spE; i += 6) {
+      // L3: Grandstands — every 5 WPs, alternating sides
+      for (let i = spS; i < spE; i += 5) {
         const ni = spNormals[i - spS];
         const [x1,y1] = wp[i], [x2,y2] = wp[Math.min(i+1, spE)];
         const segAngle = Math.atan2(y2-y1, x2-x1);
-        // Alternate sides
-        const side = (Math.floor((i - spS) / 6) % 2 === 0) ? 1 : -1;
-        const gd = spHalfW + 55;
-        const gx = wp[i][0] + ni[0]*side*gd;
-        const gy = wp[i][1] + ni[1]*side*gd;
-        this.add.sprite(gx, gy, 'v4_sprint_grandstand')
+        const side = (Math.floor((i-spS)/5) % 2 === 0) ? 1 : -1;
+        this.add.sprite(wp[i][0]+ni[0]*side*(spHalfW+42), wp[i][1]+ni[1]*side*(spHalfW+42), 'v4_sprint_grandstand')
           .setDepth(2).setRotation(segAngle).setScale(1.0);
       }
 
-      // --- Layer 5: Buildings — grid-aligned rows behind barriers ---
-      const buildingTextures = ['v4_sprint_office', 'v4_sprint_hotel', 'v4_sprint_apartment', 'v4_sprint_skyscraper', 'v4_sprint_skyscraper_sm', 'v4_sprint_shopping', 'v4_sprint_restaurant'];
-      for (let row = 0; row < 4; row++) {
-        const rowDist = spHalfW + 80 + row * 50;
-        for (let i = spS; i < spE; i += (row < 2 ? 1 : 2)) {
-          const ni = spNormals[i - spS];
-          for (const side of [-1, 1]) {
-            const bx = wp[i][0] + ni[0] * side * rowDist;
-            const by = wp[i][1] + ni[1] * side * rowDist;
-            // Closer rows = taller buildings, farther = variety
-            let tex;
-            if (row === 0) tex = buildingTextures[Math.floor(Math.random() * buildingTextures.length)];
-            else if (row === 1) tex = Math.random() > 0.4 ? 'sp_building_office' : 'sp_building_apt';
-            else tex = Math.random() > 0.5 ? 'sp_building_apt' : 'sp_building_office';
-            this.add.sprite(bx, by, tex).setDepth(1).setScale(1.0);
-          }
-        }
-      }
-
-      // --- Layer 6: Banner arches — span across road every 8 waypoints ---
-      for (let i = spS + 2; i < spE - 2; i += 8) {
-        const [x1,y1] = wp[i], [x2,y2] = wp[Math.min(i+1, spE)];
-        const segAngle = Math.atan2(y2-y1, x2-x1);
-        // Place arch centered on road
-        this.add.sprite(wp[i][0], wp[i][1], 'v4_sprint_banner')
-          .setDepth(8).setRotation(segAngle + Math.PI/2).setScale(1.0);
-      }
-
-      // --- Layer 7: Tire stacks at corners (where curvature is high) ---
-      for (let i = spS + 1; i < spE - 1; i++) {
-        const [xp,yp] = wp[i-1], [xc,yc] = wp[i], [xn,yn] = wp[i+1];
-        const dx1 = xc-xp, dy1 = yc-yp, dx2 = xn-xc, dy2 = yn-yc;
-        const cross = dx1*dy2 - dy1*dx2;
-        const mag = Math.sqrt(dx1*dx1+dy1*dy1) * Math.sqrt(dx2*dx2+dy2*dy2);
-        const curvature = mag > 0 ? Math.abs(cross / mag) : 0;
-        if (curvature > 0.15) {
-          const ni = spNormals[i - spS];
-          const turnSide = cross > 0 ? -1 : 1;
-          const td = spHalfW + 18;
-          this.add.sprite(xc + ni[0]*turnSide*td, yc + ni[1]*turnSide*td, 'v4_sprint_tires')
+      // L4: Street lights — both sides, every 3 WPs
+      for (let i = spS; i < spE; i += 3) {
+        const ni = spNormals[i - spS];
+        for (const side of [-1, 1]) {
+          this.add.sprite(wp[i][0]+ni[0]*side*(spHalfW+35), wp[i][1]+ni[1]*side*(spHalfW+35), 'v4_sprint_light')
             .setDepth(3).setScale(1.0);
         }
+      }
+
+      // L5: Buildings — GRID ALIGNED in rows, both sides
+      const bldgFront = ['v4_sprint_office','v4_sprint_hotel','v4_sprint_apartment','v4_sprint_restaurant','v4_sprint_shopping'];
+      const bldgBack = ['v4_sprint_skyscraper','v4_sprint_skyscraper_sm','v4_sprint_office','v4_sprint_apartment'];
+      for (const side of [-1, 1]) {
+        // Row 1: front row — every WP, tight (like a street wall)
+        for (let i = spS; i < spE; i++) {
+          const ni = spNormals[i - spS];
+          const tex = bldgFront[(i + (side>0?0:3)) % bldgFront.length];
+          this.add.sprite(wp[i][0]+ni[0]*side*(spHalfW+70), wp[i][1]+ni[1]*side*(spHalfW+70), tex)
+            .setDepth(1).setScale(1.0);
+        }
+        // Row 2: behind front row
+        for (let i = spS; i < spE; i++) {
+          const ni = spNormals[i - spS];
+          const tex = bldgBack[(i + (side>0?1:2)) % bldgBack.length];
+          this.add.sprite(wp[i][0]+ni[0]*side*(spHalfW+120), wp[i][1]+ni[1]*side*(spHalfW+120), tex)
+            .setDepth(0.5).setScale(1.0);
+        }
+        // Row 3: far skyline — sparser
+        for (let i = spS; i < spE; i += 2) {
+          const ni = spNormals[i - spS];
+          this.add.sprite(wp[i][0]+ni[0]*side*(spHalfW+170), wp[i][1]+ni[1]*side*(spHalfW+170), 'v4_sprint_skyscraper')
+            .setDepth(0).setScale(1.0);
+        }
+      }
+
+      // L6: Banner arches over road — every 8 WPs
+      for (let i = spS+3; i < spE-3; i += 8) {
+        const [x1,y1] = wp[i], [x2,y2] = wp[Math.min(i+1, spE)];
+        this.add.sprite(wp[i][0], wp[i][1], 'v4_sprint_banner')
+          .setDepth(8).setRotation(Math.atan2(y2-y1, x2-x1) + Math.PI/2).setScale(1.0);
+      }
+
+      // L7: Tire stacks at sharp corners
+      for (let i = spS+1; i < spE-1; i++) {
+        const [xp,yp] = wp[i-1], [xc,yc] = wp[i], [xn,yn] = wp[i+1];
+        const cross = (xc-xp)*(yn-yc) - (yc-yp)*(xn-xc);
+        const mag = Math.sqrt((xc-xp)**2+(yc-yp)**2) * Math.sqrt((xn-xc)**2+(yn-yc)**2);
+        if (mag > 0 && Math.abs(cross/mag) > 0.12) {
+          const ni = spNormals[i-spS];
+          const ts = cross > 0 ? -1 : 1;
+          this.add.sprite(xc+ni[0]*ts*(spHalfW+16), yc+ni[1]*ts*(spHalfW+16), 'v4_sprint_tires')
+            .setDepth(4).setScale(1.0);
+        }
+      }
+
+      // L8: Cones/generators between fence and grandstand
+      for (let i = spS; i < spE; i += 4) {
+        const ni = spNormals[i-spS];
+        const side = (i%8<4) ? 1 : -1;
+        const tex = Math.random() > 0.6 ? 'v4_sprint_cones' : 'v4_sprint_generator';
+        this.add.sprite(wp[i][0]+ni[0]*side*(spHalfW+52), wp[i][1]+ni[1]*side*(spHalfW+52), tex)
+          .setDepth(2).setScale(0.8);
       }
     }
 
