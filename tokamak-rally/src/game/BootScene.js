@@ -100,27 +100,27 @@ export class BootScene extends Phaser.Scene {
     const S = 128; // tile size — larger for more detail
     let g;
 
-    // ====== DESERT — Dakar-style reddish-brown sand with dune ripples ======
+    // ====== DESERT — Bright warm sand matching cactus base color ======
     g = this.add.graphics();
-    // Layer 1: Base gradient — warm reddish-brown
+    // Layer 1: Base gradient — bright warm sand (#c8a060 ~ #d4b878)
     for (let y = 0; y < S; y++) {
       const t = y / S;
-      const r = Math.floor(0xc8 + (0xb0-0xc8)*t + Math.sin(y*0.15)*5);
-      const gv = Math.floor(0x8a + (0x70-0x8a)*t + Math.sin(y*0.12)*4);
-      const b = Math.floor(0x48 + (0x35-0x48)*t + Math.sin(y*0.1)*3);
+      const r = Math.floor(0xd0 + (0xc4-0xd0)*t + Math.sin(y*0.15)*4);
+      const gv = Math.floor(0xb0 + (0xa0-0xb0)*t + Math.sin(y*0.12)*3);
+      const b = Math.floor(0x68 + (0x58-0x68)*t + Math.sin(y*0.1)*3);
       g.fillStyle((Math.max(0,Math.min(255,r))<<16)|(Math.max(0,Math.min(255,gv))<<8)|Math.max(0,Math.min(255,b)));
       g.fillRect(0, y, S, 1);
     }
     // Layer 2: Dune ridge crests — golden highlights with wave pattern
-    g.fillStyle(0xd8a858, 0.25);
+    g.fillStyle(0xdcbc70, 0.2);
     for (let y = 6; y < S; y += 16) {
       for (let x = 0; x < S; x++) {
         const wave = Math.sin(x*0.06+y*0.015)*4;
         g.fillRect(x, y+wave, 1, 2);
       }
     }
-    // Layer 3: Shadow valleys between dunes
-    g.fillStyle(0x8a5a30, 0.2);
+    // Layer 3: Shadow valleys between dunes (lighter than before)
+    g.fillStyle(0xb89050, 0.15);
     for (let y = 12; y < S; y += 16) {
       for (let x = 0; x < S; x++) {
         const wave = Math.sin(x*0.05+y*0.025)*3;
@@ -128,7 +128,7 @@ export class BootScene extends Phaser.Scene {
       }
     }
     // Layer 4: Fine sand ripples (wind-blown texture)
-    g.fillStyle(0xd4a060, 0.2);
+    g.fillStyle(0xd8b870, 0.18);
     for (let y = 2; y < S; y += 4) {
       const startX = (y*7)%S;
       g.fillRect(startX, y, 15+((y*3)%10), 1);
@@ -137,23 +137,23 @@ export class BootScene extends Phaser.Scene {
     // Layer 5: Stipple noise — 1px dots for dithered texture
     for (let i = 0; i < 150; i++) {
       const px = (i*41+13)%S, py = (i*53+7)%S;
-      g.fillStyle([0xc09050,0xa87840,0xb88848,0x9a6838,0xd0a060,0xb09048][i%6], 0.35);
+      g.fillStyle([0xd0a860,0xc49850,0xccaa58,0xba9048,0xd8b068,0xc4a050][i%6], 0.3);
       g.fillRect(px, py, 1, 1);
     }
     // Layer 6: Scattered pebbles (2px dots)
     for (let i = 0; i < 30; i++) {
       const px = (i*37+19)%S, py = (i*61+11)%S;
-      g.fillStyle([0x7a5828,0x6a4818,0x8a6838][i%3], 0.45);
+      g.fillStyle([0xa08040,0x907030,0xb09050][i%3], 0.35);
       g.fillRect(px, py, 2, 1+(i%3===0?1:0));
     }
     // Layer 7: Tire track marks
-    g.fillStyle(0x9a6a38, 0.12);
+    g.fillStyle(0xb08848, 0.1);
     for (let y = 10; y < S; y += 20) {
       g.fillRect(40, y, 2, 6); g.fillRect(48, y+3, 2, 6);
       g.fillRect(85, y+5, 2, 6); g.fillRect(93, y+8, 2, 6);
     }
     // Layer 8: Wind-blown highlight streaks
-    g.fillStyle(0xe0b870, 0.08);
+    g.fillStyle(0xe8c880, 0.08);
     for (let y = 0; y < S; y += 7) {
       const sx = (y*11+5)%S;
       g.fillRect(sx, y, 20+((y*3)%12), 1);

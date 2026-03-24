@@ -61,6 +61,8 @@ export class RaceScene extends Phaser.Scene {
     this._zoneDustTextures = {
       desert: 'dust_particle', canyon: 'dust_canyon', riverbed: 'dust_particle',
       mountain: 'snow_particle', sprint: 'smoke_particle',
+      trans_desert_canyon: 'dust_canyon', trans_canyon_riverbed: 'dust_particle',
+      trans_riverbed_mountain: 'snow_particle', trans_mountain_sprint: 'smoke_particle',
     };
 
     this.carState = {
@@ -139,6 +141,10 @@ export class RaceScene extends Phaser.Scene {
 
   drawBackground() {
     const wp = this.track.waypoints;
+    // Map zone names to bgTile keys
+    const zoneBgMap = {};
+    for (const z of this.track.zones) { zoneBgMap[z.name] = z.bgTile; }
+
     for (const zone of this.track.zones) {
       let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
       for (let i=zone.fromWP; i<=Math.min(zone.toWP, wp.length-1); i++) {
@@ -146,9 +152,35 @@ export class RaceScene extends Phaser.Scene {
         minY=Math.min(minY,wp[i][1]); maxY=Math.max(maxY,wp[i][1]);
       }
       minX-=500; maxX+=500; minY-=500; maxY+=500;
-      for (let x=minX; x<maxX; x+=128)
-        for (let y=minY; y<maxY; y+=128)
-          this.add.sprite(x, y, zone.bgTile).setOrigin(0).setDepth(0);
+
+      if (zone.transition) {
+        // Transition zone: blend two background tiles
+        const fromTile = zone.bgTile;
+        const toZone = this.track.zones.find(z => z.name === zone.transition.to);
+        const toTile = toZone ? toZone.bgTile : zone.bgTile;
+        // Compute zone center Y for progress calculation
+        const zoneMinY = Math.min(...Array.from({length: zone.toWP - zone.fromWP + 1}, (_, k) => wp[zone.fromWP + k] ? wp[zone.fromWP + k][1] : Infinity));
+        const zoneMaxY = Math.max(...Array.from({length: zone.toWP - zone.fromWP + 1}, (_, k) => wp[zone.fromWP + k] ? wp[zone.fromWP + k][1] : -Infinity));
+        const zoneMidY = (zoneMinY + zoneMaxY) / 2;
+        const zoneSpanY = Math.max(zoneMaxY - zoneMinY, 1);
+
+        for (let x=minX; x<maxX; x+=128) {
+          for (let y=minY; y<maxY; y+=128) {
+            // Progress based on Y position relative to zone span
+            const progress = Phaser.Math.Clamp((y - zoneMinY) / zoneSpanY, 0, 1);
+            // Waypoints go top to bottom (decreasing Y = forward), so invert if needed
+            const midWP = Math.floor((zone.fromWP + zone.toWP) / 2);
+            const goingUp = wp[zone.fromWP][1] > wp[zone.toWP][1];
+            const p = goingUp ? (1 - progress) : progress;
+            this.add.sprite(x, y, fromTile).setOrigin(0).setDepth(0).setAlpha(1 - p);
+            this.add.sprite(x, y, toTile).setOrigin(0).setDepth(0).setAlpha(p);
+          }
+        }
+      } else {
+        for (let x=minX; x<maxX; x+=128)
+          for (let y=minY; y<maxY; y+=128)
+            this.add.sprite(x, y, zone.bgTile).setOrigin(0).setDepth(0);
+      }
     }
   }
 
@@ -400,6 +432,14 @@ export class RaceScene extends Phaser.Scene {
             if (isBlue) {
               this.add.sprite(bx, by, 'tokamak_logo_white')
                 .setDepth(6).setRotation(segAngle).setScale(0.06).setAlpha(0.95);
+            } else {
+              // White banner: Tokamak logo in blue + text
+              this.add.sprite(bx, by, 'tokamak_logo')
+                .setDepth(6).setRotation(segAngle).setScale(0.04).setTint(0x2a72e5);
+              this.add.text(bx + Math.cos(segAngle)*12, by + Math.sin(segAngle)*12, 'TOKAMAK\nNETWORK', {
+                fontSize: '4px', fontFamily: 'monospace', color: '#000000',
+                fontStyle: 'bold', align: 'center',
+              }).setOrigin(0.5).setDepth(6).setRotation(segAngle);
             }
 
             // Dense crowd behind banners — 5 rows, packed
@@ -553,7 +593,7 @@ export class RaceScene extends Phaser.Scene {
     const scaleMap = {
       'v2_mountain_cabin': 1.0, 'v2_mountain_pine': 0.9, 'v2_mountain_rock': 0.7,
       'v2_mountain_snowman': 0.28, 'v2_mountain_turbine': 1.2,
-      'v2_desert_hut': 0.8, 'v2_desert_cow': 0.5, 'v2_desert_cactus': 0.7,
+      'v2_desert_hut': 0.8, 'v2_desert_cow': 0.85, 'v2_desert_cactus': 0.7,
       'v2_desert_scrub': 0.5, 'v2_desert_rock': 0.6,
       'v2_canyon_pillar': 0.9, 'v2_canyon_debris': 0.6, 'v2_canyon_reflector': 0.5, 'v2_canyon_cliff': 1.0,
       'v2_riverbed_reeds': 0.7, 'v2_riverbed_boulder': 0.6, 'v2_riverbed_bridge': 0.9,
@@ -592,27 +632,36 @@ export class RaceScene extends Phaser.Scene {
 
         // Track cows for animation
         if (tex === 'v2_desert_cow') {
-          this._animals.push({ type: 'cow', sprite: spr, baseX: ox, offset: Math.random() * Math.PI * 2 });
+          const dir = Math.random() > 0.5 ? 1 : -1;
+          spr.setFlipX(dir < 0);
+          this._animals.push({ type: 'cow', sprite: spr, baseX: ox, baseY: oy, dir, offset: Math.random() * Math.PI * 2 });
         }
       }
     }
 
-    // Canyon walls — sparse, well off-road, smaller scale
+    // Canyon walls — dense, close to road for deep canyon feel
     const canyonZone = this.track.zones.find(z => z.name === 'canyon');
     if (canyonZone) {
-      for (let i = canyonZone.fromWP; i < Math.min(canyonZone.toWP, wp.length-1); i += 2) {
+      for (let i = canyonZone.fromWP; i < Math.min(canyonZone.toWP, wp.length-1); i += 1) {
         const [x1,y1]=wp[i],[x2,y2]=wp[i+1];
         const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
         if (len<1) continue;
         const nx=-dy/len, ny=dx/len;
         const halfW = 75/2;
         for (let side of [-1, 1]) {
-          // Single row of walls — far from road
-          const t = Math.random();
-          const d = halfW + 80 + Math.random()*60;
+          // Cliff walls close to road edge — continuous wall feel
+          const t = Math.random() * 0.8 + 0.1;
+          const d = halfW + 45 + Math.random()*25;
           const sx = x1+dx*t + nx*side*d;
           const sy = y1+dy*t + ny*side*d;
-          this.add.sprite(sx, sy, 'canyon_wall').setDepth(1).setScale(0.4+Math.random()*0.2).setAlpha(0.5);
+          this.add.sprite(sx, sy, 'v2_canyon_cliff').setDepth(2).setScale(0.9+Math.random()*0.3);
+          // Canyon pillars on top of cliff walls (every other waypoint)
+          if (i % 2 === 0) {
+            const pd = d + 30 + Math.random()*20;
+            const px2 = x1+dx*t + nx*side*pd;
+            const py2 = y1+dy*t + ny*side*pd;
+            this.add.sprite(px2, py2, 'v2_canyon_pillar').setDepth(2).setScale(0.7+Math.random()*0.3);
+          }
         }
       }
     }
@@ -681,16 +730,22 @@ export class RaceScene extends Phaser.Scene {
         const l = Math.sqrt(nnx*nnx+nny*nny)||1;
         spNormals.push([nnx/l, nny/l]);
       }
-      for (let row = 0; row < 3; row++) {
-        const rowDist = spBarrierDist + 50 + row * 35;
-        for (let i = spS; i < spE; i += 2) {
+      for (let row = 0; row < 5; row++) {
+        const rowDist = spBarrierDist + 50 + row * 30;
+        for (let i = spS; i < spE; i += 1) {
           for (const side of [-1, 1]) {
             const ni = spNormals[i - spS];
             const bx = wp[i][0] + ni[0] * side * rowDist;
             const by = wp[i][1] + ni[1] * side * rowDist;
             const objs = ['v2_sprint_building','v2_sprint_lamp','v2_sprint_billboard'];
             const tex = objs[Math.floor(Math.random()*objs.length)];
-            this.add.sprite(bx, by, tex).setDepth(1).setScale(0.8+Math.random()*0.4);
+            const sc = 0.85 + Math.random() * 0.25;
+            this.add.sprite(bx, by, tex).setDepth(1).setScale(sc);
+            // Rooftop Tokamak logo on buildings
+            if (tex === 'v2_sprint_building') {
+              this.add.sprite(bx, by - 8, 'tokamak_logo_white')
+                .setDepth(2).setScale(0.03).setAlpha(0.8);
+            }
           }
         }
       }
@@ -724,6 +779,95 @@ export class RaceScene extends Phaser.Scene {
         }
       }
     }
+
+    // === Mountain→Sprint tunnel ===
+    const tunnelZone = this.track.zones.find(z => z.name === 'trans_mountain_sprint');
+    if (tunnelZone) {
+      const tunnelG = this.add.graphics().setDepth(15);
+      for (let i = tunnelZone.fromWP; i < Math.min(tunnelZone.toWP, wp.length-1); i++) {
+        const [x1t,y1t] = wp[i], [x2t,y2t] = wp[i+1];
+        const tdx = x2t-x1t, tdy = y2t-y1t;
+        const tlen = Math.sqrt(tdx*tdx+tdy*tdy) || 1;
+        const tnx = -tdy/tlen, tny = tdx/tlen;
+        const tw = 60;
+        // Progress for fading (darker at start, lighter at exit)
+        const progress = (i - tunnelZone.fromWP) / (tunnelZone.toWP - tunnelZone.fromWP);
+        const alpha = 0.7 * (1 - progress * 0.6);
+        tunnelG.fillStyle(0x111111, alpha);
+        tunnelG.fillTriangle(
+          x1t + tnx*tw, y1t + tny*tw,
+          x1t - tnx*tw, y1t - tny*tw,
+          x2t + tnx*tw, y2t + tny*tw
+        );
+        tunnelG.fillTriangle(
+          x1t - tnx*tw, y1t - tny*tw,
+          x2t + tnx*tw, y2t + tny*tw,
+          x2t - tnx*tw, y2t - tny*tw
+        );
+        // Ceiling lights
+        if (i % 2 === 0) {
+          const mx = (x1t+x2t)/2, my = (y1t+y2t)/2;
+          const lightG = this.add.graphics().setDepth(16);
+          lightG.fillStyle(0xffee88, 0.4 + progress * 0.3);
+          lightG.fillCircle(mx, my, 3);
+          lightG.fillStyle(0xffffcc, 0.2);
+          lightG.fillCircle(mx, my, 8);
+        }
+      }
+      // Tunnel entrance arch
+      const entryWP = wp[tunnelZone.fromWP];
+      const archG = this.add.graphics().setDepth(14);
+      archG.fillStyle(0x444444, 1);
+      archG.fillRoundedRect(-40, -30, 80, 60, 20);
+      archG.fillStyle(0x222222, 1);
+      archG.fillRoundedRect(-35, -25, 70, 50, 18);
+      archG.x = entryWP[0]; archG.y = entryWP[1];
+      // Tunnel exit arch
+      const exitWP = wp[Math.min(tunnelZone.toWP, wp.length-1)];
+      const archG2 = this.add.graphics().setDepth(14);
+      archG2.fillStyle(0x555555, 1);
+      archG2.fillRoundedRect(-40, -30, 80, 60, 20);
+      archG2.fillStyle(0x888888, 1);
+      archG2.fillRoundedRect(-35, -25, 70, 50, 18);
+      archG2.x = exitWP[0]; archG2.y = exitWP[1];
+    }
+
+    // === Finish area — press center + podium ===
+    const finWP = wp[wp.length-1];
+    const finPrev = wp[wp.length-2];
+    const fdx2 = finWP[0]-finPrev[0], fdy2 = finWP[1]-finPrev[1];
+    const flen2 = Math.sqrt(fdx2*fdx2+fdy2*fdy2)||1;
+    const fnx2 = -fdy2/flen2, fny2 = fdx2/flen2;
+    const fux2 = fdx2/flen2, fuy2 = fdy2/flen2;
+
+    // Press center booths
+    for (const side of [-1, 1]) {
+      for (let j = 0; j < 3; j++) {
+        const px = finWP[0] + fnx2*side*100 + fux2*(j*40 - 40);
+        const py = finWP[1] + fny2*side*100 + fuy2*(j*40 - 40);
+        const booth = this.add.graphics().setDepth(5);
+        booth.fillStyle(0xeeeeee, 0.9);
+        booth.fillRect(-18, -12, 36, 24);
+        booth.fillStyle(0x333333, 0.9);
+        booth.fillRect(-16, -10, 32, 4);
+        booth.x = px; booth.y = py;
+        this.add.text(px, py+6, 'PRESS', {
+          fontSize: '5px', fontFamily: 'monospace', color: '#333',
+        }).setOrigin(0.5).setDepth(5);
+      }
+    }
+
+    // Podium
+    const podX = finWP[0] + fux2*80;
+    const podY = finWP[1] + fuy2*80;
+    const podium = this.add.graphics().setDepth(5);
+    podium.fillStyle(0xffd700, 1); podium.fillRect(-12, -20, 24, 20);
+    podium.fillStyle(0xc0c0c0, 1); podium.fillRect(-36, -14, 24, 14);
+    podium.fillStyle(0xcd7f32, 1); podium.fillRect(12, -10, 24, 10);
+    podium.x = podX; podium.y = podY;
+    this.add.text(podX, podY-10, '1', {fontSize:'8px',fontFamily:'monospace',color:'#000',fontStyle:'bold'}).setOrigin(0.5).setDepth(5);
+    this.add.text(podX-24, podY-7, '2', {fontSize:'7px',fontFamily:'monospace',color:'#000',fontStyle:'bold'}).setOrigin(0.5).setDepth(5);
+    this.add.text(podX+24, podY-5, '3', {fontSize:'7px',fontFamily:'monospace',color:'#000',fontStyle:'bold'}).setOrigin(0.5).setDepth(5);
   }
 
   // Seeded PRNG (mulberry32) — ensures identical obstacle layout every attempt
@@ -866,11 +1010,14 @@ export class RaceScene extends Phaser.Scene {
       this.snowEmitter.emitting = false;
     }
 
-    // Cow animation — gentle sin wave lateral movement
+    // Cow animation — directional walking with bob
     if (this._animals) {
       for (const a of this._animals) {
         if (a.type === 'cow') {
-          a.sprite.x = a.baseX + Math.sin(time * 0.001 + a.offset) * 8;
+          a.sprite.x += a.dir * 0.3;
+          a.sprite.y = a.baseY + Math.sin(time * 0.003 + a.offset) * 1.5;
+          a.sprite.setFlipX(a.dir < 0);
+          if (Math.abs(a.sprite.x - a.baseX) > 80) a.dir *= -1;
         }
       }
     }
@@ -1090,7 +1237,7 @@ export class RaceScene extends Phaser.Scene {
     const z=getZoneByIndex(p.index,this.track.zones);
     if(z.name!==this.currentZoneName){
       this.currentZoneName=z.name;
-      const labels={desert:'🏜️ DESERT',canyon:'🪨 ROCKY CANYON',riverbed:'🏞️ DRIED RIVERBED',mountain:'⛰️ MOUNTAIN PASS',sprint:'🏁 FINAL SPRINT'};
+      const labels={desert:'🏜️ DESERT',canyon:'🪨 ROCKY CANYON',riverbed:'🏞️ DRIED RIVERBED',mountain:'⛰️ MOUNTAIN PASS',sprint:'🏁 FINAL SPRINT',trans_desert_canyon:'🏜️→🪨 ENTERING CANYON',trans_canyon_riverbed:'🪨→🏞️ RIVERBED APPROACH',trans_riverbed_mountain:'🏞️→⛰️ MOUNTAIN CLIMB',trans_mountain_sprint:'⛰️→🏁 TUNNEL TO CITY'};
       const cp = this.selectedCar.physics;
       const maxSpd = Math.floor((cp.roadMaxSpeed[z.roadType] || 400) * 0.38);
       const roadLabels = this.track.roadPhysics[z.roadType] ? this.track.roadPhysics[z.roadType].label : z.roadType;
