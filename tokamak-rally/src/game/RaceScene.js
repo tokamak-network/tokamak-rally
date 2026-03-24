@@ -21,11 +21,13 @@ export class RaceScene extends Phaser.Scene {
 
     this.drawBackground();
     this.drawTrack();
+    this.placeBarriers();
     this.placeScenery();
     this.placeCheckpoints();
     this.placeRoadObstacles();
 
-    this.player = this.add.sprite(this.track.startX, this.track.startY, `car_${this.selectedCarId}`)
+    const carTexture = this.textures.exists(`v2_car_${this.selectedCarId}`) ? `v2_car_${this.selectedCarId}` : `car_${this.selectedCarId}`;
+    this.player = this.add.sprite(this.track.startX, this.track.startY, carTexture)
       .setOrigin(0.5).setDepth(10).setScale(0.49);
 
     this.dustEmitter = this.add.particles(0, 0, 'dust_particle', {
@@ -451,6 +453,38 @@ export class RaceScene extends Phaser.Scene {
           const ci = Math.floor(Math.random()*7);
           const tex = isCheer ? `crowd_cheer_${ci}` : `crowd_${ci}`;
           this.add.sprite(cx, cy, tex).setDepth(4).setScale(1.8+Math.random()*0.6);
+        }
+      }
+    }
+  }
+
+  placeBarriers() {
+    const wp = this.track.waypoints;
+    for (const zone of this.track.zones) {
+      if (!zone.barrierTile) continue;
+      const s = Math.max(0, zone.fromWP);
+      const e = Math.min(zone.toWP + 1, wp.length);
+      const halfW = (zone.trackWidth || 100) / 2;
+      const barrierDist = halfW + 15;
+
+      for (let i = s; i < e - 1; i++) {
+        const [x1, y1] = wp[i], [x2, y2] = wp[i + 1];
+        const dx = x2 - x1, dy = y2 - y1;
+        const len = Math.sqrt(dx * dx + dy * dy);
+        if (len < 1) continue;
+        const nx = -dy / len, ny = dx / len;
+        const segAngle = Math.atan2(dy, dx);
+
+        for (let d = 0; d < len; d += 32) {
+          const t = d / len;
+          const px = x1 + dx * t, py = y1 + dy * t;
+
+          for (const side of [-1, 1]) {
+            const bx = px + nx * side * barrierDist;
+            const by = py + ny * side * barrierDist;
+            this.add.sprite(bx, by, zone.barrierTile)
+              .setDepth(2).setRotation(segAngle).setOrigin(0.5);
+          }
         }
       }
     }
