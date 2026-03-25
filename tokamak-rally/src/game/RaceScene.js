@@ -257,7 +257,16 @@ export class RaceScene extends Phaser.Scene {
         const ctx = canvas.getContext('2d');
 
         // Create repeating pattern from road texture
-        const pattern = ctx.createPattern(srcImg, 'repeat');
+        const pattern = srcImg ? ctx.createPattern(srcImg, 'repeat') : null;
+        if (!pattern) {
+          // Fallback: solid color road
+          const fg = this.add.graphics().setDepth(1);
+          fg.lineStyle(w, zone.roadColor || 0x888888);
+          fg.beginPath(); fg.moveTo(wp[s][0],wp[s][1]);
+          for (let ii=s+1;ii<e;ii++) fg.lineTo(wp[ii][0],wp[ii][1]);
+          fg.strokePath();
+          continue; // skip to next zone — don't render canvas texture
+        }
 
         // Draw each segment as a textured quad
         let cumDist = 0;
