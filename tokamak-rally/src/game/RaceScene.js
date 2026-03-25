@@ -183,25 +183,15 @@ export class RaceScene extends Phaser.Scene {
 
   drawTrack() {
     const wp = this.track.waypoints;
+    const TEX_SIZE = 512; // road texture tile size
+
     for (const zone of this.track.zones) {
-      const g = this.add.graphics().setDepth(1);
       const s = Math.max(0, zone.fromWP);
       const e = Math.min(zone.toWP+1, wp.length);
       const w = zone.trackWidth || 100;
+      const halfW = w / 2;
 
-      // Outer border
-      g.lineStyle(w+20, zone.roadBorder, 0.4);
-      g.beginPath(); g.moveTo(wp[s][0],wp[s][1]);
-      for (let i=s+1;i<e;i++) g.lineTo(wp[i][0],wp[i][1]);
-      g.strokePath();
-
-      // Road surface
-      g.lineStyle(w, zone.roadColor);
-      g.beginPath(); g.moveTo(wp[s][0],wp[s][1]);
-      for (let i=s+1;i<e;i++) g.lineTo(wp[i][0],wp[i][1]);
-      g.strokePath();
-
-      // Compute smoothed normals at each waypoint (averaged from adjacent segments)
+      // Compute smoothed normals at each waypoint
       const normals = [];
       for (let i = s; i < e; i++) {
         let nx = 0, ny = 0;
@@ -219,29 +209,118 @@ export class RaceScene extends Phaser.Scene {
         normals.push([nx/l, ny/l]);
       }
 
-      // Road edge markings — smooth lines using averaged normals
+      // ===== TEXTURED ROAD SURFACE via CanvasTexture =====
+      const roadTex = zone.roadTexture || null;
+      if (roadTex && this.textures.exists(roadTex)) {
+        // Get bounding box for this zone's road
+        let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
+        for (let i = s; i < e; i++) {
+          const ni = normals[i-s];
+          const lx = wp[i][0] - ni[0]*halfW, ly = wp[i][1] - ni[1]*halfW;
+          const rx = wp[i][0] + ni[0]*halfW, ry = wp[i][1] + ni[1]*halfW;
+          minX = Math.min(minX, lx, rx); maxX = Math.max(maxX, lx, rx);
+          minY = Math.min(minY, ly, ry); maxY = Math.max(maxY, ly, ry);
+        }
+        const PAD = 10;
+        minX = Math.floor(minX - PAD); minY = Math.floor(minY - PAD);
+        maxX = Math.ceil(maxX + PAD); maxY = Math.ceil(maxY + PAD);
+        const cw = maxX - minX, ch = maxY - minY;
+
+        // Get source texture image data
+        const srcTex = this.textures.get(roadTex);
+        const srcImg = srcTex.getSourceImage();
+
+        // Create offscreen canvas
+        const canvas = document.createElement('canvas');
+        canvas.width = cw; canvas.height = ch;
+        const ctx = canvas.getContext('2d');
+
+        // Create repeating pattern from road texture
+        const pattern = ctx.createPattern(srcImg, 'repeat');
+
+        // Draw each segment as a textured quad
+        let cumDist = 0;
+        for (let i = 0; i < (e - s) - 1; i++) {
+          const idx = s + i;
+          const ni0 = normals[i], ni1 = normals[i+1];
+          // Quad corners (in canvas-local coords)
+          const tl = [wp[idx][0] - ni0[0]*halfW - minX, wp[idx][1] - ni0[1]*halfW - minY];
+          const tr = [wp[idx][0] + ni0[0]*halfW - minX, wp[idx][1] + ni0[1]*halfW - minY];
+          const bl = [wp[idx+1][0] - ni1[0]*halfW - minX, wp[idx+1][1] - ni1[1]*halfW - minY];
+          const br = [wp[idx+1][0] + ni1[0]*halfW - minX, wp[idx+1][1] + ni1[1]*halfW - minY];
+
+          // Segment direction for pattern transform
+          const dx = wp[idx+1][0] - wp[idx][0], dy = wp[idx+1][1] - wp[idx][1];
+          const segLen = Math.sqrt(dx*dx + dy*dy);
+          const angle = Math.atan2(dy, dx);
+          const cx = (wp[idx][0] + wp[idx+1][0]) / 2 - minX;
+          const cy = (wp[idx][1] + wp[idx+1][1]) / 2 - minY;
+
+          ctx.save();
+          // Clip to the quad shape
+          ctx.beginPath();
+          ctx.moveTo(tl[0], tl[1]);
+          ctx.lineTo(tr[0], tr[1]);
+          ctx.lineTo(br[0], br[1]);
+          ctx.lineTo(bl[0], bl[1]);
+          ctx.closePath();
+          ctx.clip();
+
+          // Set pattern transform: rotate pattern to align with road direction
+          // and offset to create seamless tiling along road length
+          const m = new DOMMatrix();
+          m.translateSelf(cx, cy);
+          m.rotateSelf((angle + Math.PI/2) * 180 / Math.PI); // road texture is vertical (top-down)
+          m.translateSelf(-w/2, -cumDist % TEX_SIZE);
+          pattern.setTransform(m);
+
+          ctx.fillStyle = pattern;
+          ctx.fillRect(0, 0, cw, ch);
+          ctx.restore();
+
+          cumDist += segLen;
+        }
+
+        // Add to Phaser as a CanvasTexture
+        const texKey = 'road_canvas_' + zone.name;
+        if (this.textures.exists(texKey)) this.textures.remove(texKey);
+        this.textures.addCanvas(texKey, canvas);
+        this.add.image(minX, minY, texKey).setOrigin(0).setDepth(1);
+
+      } else {
+        // Fallback: solid color road
+        const g = this.add.graphics().setDepth(1);
+        g.lineStyle(w+20, zone.roadBorder, 0.4);
+        g.beginPath(); g.moveTo(wp[s][0],wp[s][1]);
+        for (let i=s+1;i<e;i++) g.lineTo(wp[i][0],wp[i][1]);
+        g.strokePath();
+        g.lineStyle(w, zone.roadColor);
+        g.beginPath(); g.moveTo(wp[s][0],wp[s][1]);
+        for (let i=s+1;i<e;i++) g.lineTo(wp[i][0],wp[i][1]);
+        g.strokePath();
+      }
+
+      // ===== ROAD EDGE MARKINGS (curbs) =====
+      const g = this.add.graphics().setDepth(2);
       if (zone.roadType === 'paved') {
-        // Sprint: solid white edge lines
         for (const side of [-1, 1]) {
           g.lineStyle(3, 0xdddddd, 0.6);
           g.beginPath();
           const n0 = normals[0];
-          g.moveTo(wp[s][0]+n0[0]*side*(w/2+1), wp[s][1]+n0[1]*side*(w/2+1));
+          g.moveTo(wp[s][0]+n0[0]*side*(halfW+1), wp[s][1]+n0[1]*side*(halfW+1));
           for (let i = s+1; i < e; i++) {
             const ni = normals[i-s];
-            g.lineTo(wp[i][0]+ni[0]*side*(w/2+1), wp[i][1]+ni[1]*side*(w/2+1));
+            g.lineTo(wp[i][0]+ni[0]*side*(halfW+1), wp[i][1]+ni[1]*side*(halfW+1));
           }
           g.strokePath();
         }
       } else {
-        // Non-paved: red-white curb dashes along smoothed edge path
         const CURB_DASH = 10, CURB_W = 4;
         for (const side of [-1, 1]) {
-          // Build edge polyline from smoothed normals
           const edgePts = [];
           for (let i = s; i < e; i++) {
             const ni = normals[i-s];
-            edgePts.push([wp[i][0]+ni[0]*side*(w/2+2), wp[i][1]+ni[1]*side*(w/2+2)]);
+            edgePts.push([wp[i][0]+ni[0]*side*(halfW+2), wp[i][1]+ni[1]*side*(halfW+2)]);
           }
           let curbDist = 0;
           for (let i = 0; i < edgePts.length - 1; i++) {
@@ -259,80 +338,6 @@ export class RaceScene extends Phaser.Scene {
               g.beginPath(); g.moveTo(x1,y1); g.lineTo(x2,y2); g.strokePath();
               pos += step;
               curbDist += step;
-            }
-          }
-        }
-      }
-
-      // Road details by type
-      if (zone.roadType === 'paved') {
-        // Center yellow dashes only — cumulative distance based for uniform spacing
-        g.lineStyle(2, 0xf4d35e, 0.4);
-        const DASH_LEN = 12, GAP_LEN = 13;
-        let drawing = true;
-        let segRemain = 0;
-        for (let i = s; i < e - 1; i++) {
-          const dx = wp[i+1][0] - wp[i][0], dy = wp[i+1][1] - wp[i][1];
-          const segLen = Math.sqrt(dx*dx + dy*dy);
-          if (segLen < 1) continue;
-          const ux = dx / segLen, uy = dy / segLen;
-          let pos = 0;
-          while (pos < segLen) {
-            const phase = drawing ? DASH_LEN : GAP_LEN;
-            const left = phase - segRemain;
-            const step = Math.min(left, segLen - pos);
-            if (drawing) {
-              const x1 = wp[i][0] + ux * pos, y1 = wp[i][1] + uy * pos;
-              const x2 = wp[i][0] + ux * (pos + step), y2 = wp[i][1] + uy * (pos + step);
-              g.beginPath(); g.moveTo(x1, y1); g.lineTo(x2, y2); g.strokePath();
-            }
-            pos += step;
-            segRemain += step;
-            if (segRemain >= phase) {
-              segRemain = 0;
-              drawing = !drawing;
-            }
-          }
-        }
-      } else if (zone.roadType === 'sand') {
-        g.lineStyle(1, 0xb89050, 0.2);
-        for (let i=s;i<e-1;i++) {
-          const dx=wp[i+1][0]-wp[i][0],dy=wp[i+1][1]-wp[i][1];
-          const len=Math.sqrt(dx*dx+dy*dy),nx=-dy/len,ny=dx/len;
-          for (let j=0;j<len;j+=18) {
-            const t=j/len,cx=wp[i][0]+dx*t,cy=wp[i][1]+dy*t;
-            g.beginPath();
-            g.moveTo(cx+nx*w*0.3,cy+ny*w*0.3);
-            g.lineTo(cx-nx*w*0.3,cy-ny*w*0.3);
-            g.strokePath();
-          }
-        }
-      } else if (zone.roadType === 'dirt') {
-        // Subtle rut marks — dashed, not solid lines
-        g.lineStyle(1, 0x5a4525, 0.15);
-        const RUT_DASH = 15, RUT_GAP = 20;
-        for (const off of [-12, 12]) {
-          let rutDist = 0;
-          let drawing = true;
-          for (let i = s; i < e-1; i++) {
-            const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1];
-            const segLen = Math.sqrt(dx*dx+dy*dy);
-            if (segLen < 1) continue;
-            const ux = dx/segLen, uy = dy/segLen;
-            const ni = normals[i-s];
-            let pos = 0;
-            while (pos < segLen) {
-              const phase = drawing ? RUT_DASH : RUT_GAP;
-              const left = phase - (rutDist % phase);
-              const step = Math.min(left, segLen - pos);
-              if (drawing) {
-                g.beginPath();
-                g.moveTo(wp[i][0]+ux*pos+ni[0]*off, wp[i][1]+uy*pos+ni[1]*off);
-                g.lineTo(wp[i][0]+ux*(pos+step)+ni[0]*off, wp[i][1]+uy*(pos+step)+ni[1]*off);
-                g.strokePath();
-              }
-              pos += step; rutDist += step;
-              if (rutDist % phase < 0.01) drawing = !drawing;
             }
           }
         }

@@ -29,6 +29,11 @@ export class BootScene extends Phaser.Scene {
     this.load.image('v5_bg_mountain', '/assets/v5/tiles/bg_mountain.png');
     this.load.image('v5_bg_sprint', '/assets/v5/tiles/bg_sprint.png');
 
+    // v5 도로 텍스처 (DALL-E 심리스 타일, 512×512)
+    this.load.image('v5_road_dirt', '/assets/v5/roads/road_dirt.png');
+    this.load.image('v5_road_snow', '/assets/v5/roads/road_snow.png');
+    this.load.image('v5_road_asphalt', '/assets/v5/roads/road_asphalt.png');
+
     // v3 배리어
     this.load.image('v3_barrier_desert', '/assets/v3/barriers/barrier_desert.png');
     this.load.image('v3_barrier_canyon', '/assets/v3/barriers/barrier_canyon.png');
