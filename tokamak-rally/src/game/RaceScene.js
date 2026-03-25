@@ -142,10 +142,11 @@ export class RaceScene extends Phaser.Scene {
 
   drawBackground() {
     const wp = this.track.waypoints;
-    const TILE_SIZE = 512; // v5 DALL-E 심리스 타일 크기
+    const TILE_SIZE = 512;
+    const ROAD_PAD = 400; // how far from road center to place bg tiles
 
-    // Draw non-transition zones FIRST (higher depth), then transition zones on top
-    // Sort: main zones first, transition zones second (to blend on top)
+    // Collect tile positions per zone, avoiding bounding-box overlap
+    // Instead of bounding box, place tiles near each waypoint segment
     const sortedZones = [...this.track.zones].sort((a, b) => {
       if (a.transition && !b.transition) return 1;
       if (!a.transition && b.transition) return -1;
@@ -153,40 +154,50 @@ export class RaceScene extends Phaser.Scene {
     });
 
     for (const zone of sortedZones) {
-      let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
-      for (let i=zone.fromWP; i<=Math.min(zone.toWP, wp.length-1); i++) {
-        minX=Math.min(minX,wp[i][0]); maxX=Math.max(maxX,wp[i][0]);
-        minY=Math.min(minY,wp[i][1]); maxY=Math.max(maxY,wp[i][1]);
+      const s = zone.fromWP, e = Math.min(zone.toWP, wp.length - 1);
+
+      // Collect unique tile grid positions near the road
+      const tileSet = new Set();
+      for (let i = s; i <= e; i++) {
+        const cx = wp[i][0], cy = wp[i][1];
+        // Cover area around this waypoint
+        const gxMin = Math.floor((cx - ROAD_PAD) / TILE_SIZE);
+        const gxMax = Math.floor((cx + ROAD_PAD) / TILE_SIZE);
+        const gyMin = Math.floor((cy - ROAD_PAD) / TILE_SIZE);
+        const gyMax = Math.floor((cy + ROAD_PAD) / TILE_SIZE);
+        for (let gx = gxMin; gx <= gxMax; gx++) {
+          for (let gy = gyMin; gy <= gyMax; gy++) {
+            tileSet.add(`${gx},${gy}`);
+          }
+        }
       }
-      // Smaller padding for transition zones to prevent bleed into adjacent main zones
-      const PAD = zone.transition ? 200 : 600;
-      minX-=PAD; maxX+=PAD; minY-=PAD; maxY+=PAD;
-      // Snap to tile grid for seamless tiling
-      minX = Math.floor(minX / TILE_SIZE) * TILE_SIZE;
-      minY = Math.floor(minY / TILE_SIZE) * TILE_SIZE;
 
       if (zone.transition) {
-        // Transition zone: blend two background tiles
         const fromTile = zone.bgTile;
         const toZone = this.track.zones.find(z => z.name === zone.transition.to);
         const toTile = toZone ? toZone.bgTile : zone.bgTile;
-        const zoneMinY = Math.min(...Array.from({length: zone.toWP - zone.fromWP + 1}, (_, k) => wp[zone.fromWP + k] ? wp[zone.fromWP + k][1] : Infinity));
-        const zoneMaxY = Math.max(...Array.from({length: zone.toWP - zone.fromWP + 1}, (_, k) => wp[zone.fromWP + k] ? wp[zone.fromWP + k][1] : -Infinity));
-        const zoneSpanY = Math.max(zoneMaxY - zoneMinY, 1);
+        // Compute progress based on waypoint index (not Y position — avoids overlap issues)
+        const totalWP = e - s;
 
-        for (let x=minX; x<maxX; x+=TILE_SIZE) {
-          for (let y=minY; y<maxY; y+=TILE_SIZE) {
-            const progress = Phaser.Math.Clamp((y - zoneMinY) / zoneSpanY, 0, 1);
-            const goingUp = wp[zone.fromWP][1] > wp[zone.toWP][1];
-            const p = goingUp ? (1 - progress) : progress;
-            this.add.sprite(x, y, fromTile).setOrigin(0).setDepth(0).setAlpha(1 - p);
-            this.add.sprite(x, y, toTile).setOrigin(0).setDepth(0).setAlpha(p);
+        for (const key of tileSet) {
+          const [gx, gy] = key.split(',').map(Number);
+          const x = gx * TILE_SIZE, y = gy * TILE_SIZE;
+          // Find nearest waypoint to determine blend progress
+          let minDist = Infinity, nearestIdx = s;
+          for (let i = s; i <= e; i++) {
+            const dx = wp[i][0] - (x + TILE_SIZE/2), dy = wp[i][1] - (y + TILE_SIZE/2);
+            const d = dx*dx + dy*dy;
+            if (d < minDist) { minDist = d; nearestIdx = i; }
           }
+          const p = totalWP > 0 ? Phaser.Math.Clamp((nearestIdx - s) / totalWP, 0, 1) : 0;
+          this.add.sprite(x, y, fromTile).setOrigin(0).setDepth(0).setAlpha(1 - p);
+          this.add.sprite(x, y, toTile).setOrigin(0).setDepth(0).setAlpha(p);
         }
       } else {
-        for (let x=minX; x<maxX; x+=TILE_SIZE)
-          for (let y=minY; y<maxY; y+=TILE_SIZE)
-            this.add.sprite(x, y, zone.bgTile).setOrigin(0).setDepth(0);
+        for (const key of tileSet) {
+          const [gx, gy] = key.split(',').map(Number);
+          this.add.sprite(gx * TILE_SIZE, gy * TILE_SIZE, zone.bgTile).setOrigin(0).setDepth(0);
+        }
       }
     }
   }
