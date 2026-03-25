@@ -8,20 +8,6 @@ export class BootScene extends Phaser.Scene {
     this.load.image('tokamak_logo', '/tokamak-logo-cropped.png');
     this.load.image('tokamak_logo_white', '/tokamak-logo-white.png');
 
-    // v2 배경 타일 (legacy)
-    this.load.image('v2_bg_desert', '/assets/v2/tiles/bg_desert.png');
-    this.load.image('v2_bg_canyon', '/assets/v2/tiles/bg_canyon.png');
-    this.load.image('v2_bg_riverbed', '/assets/v2/tiles/bg_riverbed.png');
-    this.load.image('v2_bg_mountain', '/assets/v2/tiles/bg_mountain.png');
-    this.load.image('v2_bg_sprint', '/assets/v2/tiles/bg_sprint.png');
-
-    // v3 배경 타일 (프로그래매틱 픽셀아트)
-    this.load.image('v3_bg_desert', '/assets/v3/tiles/bg_desert.png');
-    this.load.image('v3_bg_canyon', '/assets/v3/tiles/bg_canyon.png');
-    this.load.image('v3_bg_riverbed', '/assets/v3/tiles/bg_riverbed.png');
-    this.load.image('v3_bg_mountain', '/assets/v3/tiles/bg_mountain.png');
-    this.load.image('v3_bg_sprint', '/assets/v3/tiles/bg_sprint.png');
-
     // v5 배경 타일 (DALL-E 심리스 타일, 512×512)
     this.load.image('v5_bg_desert', '/assets/v5/tiles/bg_desert.png');
     this.load.image('v5_bg_canyon', '/assets/v5/tiles/bg_canyon.png');
@@ -34,177 +20,17 @@ export class BootScene extends Phaser.Scene {
     this.load.image('v5_road_snow', '/assets/v5/roads/road_snow.png');
     this.load.image('v5_road_asphalt', '/assets/v5/roads/road_asphalt.png');
 
-    // v3 배리어
-    this.load.image('v3_barrier_desert', '/assets/v3/barriers/barrier_desert.png');
-    this.load.image('v3_barrier_canyon', '/assets/v3/barriers/barrier_canyon.png');
-    this.load.image('v3_barrier_riverbed', '/assets/v3/barriers/barrier_riverbed.png');
-    this.load.image('v3_barrier_mountain', '/assets/v3/barriers/barrier_mountain.png');
-    this.load.image('v3_barrier_sprint', '/assets/v3/barriers/barrier_sprint.png');
-
-    // v3 오브젝트 — desert
-    this.load.image('v3_desert_cactus', '/assets/v3/objects/desert/cactus.png');
-    this.load.image('v3_desert_rock_sm', '/assets/v3/objects/desert/rock_sm.png');
-    this.load.image('v3_desert_rock_lg', '/assets/v3/objects/desert/rock_lg.png');
-    this.load.image('v3_desert_scrub', '/assets/v3/objects/desert/scrub.png');
-    this.load.image('v3_desert_hut', '/assets/v3/objects/desert/hut.png');
-    this.load.image('v3_desert_cow', '/assets/v3/objects/desert/cow.png');
-    this.load.image('v3_desert_fence', '/assets/v3/objects/desert/fence.png');
-    this.load.image('v3_desert_skull', '/assets/v3/objects/desert/skull.png');
-
-    // v3 오브젝트 — canyon
-    this.load.image('v3_canyon_cliff', '/assets/v3/objects/canyon/cliff.png');
-    this.load.image('v3_canyon_pillar', '/assets/v3/objects/canyon/pillar.png');
-    this.load.image('v3_canyon_debris', '/assets/v3/objects/canyon/debris.png');
-    this.load.image('v3_canyon_arch', '/assets/v3/objects/canyon/arch.png');
-    this.load.image('v3_canyon_bush', '/assets/v3/objects/canyon/bush.png');
-
-    // v3 오브젝트 — riverbed
-    this.load.image('v3_riverbed_tree', '/assets/v3/objects/riverbed/tree.png');
-    this.load.image('v3_riverbed_bush', '/assets/v3/objects/riverbed/bush.png');
-    this.load.image('v3_riverbed_reeds', '/assets/v3/objects/riverbed/reeds.png');
-    this.load.image('v3_riverbed_boulder', '/assets/v3/objects/riverbed/boulder.png');
-    this.load.image('v3_riverbed_bridge', '/assets/v3/objects/riverbed/bridge.png');
-
-    // v3 오브젝트 — mountain
-    this.load.image('v3_mountain_pine', '/assets/v3/objects/mountain/pine.png');
-    this.load.image('v3_mountain_cabin', '/assets/v3/objects/mountain/cabin.png');
-    this.load.image('v3_mountain_rock', '/assets/v3/objects/mountain/rock.png');
-    this.load.image('v3_mountain_snowman', '/assets/v3/objects/mountain/snowman.png');
-    this.load.image('v3_mountain_pole', '/assets/v3/objects/mountain/pole.png');
-
-    // v3 오브젝트 — sprint (legacy small)
-    this.load.image('v3_sprint_building_tall', '/assets/v3/objects/sprint/building_tall.png');
-    this.load.image('v3_sprint_building_low', '/assets/v3/objects/sprint/building_low.png');
-    this.load.image('v3_sprint_lamp', '/assets/v3/objects/sprint/lamp.png');
-    this.load.image('v3_sprint_tire_wall', '/assets/v3/objects/sprint/tire_wall.png');
-    this.load.image('v3_sprint_grandstand', '/assets/v3/objects/sprint/grandstand.png');
-    this.load.image('v3_sprint_ad_board', '/assets/v3/objects/sprint/ad_board.png');
-    this.load.image('v3_sprint_billboard', '/assets/v3/objects/sprint/billboard.png');
-
-    // ======= V4 DALL-E assets =======
-    // Desert
-    this.load.image('v4_desert_cactus_tall', '/assets/v4/objects/desert/cactus_tall.png');
-    this.load.image('v4_desert_cactus_barrel', '/assets/v4/objects/desert/barrel_cactus.png');
-    this.load.image('v4_desert_rock_lg', '/assets/v4/objects/desert/rock_large.png');
-    this.load.image('v4_desert_rock_sm', '/assets/v4/objects/desert/rock_small.png');
-    this.load.image('v4_desert_bush', '/assets/v4/objects/desert/bush.png');
-    this.load.image('v4_desert_tumbleweed', '/assets/v4/objects/desert/tumbleweed.png');
-    this.load.image('v4_desert_hut', '/assets/v4/objects/desert/hut.png');
-    this.load.image('v4_desert_fence', '/assets/v4/objects/desert/fence.png');
+    // 유지 에셋 — cow, bird (애니메이션용)
     this.load.image('v4_desert_cow', '/assets/v4/objects/desert/cow_lying1.png');
     this.load.image('v4_desert_cow_rest', '/assets/v4/objects/desert/cow_lying2.png');
-    this.load.image('v4_desert_dry_grass', '/assets/v4/objects/desert/dry_grass.png');
-    // Canyon
-    this.load.image('v4_canyon_pillar', '/assets/v4/objects/canyon/pillar.png');
-    this.load.image('v4_canyon_wall', '/assets/v4/objects/canyon/wall_long.png');
-    this.load.image('v4_canyon_cliff_v', '/assets/v4/objects/canyon/cliff_wall_v.png');
-    this.load.image('v4_canyon_cliff_rock_v', '/assets/v4/objects/canyon/cliff_rock_v.png');
-    this.load.image('v4_canyon_rock', '/assets/v4/objects/canyon/rock_cluster.png');
-    this.load.image('v4_canyon_arch', '/assets/v4/objects/canyon/arch.png');
-    this.load.image('v4_canyon_debris_sm', '/assets/v4/objects/canyon/debris_small.png');
-    this.load.image('v4_canyon_barrier', '/assets/v4/objects/canyon/barrier.png');
-    this.load.image('v4_canyon_debris_lg', '/assets/v4/objects/canyon/debris_large.png');
-    this.load.image('v4_canyon_dead_bush', '/assets/v4/objects/canyon/dead_bush.png');
-    // Mountain
-    this.load.image('v4_mountain_bush', '/assets/v4/objects/mountain/bush_green.png');
-    this.load.image('v4_mountain_pine', '/assets/v4/objects/mountain/pine_snow.png');
-    this.load.image('v4_mountain_rock_snow', '/assets/v4/objects/mountain/rock_snow.png');
-    this.load.image('v4_mountain_cabin', '/assets/v4/objects/mountain/cabin.png');
-    this.load.image('v4_mountain_snowman', '/assets/v4/objects/mountain/snowman.png');
-    this.load.image('v4_mountain_sign', '/assets/v4/objects/mountain/sign_post1.png');
-    this.load.image('v4_mountain_sign_arrow', '/assets/v4/objects/mountain/sign_post2.png');
-    this.load.image('v4_mountain_rock_flat', '/assets/v4/objects/mountain/rock_flat.png');
-    this.load.image('v4_mountain_stone_wall', '/assets/v4/objects/mountain/stone_wall.png');
-    this.load.image('v4_mountain_snow_pile', '/assets/v4/objects/mountain/snow_pile.png');
-    // Riverbed
-    this.load.image('v4_riverbed_tree', '/assets/v4/objects/riverbed/tree.png');
-    this.load.image('v4_riverbed_reeds', '/assets/v4/objects/riverbed/reeds.png');
-    this.load.image('v4_riverbed_rock', '/assets/v4/objects/riverbed/mossy_rock.png');
-    this.load.image('v4_riverbed_fence', '/assets/v4/objects/riverbed/fence.png');
-    this.load.image('v4_riverbed_puddle', '/assets/v4/objects/riverbed/puddle.png');
-    this.load.image('v4_riverbed_bush', '/assets/v4/objects/riverbed/bush_wide.png');
-    this.load.image('v4_riverbed_bush_low', '/assets/v4/objects/riverbed/bush_low.png');
-    this.load.image('v4_riverbed_log', '/assets/v4/objects/riverbed/log_moss.png');
-    this.load.image('v4_riverbed_log2', '/assets/v4/objects/riverbed/log_plain.png');
     this.load.image('v4_riverbed_bird', '/assets/v4/objects/riverbed/bird.png');
-    // Sprint
-    this.load.image('v4_sprint_office', '/assets/v4/objects/sprint/office_tower.png');
-    this.load.image('v4_sprint_hotel', '/assets/v4/objects/sprint/hotel.png');
-    this.load.image('v4_sprint_shopping', '/assets/v4/objects/sprint/shopping_center.png');
-    this.load.image('v4_sprint_apartment', '/assets/v4/objects/sprint/apartment.png');
-    this.load.image('v4_sprint_skyscraper', '/assets/v4/objects/sprint/skyscraper_tall.png');
-    this.load.image('v4_sprint_skyscraper_sm', '/assets/v4/objects/sprint/skyscraper_sm.png');
-    this.load.image('v4_sprint_restaurant', '/assets/v4/objects/sprint/restaurant.png');
-    this.load.image('v4_sprint_grandstand', '/assets/v4/objects/sprint/grandstand.png');
-    this.load.image('v4_sprint_jersey', '/assets/v4/objects/sprint/jersey_barrier.png');
-    this.load.image('v4_sprint_fence', '/assets/v4/objects/sprint/catch_fence.png');
-    this.load.image('v4_sprint_light', '/assets/v4/objects/sprint/street_light.png');
-    this.load.image('v4_sprint_banner', '/assets/v4/objects/sprint/banner_arch.png');
-    this.load.image('v4_sprint_tires', '/assets/v4/objects/sprint/tire_stack.png');
-    this.load.image('v4_sprint_tires_flat', '/assets/v4/objects/sprint/tires_flat.png');
-    this.load.image('v4_sprint_cones', '/assets/v4/objects/sprint/cones.png');
-    this.load.image('v4_sprint_generator', '/assets/v4/objects/sprint/generator.png');
-    this.load.image('v4_sprint_generator_sm', '/assets/v4/objects/sprint/generator_sm.png');
 
-    // Sprint rework — high-detail assets (v3 programmatic, kept as fallback)
-    this.load.image('sp_road_tile', '/assets/v3/objects/sprint/road_tile.png');
-    this.load.image('sp_building_office', '/assets/v3/objects/sprint/building_office.png');
-    this.load.image('sp_building_shop', '/assets/v3/objects/sprint/building_shop.png');
-    this.load.image('sp_building_apt', '/assets/v3/objects/sprint/building_apt.png');
-    this.load.image('sp_grandstand_lg', '/assets/v3/objects/sprint/grandstand_lg.png');
-    this.load.image('sp_banner_arch', '/assets/v3/objects/sprint/banner_arch.png');
-    this.load.image('sp_jersey_barrier', '/assets/v3/objects/sprint/jersey_barrier.png');
-    this.load.image('sp_catch_fence', '/assets/v3/objects/sprint/catch_fence.png');
-    this.load.image('sp_street_light', '/assets/v3/objects/sprint/street_light.png');
-    this.load.image('sp_tire_stack', '/assets/v3/objects/sprint/tire_stack.png');
-    this.load.image('sp_curb_strip', '/assets/v3/objects/sprint/curb_strip.png');
-
-    // v2 차량 (Cars.js ID에 맞춤)
+    // v2 차량 (Cars.js에서 사용 중)
     this.load.image('v2_car_alpine_white', '/assets/v2/cars/car_alpine_white.png');
     this.load.image('v2_car_hyper_blue', '/assets/v2/cars/car_hyper_blue.png');
     this.load.image('v2_car_puma_orange', '/assets/v2/cars/car_puma_orange.png');
     this.load.image('v2_car_tundra_red', '/assets/v2/cars/car_tundra_red.png');
     this.load.image('v2_car_volt_green', '/assets/v2/cars/car_volt_green.png');
-
-    // v2 배리어
-    this.load.image('v2_barrier_desert', '/assets/v2/barriers/barrier_desert.png');
-    this.load.image('v2_barrier_canyon', '/assets/v2/barriers/barrier_canyon.png');
-    this.load.image('v2_barrier_riverbed', '/assets/v2/barriers/barrier_riverbed.png');
-    this.load.image('v2_barrier_mountain', '/assets/v2/barriers/barrier_mountain.png');
-    this.load.image('v2_barrier_sprint', '/assets/v2/barriers/barrier_sprint.png');
-
-    // v2 오브젝트 — desert
-    this.load.image('v2_desert_cactus', '/assets/v2/objects/desert/desert_cactus.png');
-    this.load.image('v2_desert_scrub', '/assets/v2/objects/desert/desert_scrub.png');
-    this.load.image('v2_desert_rock', '/assets/v2/objects/desert/desert_rock.png');
-    this.load.image('v2_desert_cow', '/assets/v2/objects/desert/desert_cow.png');
-    this.load.image('v2_desert_hut', '/assets/v2/objects/desert/desert_hut.png');
-
-    // v2 오브젝트 — canyon
-    this.load.image('v2_canyon_pillar', '/assets/v2/objects/canyon/canyon_pillar.png');
-    this.load.image('v2_canyon_debris', '/assets/v2/objects/canyon/canyon_debris.png');
-    this.load.image('v2_canyon_reflector', '/assets/v2/objects/canyon/canyon_reflector.png');
-    this.load.image('v2_canyon_cliff', '/assets/v2/objects/canyon/canyon_cliff.png');
-
-    // v2 오브젝트 — riverbed
-    this.load.image('v2_riverbed_reeds', '/assets/v2/objects/riverbed/riverbed_reeds.png');
-    this.load.image('v2_riverbed_bridge', '/assets/v2/objects/riverbed/riverbed_bridge.png');
-    this.load.image('v2_riverbed_boulder', '/assets/v2/objects/riverbed/riverbed_boulder.png');
-    this.load.image('v2_riverbed_bird', '/assets/v2/objects/riverbed/riverbed_bird.png');
-
-    // v2 오브젝트 — mountain
-    this.load.image('v2_mountain_pine', '/assets/v2/objects/mountain/mountain_pine.png');
-    this.load.image('v2_mountain_rock', '/assets/v2/objects/mountain/mountain_rock.png');
-    this.load.image('v2_mountain_cabin', '/assets/v2/objects/mountain/mountain_cabin.png');
-    this.load.image('v2_mountain_snowman', '/assets/v2/objects/mountain/mountain_snowman.png');
-    this.load.image('v2_mountain_turbine', '/assets/v2/objects/mountain/mountain_turbine.png');
-
-    // v2 오브젝트 — sprint
-    this.load.image('v2_sprint_building', '/assets/v2/objects/sprint/sprint_building.png');
-    this.load.image('v2_sprint_lamp', '/assets/v2/objects/sprint/sprint_lamp.png');
-    this.load.image('v2_sprint_tires', '/assets/v2/objects/sprint/sprint_tires.png');
-    this.load.image('v2_sprint_billboard', '/assets/v2/objects/sprint/sprint_billboard.png');
-    this.load.image('v2_sprint_grandstand', '/assets/v2/objects/sprint/sprint_grandstand.png');
   }
 
   create() {
