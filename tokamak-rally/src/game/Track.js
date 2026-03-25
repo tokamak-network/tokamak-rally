@@ -254,7 +254,7 @@ export const TRACK_CONFIG = {
   zones: [
     {
       name: 'desert', fromWP: 0, toWP: 34,
-      bgTile: 'v3_bg_desert',
+      bgTile: 'v5_bg_desert',
       roadType: 'sand',
       roadColor: 0xb89060, roadBorder: 0x9a7040,
       trackWidth: 110,
@@ -264,7 +264,7 @@ export const TRACK_CONFIG = {
     },
     {
       name: 'trans_desert_canyon', fromWP: 34, toWP: 39,
-      bgTile: 'v3_bg_desert',
+      bgTile: 'v5_bg_desert',
       roadType: 'dirt',
       roadColor: 0xa08050, roadBorder: 0x806030,
       trackWidth: 95,
@@ -275,7 +275,7 @@ export const TRACK_CONFIG = {
     },
     {
       name: 'canyon', fromWP: 39, toWP: 56,
-      bgTile: 'v3_bg_canyon',
+      bgTile: 'v5_bg_canyon',
       roadType: 'dirt',
       roadColor: 0x8a7555, roadBorder: 0x6a5535,
       trackWidth: 75,
@@ -285,7 +285,7 @@ export const TRACK_CONFIG = {
     },
     {
       name: 'trans_canyon_riverbed', fromWP: 56, toWP: 61,
-      bgTile: 'v3_bg_canyon',
+      bgTile: 'v5_bg_canyon',
       roadType: 'dirt',
       roadColor: 0x827050, roadBorder: 0x625540,
       trackWidth: 88,
@@ -296,7 +296,7 @@ export const TRACK_CONFIG = {
     },
     {
       name: 'riverbed', fromWP: 61, toWP: 85,
-      bgTile: 'v3_bg_riverbed',
+      bgTile: 'v5_bg_riverbed',
       roadType: 'dirt',
       roadColor: 0x7a6a50, roadBorder: 0x5a4a35,
       trackWidth: 100,
@@ -306,7 +306,7 @@ export const TRACK_CONFIG = {
     },
     {
       name: 'trans_riverbed_mountain', fromWP: 85, toWP: 90,
-      bgTile: 'v3_bg_riverbed',
+      bgTile: 'v5_bg_riverbed',
       roadType: 'rocky',
       roadColor: 0x6a5a40, roadBorder: 0x4a3a28,
       trackWidth: 90,
@@ -317,7 +317,7 @@ export const TRACK_CONFIG = {
     },
     {
       name: 'mountain', fromWP: 90, toWP: 114,
-      bgTile: 'v3_bg_mountain',
+      bgTile: 'v5_bg_mountain',
       roadType: 'rocky',
       roadColor: 0x7a5538, roadBorder: 0x5a3a22,
       trackWidth: 80,
@@ -327,7 +327,7 @@ export const TRACK_CONFIG = {
     },
     {
       name: 'trans_mountain_sprint', fromWP: 114, toWP: 119,
-      bgTile: 'v3_bg_mountain',
+      bgTile: 'v5_bg_mountain',
       roadType: 'paved',
       roadColor: 0x585860, roadBorder: 0x505058,
       trackWidth: 100,
@@ -338,7 +338,7 @@ export const TRACK_CONFIG = {
     },
     {
       name: 'sprint', fromWP: 119, toWP: 161,
-      bgTile: 'v3_bg_sprint',
+      bgTile: 'v5_bg_sprint',
       roadType: 'paved',
       roadColor: 0x484850, roadBorder: 0x606068,
       trackWidth: 120,

@@ -142,9 +142,7 @@ export class RaceScene extends Phaser.Scene {
 
   drawBackground() {
     const wp = this.track.waypoints;
-    // Map zone names to bgTile keys
-    const zoneBgMap = {};
-    for (const z of this.track.zones) { zoneBgMap[z.name] = z.bgTile; }
+    const TILE_SIZE = 512; // v5 DALL-E 심리스 타일 크기
 
     for (const zone of this.track.zones) {
       let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
@@ -152,25 +150,23 @@ export class RaceScene extends Phaser.Scene {
         minX=Math.min(minX,wp[i][0]); maxX=Math.max(maxX,wp[i][0]);
         minY=Math.min(minY,wp[i][1]); maxY=Math.max(maxY,wp[i][1]);
       }
-      minX-=500; maxX+=500; minY-=500; maxY+=500;
+      minX-=600; maxX+=600; minY-=600; maxY+=600;
+      // Snap to tile grid for seamless tiling
+      minX = Math.floor(minX / TILE_SIZE) * TILE_SIZE;
+      minY = Math.floor(minY / TILE_SIZE) * TILE_SIZE;
 
       if (zone.transition) {
         // Transition zone: blend two background tiles
         const fromTile = zone.bgTile;
         const toZone = this.track.zones.find(z => z.name === zone.transition.to);
         const toTile = toZone ? toZone.bgTile : zone.bgTile;
-        // Compute zone center Y for progress calculation
         const zoneMinY = Math.min(...Array.from({length: zone.toWP - zone.fromWP + 1}, (_, k) => wp[zone.fromWP + k] ? wp[zone.fromWP + k][1] : Infinity));
         const zoneMaxY = Math.max(...Array.from({length: zone.toWP - zone.fromWP + 1}, (_, k) => wp[zone.fromWP + k] ? wp[zone.fromWP + k][1] : -Infinity));
-        const zoneMidY = (zoneMinY + zoneMaxY) / 2;
         const zoneSpanY = Math.max(zoneMaxY - zoneMinY, 1);
 
-        for (let x=minX; x<maxX; x+=128) {
-          for (let y=minY; y<maxY; y+=128) {
-            // Progress based on Y position relative to zone span
+        for (let x=minX; x<maxX; x+=TILE_SIZE) {
+          for (let y=minY; y<maxY; y+=TILE_SIZE) {
             const progress = Phaser.Math.Clamp((y - zoneMinY) / zoneSpanY, 0, 1);
-            // Waypoints go top to bottom (decreasing Y = forward), so invert if needed
-            const midWP = Math.floor((zone.fromWP + zone.toWP) / 2);
             const goingUp = wp[zone.fromWP][1] > wp[zone.toWP][1];
             const p = goingUp ? (1 - progress) : progress;
             this.add.sprite(x, y, fromTile).setOrigin(0).setDepth(0).setAlpha(1 - p);
@@ -178,8 +174,8 @@ export class RaceScene extends Phaser.Scene {
           }
         }
       } else {
-        for (let x=minX; x<maxX; x+=128)
-          for (let y=minY; y<maxY; y+=128)
+        for (let x=minX; x<maxX; x+=TILE_SIZE)
+          for (let y=minY; y<maxY; y+=TILE_SIZE)
             this.add.sprite(x, y, zone.bgTile).setOrigin(0).setDepth(0);
       }
     }
