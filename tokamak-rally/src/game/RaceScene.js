@@ -21,6 +21,13 @@ export class RaceScene extends Phaser.Scene {
     this._animals = [];
     this._birdTimer = 5000 + Math.random() * 8000;
 
+    this.drawBackground();
+    this.drawTrack();
+    this.drawSprintOverlay();
+    this.placeBarriers();
+    this.placeScenery();
+    this.placeCheckpoints();
+    this.placeRoadObstacles();
 
     const carTexture = this.textures.exists(`v2_car_${this.selectedCarId}`) ? `v2_car_${this.selectedCarId}` : `car_${this.selectedCarId}`;
     this.player = this.add.sprite(this.track.startX, this.track.startY, carTexture)

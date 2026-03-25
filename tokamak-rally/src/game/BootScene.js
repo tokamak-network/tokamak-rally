@@ -34,6 +34,11 @@ export class BootScene extends Phaser.Scene {
   }
 
   create() {
+    this.genAllCars();
+    this.genBackgrounds();
+    this.genScenery();
+    this.genObstacles();
+    this.genUI();
     this.scene.start('Menu');
   }
 
