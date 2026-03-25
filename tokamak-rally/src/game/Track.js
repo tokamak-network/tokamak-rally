@@ -269,7 +269,6 @@ export const TRACK_CONFIG = {
       trackWidth: 110,
       scenery: [],
       sceneryDensity: 5,
-      barrierTile: 'v3_barrier_desert',
     },
     {
       name: 'trans_desert_canyon', fromWP: 34, toWP: 39,
@@ -280,7 +279,6 @@ export const TRACK_CONFIG = {
       trackWidth: 95,
       scenery: [],
       sceneryDensity: 5,
-      barrierTile: 'v3_barrier_canyon',
       transition: { from: 'desert', to: 'canyon' },
     },
     {
@@ -292,7 +290,6 @@ export const TRACK_CONFIG = {
       trackWidth: 75,
       scenery: [],
       sceneryDensity: 5,
-      barrierTile: 'v3_barrier_canyon',
     },
     {
       name: 'trans_canyon_riverbed', fromWP: 56, toWP: 61,
@@ -303,7 +300,6 @@ export const TRACK_CONFIG = {
       trackWidth: 88,
       scenery: [],
       sceneryDensity: 5,
-      barrierTile: 'v3_barrier_riverbed',
       transition: { from: 'canyon', to: 'riverbed' },
     },
     {
@@ -315,7 +311,6 @@ export const TRACK_CONFIG = {
       trackWidth: 100,
       scenery: [],
       sceneryDensity: 6,
-      barrierTile: 'v3_barrier_riverbed',
     },
     {
       name: 'trans_riverbed_mountain', fromWP: 85, toWP: 90,
@@ -326,7 +321,6 @@ export const TRACK_CONFIG = {
       trackWidth: 90,
       scenery: [],
       sceneryDensity: 5,
-      barrierTile: 'v3_barrier_mountain',
       transition: { from: 'riverbed', to: 'mountain' },
     },
     {
@@ -338,7 +332,6 @@ export const TRACK_CONFIG = {
       trackWidth: 80,
       scenery: [],
       sceneryDensity: 6,
-      barrierTile: 'v3_barrier_mountain',
     },
     {
       name: 'trans_mountain_sprint', fromWP: 114, toWP: 119,
@@ -349,7 +342,6 @@ export const TRACK_CONFIG = {
       trackWidth: 100,
       scenery: [],
       sceneryDensity: 5,
-      barrierTile: 'v3_barrier_sprint',
       transition: { from: 'mountain', to: 'sprint' },
     },
     {
@@ -361,7 +353,6 @@ export const TRACK_CONFIG = {
       trackWidth: 120,
       scenery: [],
       sceneryDensity: 7,
-      barrierTile: 'v3_barrier_sprint',
     },
   ],
 

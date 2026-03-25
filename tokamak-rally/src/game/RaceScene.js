@@ -212,7 +212,7 @@ export class RaceScene extends Phaser.Scene {
       const w = zone.trackWidth || 100;
       const halfW = w / 2;
 
-      // Subdivide waypoints at sharp corners (>30° angle change) for smooth quads
+      // Subdivide waypoints at sharp corners using Catmull-Rom interpolation
       const rawPts = [];
       for (let i = s; i < e; i++) rawPts.push([wp[i][0], wp[i][1]]);
       const subPts = [rawPts[0]];
@@ -223,14 +223,20 @@ export class RaceScene extends Phaser.Scene {
           const a1 = Math.atan2(dy1, dx1), a2 = Math.atan2(dy2, dx2);
           let dAngle = Math.abs(a2 - a1);
           if (dAngle > Math.PI) dAngle = 2*Math.PI - dAngle;
-          if (dAngle > Math.PI/6) { // >30°: insert midpoints
-            const steps = Math.ceil(dAngle / (Math.PI/12)); // subdivide into ~15° steps
+          if (dAngle > Math.PI/6) { // >30°: Catmull-Rom subdivision
+            const steps = Math.ceil(dAngle / (Math.PI/18)); // ~10° per step for smoother curves
+            // Catmull-Rom control points: P0, P1 (prev), P2 (current), P3 (next)
+            const p0 = rawPts[Math.max(0, i-2)];
+            const p1 = rawPts[i-1];
+            const p2 = rawPts[i];
+            const p3 = rawPts[Math.min(rawPts.length-1, i+1)];
             for (let t = 1; t <= steps; t++) {
-              const frac = t / (steps + 1);
-              subPts.push([
-                rawPts[i-1][0] + (rawPts[i][0]-rawPts[i-1][0]) * (1-frac*0.5) + (rawPts[i+1][0]-rawPts[i][0]) * frac*0.5,
-                rawPts[i-1][1] + (rawPts[i][1]-rawPts[i-1][1]) * (1-frac*0.5) + (rawPts[i+1][1]-rawPts[i][1]) * frac*0.5,
-              ]);
+              const u = t / (steps + 1);
+              const u2 = u * u, u3 = u2 * u;
+              // Catmull-Rom spline (centripetal, alpha=0.5 simplified to uniform)
+              const x = 0.5 * ((2*p1[0]) + (-p0[0]+p2[0])*u + (2*p0[0]-5*p1[0]+4*p2[0]-p3[0])*u2 + (-p0[0]+3*p1[0]-3*p2[0]+p3[0])*u3);
+              const y = 0.5 * ((2*p1[1]) + (-p0[1]+p2[1])*u + (2*p0[1]-5*p1[1]+4*p2[1]-p3[1])*u2 + (-p0[1]+3*p1[1]-3*p2[1]+p3[1])*u3);
+              subPts.push([x, y]);
             }
           }
         }
@@ -533,7 +539,7 @@ export class RaceScene extends Phaser.Scene {
   placeBarriers() {
     const wp = this.track.waypoints;
     for (const zone of this.track.zones) {
-      if (!zone.barrierTile) continue;
+      // Draw barriers for all zones
       const s = Math.max(0, zone.fromWP);
       const e = Math.min(zone.toWP + 1, wp.length);
       const halfW = (zone.trackWidth || 100) / 2;
