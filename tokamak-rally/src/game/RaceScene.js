@@ -459,55 +459,29 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // Finish banner
+    // Finish banner (checkered) — spans road width
     const finBanner = this.add.sprite(wFin[0], wFin[1], 'finish_banner').setDepth(4).setAngle(finAngle);
     finBanner.displayWidth = finTrackW + 20;
     finBanner.scaleY = finBanner.scaleX;
-    this.add.text(wFin[0], wFin[1]-40, '🏁 FINISH', {
-      fontSize:'18px',fontFamily:'monospace',color:'#e63946',fontStyle:'bold',stroke:'#000',strokeThickness:3,
-    }).setOrigin(0.5).setDepth(4);
 
-    // Finish line direction vectors
-    const wLast = wFin, wPrev = wFinPrev;
-    const fdx = wLast[0]-wPrev[0], fdy = wLast[1]-wPrev[1];
-    const flen = Math.sqrt(fdx*fdx+fdy*fdy) || 1;
-    const fnx = -fdy/flen, fny = fdx/flen; // perpendicular to road
-    const fux = fdx/flen, fuy = fdy/flen; // along road direction
+    // Tokamak Network logo above finish line
+    const finDirX = finDx/finLen, finDirY = finDy/finLen;
+    const logoX = wFin[0] - finDirX * 30; // slightly before finish line
+    const logoY = wFin[1] - finDirY * 30;
+    if (this.textures.exists('tokamak_logo_white')) {
+      const logo = this.add.sprite(logoX, logoY, 'tokamak_logo_white').setDepth(5).setScale(0.15);
+    }
+
+    // FINISH text below logo
+    this.add.text(wFin[0], wFin[1] - 25, '🏁 FINISH', {
+      fontSize:'18px',fontFamily:'monospace',color:'#e63946',fontStyle:'bold',stroke:'#000',strokeThickness:3,
+    }).setOrigin(0.5).setDepth(5);
+
+    this.add.text(wFin[0], wFin[1] + 25, 'TOKAMAK NETWORK', {
+      fontSize:'10px',fontFamily:'monospace',color:'#4a90e2',fontStyle:'bold',stroke:'#000',strokeThickness:2,
+    }).setOrigin(0.5).setDepth(5);
 
     // Barrier collision data is now collected in placeBarriers() → this._barrierSegments
-
-    // Finish line: banners on both sides of track (parallel to road, NOT crossing it)
-    // Placed along the road direction at the finish area, outside track boundaries
-    const FBW = 50, FBH = 14;
-    const finRoadAngle = Math.atan2(fuy, fux); // along-road angle for banner rotation
-    for (const side of [-1, 1]) {
-      const bDist = 75; // perpendicular distance from track center
-      for (let j = -3; j <= 3; j++) {
-        const bx = wLast[0] + fnx*side*bDist + fux*j*FBW;
-        const by = wLast[1] + fny*side*bDist + fuy*j*FBW;
-        const isBlue = (j + 4) % 2 === 0;
-        const bg = this.add.graphics().setDepth(5);
-        bg.fillStyle(isBlue ? 0x2a6ddb : 0xffffff, 0.95);
-        bg.fillRect(-FBW/2, -FBH/2, FBW, FBH);
-        bg.x = bx; bg.y = by; bg.rotation = finRoadAngle;
-      }
-    }
-
-    // Finish crowd behind banners — dense packed crowd
-    for (let side of [-1, 1]) {
-      for (let row = 0; row < 5; row++) {
-        const baseDist = 88 + row * 10;
-        for (let j = 0; j < 8; j++) {
-          const along = (j - 3.5) * 14 + (Math.random()-0.5)*5;
-          const cx = wLast[0] + fnx*side*baseDist + fux*along;
-          const cy = wLast[1] + fny*side*baseDist + fuy*along;
-          const isCheer = Math.random() > 0.35;
-          const ci = Math.floor(Math.random()*7);
-          const tex = isCheer ? `crowd_cheer_${ci}` : `crowd_${ci}`;
-          this.add.sprite(cx, cy, tex).setDepth(4).setScale(2.0);
-        }
-      }
-    }
   }
 
   drawSprintOverlay() {
