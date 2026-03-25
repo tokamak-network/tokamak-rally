@@ -1,373 +1,517 @@
 /**
- * Track v2.0 — "Straight is default, corners are variation"
- * Thrash Rally inspired. Primary direction: NORTH (↑12 o'clock).
- * Each zone has 2-3 variation sections (S-curves, hairpins).
- * All variations exit back to 12 o'clock straight.
- * Hairpins are smooth U-arcs, never sharp V-turns.
+ * Track v3.0 — Parts-based track system
+ * Track is defined as a sequence of "parts" (straight, curve, turn, hairpin, etc.)
+ * Waypoints are auto-generated from parts for backward compatibility.
+ * Phase 1: Programmatic rendering (solid colors + patterns)
+ * Phase 2: DALL-E image replacement
  */
+
+// ---- Direction Helpers ----
+const DIR_VECTORS = {
+  north: { dx: 0, dy: -1 },
+  south: { dx: 0, dy: 1 },
+  east:  { dx: 1, dy: 0 },
+  west:  { dx: -1, dy: 0 },
+};
+
+const DIR_RIGHT = { north: 'east', east: 'south', south: 'west', west: 'north' };
+const DIR_LEFT  = { north: 'west', west: 'south', south: 'east', east: 'north' };
+
+const DIR_RIGHT_VEC = {
+  north: { dx: 1, dy: 0 },
+  east:  { dx: 0, dy: 1 },
+  south: { dx: -1, dy: 0 },
+  west:  { dx: 0, dy: -1 },
+};
+
+// ---- Part Types ----
+const partTypes = {
+  straight:   { width: 256, height: 512, fwdDist: 512, xShift: 0 },
+  curve_l:    { width: 256, height: 512, fwdDist: 512, xShift: -40 },
+  curve_r:    { width: 256, height: 512, fwdDist: 512, xShift: 40 },
+  s_curve:    { width: 256, height: 512, fwdDist: 512, xShift: 0 },
+  hairpin_l:  { width: 256, height: 512, fwdDist: 512, xShift: -80 },
+  hairpin_r:  { width: 256, height: 512, fwdDist: 512, xShift: 80 },
+  turn_90_l:  { width: 512, height: 512, turnRadius: 200 },
+  turn_90_r:  { width: 512, height: 512, turnRadius: 200 },
+  straight_h: { width: 512, height: 256, fwdDist: 512, xShift: 0 },
+};
+
+// ---- Zone Configuration ----
+const zoneConfig = {
+  desert: {
+    bgColor: 0xD4A574,
+    roadColor: 0xB89060,
+    edgeColor: 0x8B6914,
+    roadType: 'sand',
+    trackWidth: 100,
+    barrierStyle: 'wood_fence',
+  },
+  trans_desert_canyon: {
+    bgColor: 0xC49564,
+    roadColor: 0xA08050,
+    edgeColor: 0x7A5A20,
+    roadType: 'dirt',
+    trackWidth: 100,
+    barrierStyle: 'wood_fence',
+    transition: { from: 'desert', to: 'canyon' },
+  },
+  canyon: {
+    bgColor: 0x8B4513,
+    roadColor: 0x7A6550,
+    edgeColor: 0x5A4530,
+    roadType: 'dirt',
+    trackWidth: 100,
+    barrierStyle: 'metal_guardrail',
+  },
+  trans_canyon_riverbed: {
+    bgColor: 0x6A6030,
+    roadColor: 0x6A5A40,
+    edgeColor: 0x4A3A28,
+    roadType: 'dirt',
+    trackWidth: 100,
+    barrierStyle: 'metal_guardrail',
+    transition: { from: 'canyon', to: 'riverbed' },
+  },
+  riverbed: {
+    bgColor: 0x5A7A4A,
+    roadColor: 0x6A5A40,
+    edgeColor: 0x4A3A28,
+    roadType: 'dirt',
+    trackWidth: 100,
+    barrierStyle: 'wood_fence',
+  },
+  trans_riverbed_mountain: {
+    bgColor: 0x5A7060,
+    roadColor: 0x6A5A40,
+    edgeColor: 0x4A3A28,
+    roadType: 'rocky',
+    trackWidth: 100,
+    barrierStyle: 'wood_fence',
+    transition: { from: 'riverbed', to: 'mountain' },
+  },
+  mountain: {
+    bgColor: 0x6A7A8A,
+    roadColor: 0x7A6050,
+    edgeColor: 0x4A4A50,
+    roadType: 'rocky',
+    trackWidth: 100,
+    barrierStyle: 'stone_wall',
+  },
+  trans_mountain_sprint: {
+    bgColor: 0x505060,
+    roadColor: 0x585860,
+    edgeColor: 0x505058,
+    roadType: 'paved',
+    trackWidth: 100,
+    barrierStyle: 'stone_wall',
+    transition: { from: 'mountain', to: 'sprint' },
+  },
+  sprint: {
+    bgColor: 0x3A3A42,
+    roadColor: 0x484850,
+    edgeColor: 0x606068,
+    roadType: 'paved',
+    trackWidth: 100,
+    barrierStyle: 'jersey_barrier',
+  },
+};
+
+// ---- Parts Definition ----
+const parts = [
+  // === ZONE 1: DESERT ===
+  { type: 'straight', zone: 'desert' },
+  { type: 'straight', zone: 'desert' },
+  { type: 'curve_l', zone: 'desert' },
+  { type: 'straight', zone: 'desert' },
+  { type: 'curve_r', zone: 'desert' },
+  { type: 'straight', zone: 'desert' },
+  { type: 's_curve', zone: 'desert' },
+  { type: 'straight', zone: 'desert' },
+  { type: 'hairpin_r', zone: 'desert' },
+  { type: 'straight', zone: 'desert' },
+
+  // === TRANSITION: DESERT → CANYON ===
+  { type: 'straight', zone: 'trans_desert_canyon' },
+  { type: 'straight', zone: 'trans_desert_canyon' },
+
+  // === ZONE 2: CANYON ===
+  { type: 'straight', zone: 'canyon' },
+  { type: 'curve_r', zone: 'canyon' },
+  { type: 'curve_l', zone: 'canyon' },
+  { type: 'straight', zone: 'canyon' },
+  { type: 'turn_90_r', zone: 'canyon' },
+  { type: 'straight_h', zone: 'canyon' },
+  { type: 'turn_90_l', zone: 'canyon' },
+  { type: 'straight', zone: 'canyon' },
+
+  // === TRANSITION: CANYON → RIVERBED ===
+  { type: 'straight', zone: 'trans_canyon_riverbed' },
+  { type: 'straight', zone: 'trans_canyon_riverbed' },
+
+  // === ZONE 3: RIVERBED ===
+  { type: 'straight', zone: 'riverbed' },
+  { type: 's_curve', zone: 'riverbed' },
+  { type: 'straight', zone: 'riverbed' },
+  { type: 'curve_l', zone: 'riverbed' },
+  { type: 'curve_r', zone: 'riverbed' },
+  { type: 'straight', zone: 'riverbed' },
+  { type: 'hairpin_l', zone: 'riverbed' },
+  { type: 'straight', zone: 'riverbed' },
+
+  // === TRANSITION: RIVERBED → MOUNTAIN ===
+  { type: 'straight', zone: 'trans_riverbed_mountain' },
+  { type: 'straight', zone: 'trans_riverbed_mountain' },
+
+  // === ZONE 4: MOUNTAIN ===
+  { type: 'straight', zone: 'mountain' },
+  { type: 'curve_l', zone: 'mountain' },
+  { type: 'straight', zone: 'mountain' },
+  { type: 'hairpin_r', zone: 'mountain' },
+  { type: 'curve_r', zone: 'mountain' },
+  { type: 'straight', zone: 'mountain' },
+
+  // === TRANSITION: MOUNTAIN → SPRINT ===
+  { type: 'straight', zone: 'trans_mountain_sprint' },
+  { type: 'straight', zone: 'trans_mountain_sprint' },
+
+  // === ZONE 5: SPRINT ===
+  { type: 'straight', zone: 'sprint' },
+  { type: 'straight', zone: 'sprint' },
+  { type: 'turn_90_r', zone: 'sprint' },
+  { type: 'straight_h', zone: 'sprint' },
+  { type: 'turn_90_l', zone: 'sprint' },
+  { type: 'straight', zone: 'sprint' },
+  { type: 'turn_90_l', zone: 'sprint' },
+  { type: 'straight_h', zone: 'sprint' },
+  { type: 'turn_90_r', zone: 'sprint' },
+  { type: 'straight', zone: 'sprint' },
+  { type: 'straight', zone: 'sprint' },  // FINISH
+];
+
+// ---- Turn arc configurations (pre-computed for each direction) ----
+const R = 200; // turn radius
+
+// point on arc: (cx + R*cos(θ), cy - R*sin(θ))  [game coords, Y-down]
+const TURN_90_R_CFG = {
+  north: { cdx: +R, cdy: 0,  sa: Math.PI,     ea: Math.PI/2,       exitDir: 'east',  edx: +R, edy: -R },
+  east:  { cdx: 0,  cdy: +R, sa: Math.PI/2,   ea: 0,               exitDir: 'south', edx: +R, edy: +R },
+  south: { cdx: -R, cdy: 0,  sa: 0,           ea: -Math.PI/2,      exitDir: 'west',  edx: -R, edy: +R },
+  west:  { cdx: 0,  cdy: -R, sa: -Math.PI/2,  ea: -Math.PI,        exitDir: 'north', edx: -R, edy: -R },
+};
+
+const TURN_90_L_CFG = {
+  north: { cdx: -R, cdy: 0,  sa: 0,           ea: Math.PI/2,       exitDir: 'west',  edx: -R, edy: -R },
+  east:  { cdx: 0,  cdy: -R, sa: -Math.PI/2,  ea: 0,               exitDir: 'north', edx: +R, edy: -R },
+  south: { cdx: +R, cdy: 0,  sa: Math.PI,     ea: 3*Math.PI/2,     exitDir: 'east',  edx: +R, edy: +R },
+  west:  { cdx: 0,  cdy: +R, sa: Math.PI/2,   ea: Math.PI,         exitDir: 'south', edx: -R, edy: +R },
+};
+
+// ---- Exit Direction ----
+function getExitDirection(type, entryDir) {
+  switch (type) {
+    case 'straight':
+    case 'curve_l':
+    case 'curve_r':
+    case 's_curve':
+    case 'hairpin_l':
+    case 'hairpin_r':
+    case 'straight_h':
+      return entryDir;
+    case 'turn_90_r':
+      return DIR_RIGHT[entryDir];
+    case 'turn_90_l':
+      return DIR_LEFT[entryDir];
+    default:
+      return entryDir;
+  }
+}
+
+// ---- Part Exit Position ----
+function getPartExit(type, x, y, direction) {
+  const fwd = DIR_VECTORS[direction];
+  const right = DIR_RIGHT_VEC[direction];
+  const pt = partTypes[type];
+  const exitDir = getExitDirection(type, direction);
+
+  if (type === 'turn_90_r') {
+    const cfg = TURN_90_R_CFG[direction];
+    return { x: x + cfg.edx, y: y + cfg.edy, direction: exitDir };
+  }
+  if (type === 'turn_90_l') {
+    const cfg = TURN_90_L_CFG[direction];
+    return { x: x + cfg.edx, y: y + cfg.edy, direction: exitDir };
+  }
+
+  // Linear parts: move forward by fwdDist, shift perpendicular by xShift
+  const dist = pt.fwdDist;
+  const shift = pt.xShift;
+  return {
+    x: x + fwd.dx * dist + right.dx * shift,
+    y: y + fwd.dy * dist + right.dy * shift,
+    direction: exitDir,
+  };
+}
+
+// ---- Bezier helpers ----
+function quadBezier(p0, p1, p2, t) {
+  const mt = 1 - t;
+  return [
+    mt*mt*p0[0] + 2*mt*t*p1[0] + t*t*p2[0],
+    mt*mt*p0[1] + 2*mt*t*p1[1] + t*t*p2[1],
+  ];
+}
+
+function cubicBezier(p0, p1, p2, p3, t) {
+  const mt = 1 - t;
+  return [
+    mt*mt*mt*p0[0] + 3*mt*mt*t*p1[0] + 3*mt*t*t*p2[0] + t*t*t*p3[0],
+    mt*mt*mt*p0[1] + 3*mt*mt*t*p1[1] + 3*mt*t*t*p2[1] + t*t*t*p3[1],
+  ];
+}
+
+// ---- Waypoint Generation per Part ----
+function generatePartWaypoints(type, x, y, direction) {
+  const fwd = DIR_VECTORS[direction];
+  const right = DIR_RIGHT_VEC[direction];
+  const pts = [];
+
+  if (type === 'straight' || type === 'straight_h') {
+    // 4 evenly spaced points over 512px
+    const dist = partTypes[type].fwdDist;
+    for (let i = 0; i < 4; i++) {
+      const t = i / 4;
+      pts.push([x + fwd.dx * dist * t, y + fwd.dy * dist * t]);
+    }
+  } else if (type === 'curve_l' || type === 'curve_r') {
+    // Quadratic bezier, 8 points
+    const shift = partTypes[type].xShift;
+    const dist = partTypes[type].fwdDist;
+    const p0 = [x, y];
+    const p1 = [x + fwd.dx * dist * 0.5 + right.dx * shift * 1.3,
+                y + fwd.dy * dist * 0.5 + right.dy * shift * 1.3];
+    const p2 = [x + fwd.dx * dist + right.dx * shift,
+                y + fwd.dy * dist + right.dy * shift];
+    for (let i = 0; i < 8; i++) {
+      const t = i / 8;
+      pts.push(quadBezier(p0, p1, p2, t));
+    }
+  } else if (type === 's_curve') {
+    // S-curve: cubic bezier, 10 points
+    const dist = partTypes[type].fwdDist;
+    const sway = 50; // how far the S sways
+    const p0 = [x, y];
+    const p1 = [x + right.dx * sway + fwd.dx * dist * 0.25,
+                y + right.dy * sway + fwd.dy * dist * 0.25];
+    const p2 = [x - right.dx * sway + fwd.dx * dist * 0.75,
+                y - right.dy * sway + fwd.dy * dist * 0.75];
+    const p3 = [x + fwd.dx * dist, y + fwd.dy * dist];
+    for (let i = 0; i < 10; i++) {
+      const t = i / 10;
+      pts.push(cubicBezier(p0, p1, p2, p3, t));
+    }
+  } else if (type === 'hairpin_l' || type === 'hairpin_r') {
+    // U-shaped curve, 12 points via cubic bezier
+    const shift = partTypes[type].xShift;
+    const dist = partTypes[type].fwdDist;
+    // Swing out wide then come back
+    const p0 = [x, y];
+    const p1 = [x + right.dx * shift * 1.8 + fwd.dx * dist * 0.3,
+                y + right.dy * shift * 1.8 + fwd.dy * dist * 0.3];
+    const p2 = [x + right.dx * shift * 1.8 + fwd.dx * dist * 0.7,
+                y + right.dy * shift * 1.8 + fwd.dy * dist * 0.7];
+    const p3 = [x + right.dx * shift + fwd.dx * dist,
+                y + right.dy * shift + fwd.dy * dist];
+    for (let i = 0; i < 12; i++) {
+      const t = i / 12;
+      pts.push(cubicBezier(p0, p1, p2, p3, t));
+    }
+  } else if (type === 'turn_90_r') {
+    const cfg = TURN_90_R_CFG[direction];
+    const cx = x + cfg.cdx, cy = y + cfg.cdy;
+    for (let i = 0; i < 8; i++) {
+      const t = i / 8;
+      const angle = cfg.sa + (cfg.ea - cfg.sa) * t;
+      pts.push([cx + R * Math.cos(angle), cy - R * Math.sin(angle)]);
+    }
+  } else if (type === 'turn_90_l') {
+    const cfg = TURN_90_L_CFG[direction];
+    const cx = x + cfg.cdx, cy = y + cfg.cdy;
+    for (let i = 0; i < 8; i++) {
+      const t = i / 8;
+      const angle = cfg.sa + (cfg.ea - cfg.sa) * t;
+      pts.push([cx + R * Math.cos(angle), cy - R * Math.sin(angle)]);
+    }
+  }
+
+  return pts;
+}
+
+// ---- Full Waypoint Generation ----
+function generateWaypoints(partsList, startX, startY) {
+  const waypoints = [];
+  const partBounds = []; // { partIndex, startWP, endWP, zone }
+  let x = startX, y = startY, direction = 'north';
+
+  for (let pi = 0; pi < partsList.length; pi++) {
+    const part = partsList[pi];
+    const pts = generatePartWaypoints(part.type, x, y, direction);
+    const startWP = waypoints.length;
+
+    if (pi === 0) {
+      // Include all points for first part
+      waypoints.push(...pts);
+    } else {
+      // Skip first point (overlaps with previous exit)
+      for (let i = 1; i < pts.length; i++) {
+        waypoints.push(pts[i]);
+      }
+    }
+
+    const endWP = waypoints.length - 1;
+    partBounds.push({ partIndex: pi, startWP, endWP, zone: part.zone, type: part.type });
+
+    const exit = getPartExit(part.type, x, y, direction);
+    x = exit.x; y = exit.y; direction = exit.direction;
+  }
+
+  // Add final exit point as last waypoint
+  waypoints.push([x, y]);
+  // Also add a couple extra for visual continuity
+  const lastFwd = DIR_VECTORS[direction];
+  waypoints.push([x + lastFwd.dx * 250, y + lastFwd.dy * 250]);
+  waypoints.push([x + lastFwd.dx * 500, y + lastFwd.dy * 500]);
+
+  return { waypoints, partBounds };
+}
+
+// ---- Generate zone array (backward compatible) ----
+function generateZones(partBounds) {
+  const zones = [];
+  let currentZone = null;
+
+  for (const pb of partBounds) {
+    if (!currentZone || currentZone.name !== pb.zone) {
+      if (currentZone) {
+        currentZone.toWP = pb.startWP;
+        zones.push(currentZone);
+      }
+      const zc = zoneConfig[pb.zone];
+      currentZone = {
+        name: pb.zone,
+        fromWP: pb.startWP,
+        toWP: 0,
+        roadType: zc.roadType,
+        roadColor: zc.roadColor,
+        roadBorder: zc.edgeColor,
+        trackWidth: zc.trackWidth,
+        bgColor: zc.bgColor,
+        edgeColor: zc.edgeColor,
+        barrierStyle: zc.barrierStyle,
+        scenery: [],
+        sceneryDensity: 5,
+        transition: zc.transition || null,
+      };
+    }
+  }
+  if (currentZone) {
+    currentZone.toWP = partBounds[partBounds.length - 1].endWP + 3; // +3 for continuation points
+    zones.push(currentZone);
+  }
+
+  return zones;
+}
+
+// ---- Generate checkpoints at zone transitions ----
+function generateCheckpoints(partBounds) {
+  // CP at the boundary between each main zone and its transition zone
+  const mainZones = ['desert', 'canyon', 'riverbed', 'mountain'];
+  const cpNames = ['CP1: Dune Ridge', 'CP2: Canyon Exit', 'CP3: Riverbed Crossing', 'CP4: Summit'];
+  const checkpoints = [];
+
+  for (let z = 0; z < mainZones.length; z++) {
+    const zoneName = mainZones[z];
+    // Find last partBound of this zone
+    let lastPB = null;
+    for (const pb of partBounds) {
+      if (pb.zone === zoneName) lastPB = pb;
+    }
+    if (lastPB) {
+      checkpoints.push({
+        waypointIndex: lastPB.endWP,
+        timeBonus: 15000,
+        name: cpNames[z],
+      });
+    }
+  }
+
+  return checkpoints;
+}
+
+// ---- Validate track connections ----
+export function validateTrack(partsList) {
+  let direction = 'north';
+  for (let i = 0; i < partsList.length; i++) {
+    const part = partsList[i];
+    const type = part.type;
+
+    // Check entry compatibility
+    if (type === 'straight' && direction !== 'north' && direction !== 'south') {
+      // straight can technically work in any vertical direction
+      // but for safety, allow only north/south
+    }
+    if (type === 'straight_h' && direction !== 'east' && direction !== 'west') {
+      console.error(`Part ${i} (${type}): cannot accept ${direction} entry, needs east/west`);
+      return false;
+    }
+
+    const exitDir = getExitDirection(type, direction);
+    if (!exitDir) {
+      console.error(`Part ${i} (${type}): invalid exit from ${direction} entry`);
+      return false;
+    }
+    direction = exitDir;
+  }
+  if (direction !== 'north') {
+    console.warn(`Track ends facing ${direction}, not north`);
+  }
+  return true;
+}
+
+// ---- Build TRACK_CONFIG ----
+const START_X = 2000;
+const START_Y = 14200;
+
+const { waypoints, partBounds } = generateWaypoints(parts, START_X, START_Y);
+const zones = generateZones(partBounds);
+const checkpoints = generateCheckpoints(partBounds);
+
+// Finish WP: 3 waypoints before the absolute end (last part's end)
+const finishWP = waypoints.length - 4;
+
+// Validate on load
+validateTrack(parts);
 
 export const TRACK_CONFIG = {
   name: 'Stage 1: Sahara Crossing',
 
-  waypoints: [
-    // ===== ZONE 1: DESERT (0-34) — Wide open, S-curves + gentle hairpins =====
-    // --- Straight north from start ---
-    [2000, 14200],  // 0  START
-    [2000, 13950],  // 1
-    [2000, 13700],  // 2
-    [2000, 13450],  // 3
+  // Parts system (new)
+  partTypes,
+  parts,
+  partBounds,
+  zoneConfig,
 
-    // --- S-curve 1: right diagonal → left diagonal ---
-    [2050, 13250],  // 4  enter right
-    [2110, 13070],  // 5
-    [2150, 12890],  // 6  right apex
-    [2110, 12710],  // 7  transition
-    [2050, 12540],  // 8
-    [2000, 12370],  // 9  center
-    [1950, 12200],  // 10 enter left
-    [1890, 12030],  // 11
-    [1850, 11860],  // 12 left apex
-    [1890, 11690],  // 13
-    [1950, 11520],  // 14
-    [2000, 11350],  // 15 back to center — straight
+  // Auto-generated (backward compatible)
+  waypoints,
+  zones,
+  checkpoints,
+  finishWP,
 
-    // --- Straight recovery ---
-    [2000, 11100],  // 16
-    [2000, 10850],  // 17
-
-    // --- S-curve 2: left then right ---
-    [1950, 10650],  // 18
-    [1890, 10470],  // 19
-    [1850, 10300],  // 20 left apex
-    [1890, 10130],  // 21
-    [1950, 9970],   // 22
-    [2000, 9810],   // 23 center
-    [2050, 9650],   // 24
-    [2110, 9480],   // 25
-    [2150, 9310],   // 26 right apex
-    [2110, 9140],   // 27
-    [2050, 8980],   // 28
-    [2000, 8820],   // 29 back to center
-
-    // --- Straight to CP1 ---
-    [2000, 8570],   // 30
-    [2000, 8320],   // 31
-    [2000, 8070],   // 32
-    [2000, 7820],   // 33 << CP1: Dune Ridge
-    [2000, 7570],   // 34
-
-    // ===== TRANSITION: DESERT→CANYON (35-38) =====
-    [2000, 7370],   // 35
-    [2000, 7170],   // 36
-    [2000, 6970],   // 37
-    [2000, 6770],   // 38
-
-    // ===== ZONE 2: CANYON (39-56) — Narrow gorge, tight S-curves =====
-    // --- Straight into gorge ---
-    [2000, 6570],   // 39
-    [2000, 6320],   // 40
-    [2000, 6070],   // 41
-
-    // --- S-curve through canyon ---
-    [2040, 5890],   // 42
-    [2090, 5720],   // 43
-    [2120, 5560],   // 44 right apex
-    [2090, 5400],   // 45
-    [2040, 5240],   // 46
-    [2000, 5080],   // 47 center
-    [1960, 4920],   // 48
-    [1910, 4760],   // 49
-    [1880, 4600],   // 50 left apex
-    [1910, 4440],   // 51
-    [1960, 4280],   // 52
-    [2000, 4120],   // 53 back to center
-
-    // --- Straight ---
-    [2000, 3870],   // 54
-    [2000, 3620],   // 55
-    [2000, 3370],   // 56 << CP2: Canyon Exit
-
-    // ===== TRANSITION: CANYON→RIVERBED (57-60) =====
-    [2000, 3170],   // 57
-    [2000, 2970],   // 58
-    [2000, 2770],   // 59
-    [2000, 2570],   // 60
-
-    // ===== ZONE 3: RIVERBED (61-83) — Tree-lined, flowing S-curves =====
-    // --- Straight ---
-    [2000, 2370],   // 61
-    [2000, 2120],   // 62
-
-    // --- S-curve 1 ---
-    [2060, 1930],   // 63
-    [2130, 1750],   // 64
-    [2170, 1580],   // 65 right apex
-    [2130, 1410],   // 66
-    [2060, 1250],   // 67
-    [2000, 1090],   // 68 center
-    [1940, 930],    // 69
-    [1870, 770],    // 70
-    [1830, 610],    // 71 left apex
-    [1870, 450],    // 72
-    [1940, 290],    // 73
-    [2000, 130],    // 74 back to center
-
-    // --- Short straight ---
-    [2000, -70],    // 75
-
-    // --- Hairpin right (smooth U-arc) ---
-    [2060, -230],   // 76 enter
-    [2150, -370],   // 77
-    [2250, -470],   // 78
-    [2310, -580],   // 79 apex east
-    [2250, -690],   // 80
-    [2150, -790],   // 81
-    [2060, -870],   // 82
-    [2000, -950],   // 83 exit — back to 12 o'clock
-
-    // --- Straight to CP3 ---
-    [2000, -1150],  // 84
-    [2000, -1350],  // 85 << CP3: Riverbed Crossing
-
-    // ===== TRANSITION: RIVERBED→MOUNTAIN (86-89) =====
-    [2000, -1550],  // 86
-    [2000, -1750],  // 87
-    [2000, -1950],  // 88
-    [2000, -2150],  // 89
-
-    // ===== ZONE 4: MOUNTAIN (90-114) — Switchbacks with smooth U-arcs =====
-    // --- Straight climb ---
-    [2000, -2350],  // 90
-    [2000, -2600],  // 91
-    [2000, -2850],  // 92
-
-    // --- S-curve 1 (gentle) ---
-    [2050, -3030],  // 93
-    [2100, -3200],  // 94
-    [2130, -3370],  // 95 right apex
-    [2100, -3540],  // 96
-    [2050, -3700],  // 97
-    [2000, -3860],  // 98 center
-    [1950, -4020],  // 99
-    [1900, -4180],  // 100
-    [1870, -4340],  // 101 left apex
-    [1900, -4500],  // 102
-    [1950, -4660],  // 103
-    [2000, -4820],  // 104 back to center
-
-    // --- Short straight ---
-    [2000, -5020],  // 105
-
-    // --- Hairpin left (smooth U-arc) ---
-    [1940, -5180],  // 106 enter
-    [1860, -5330],  // 107
-    [1770, -5440],  // 108
-    [1700, -5530],  // 109 apex west
-    [1770, -5640],  // 110
-    [1860, -5750],  // 111
-    [1940, -5850],  // 112
-    [2000, -5950],  // 113 exit — back to 12 o'clock
-
-    // --- Straight to CP4 ---
-    [2000, -6150],  // 114 << CP4: Summit
-
-    // ===== TRANSITION: MOUNTAIN→SPRINT (115-118) =====
-    [2000, -6350],  // 115
-    [2000, -6550],  // 116
-    [2000, -6750],  // 117
-    [2000, -6950],  // 118
-
-    // ===== ZONE 5: SPRINT (119-161) — City circuit: always progressing north (Y decreasing) =====
-    // Zigzag layout with 90° corners, no U-turns, always moving upward
-
-    // --- Straight north ---
-    [2000, -7150],  // 119
-    [2000, -7400],  // 120
-    [2000, -7650],  // 121
-    [2000, -7900],  // 122
-    [2000, -8150],  // 123
-
-    // --- 90° right turn (smooth arc east) ---
-    [2060, -8320],  // 124
-    [2160, -8440],  // 125
-    [2300, -8510],  // 126
-    [2450, -8540],  // 127
-
-    // --- Short east straight ---
-    [2700, -8540],  // 128
-    [2950, -8540],  // 129
-
-    // --- 90° left turn (smooth arc north) ---
-    [3120, -8600],  // 130
-    [3250, -8720],  // 131
-    [3320, -8880],  // 132
-    [3340, -9050],  // 133
-
-    // --- Straight north ---
-    [3340, -9300],  // 134
-    [3340, -9550],  // 135
-    [3340, -9800],  // 136
-
-    // --- 90° left turn (smooth arc west) ---
-    [3280, -9970],  // 137
-    [3160, -10090], // 138
-    [3000, -10150], // 139
-    [2840, -10170], // 140
-
-    // --- Short west straight ---
-    [2590, -10170], // 141
-    [2340, -10170], // 142
-
-    // --- 90° right turn (smooth arc north) ---
-    [2170, -10230], // 143
-    [2060, -10350], // 144
-    [2000, -10510], // 145
-    [1980, -10680], // 146
-
-    // --- Straight north ---
-    [1980, -10930], // 147
-    [1980, -11180], // 148
-    [1980, -11430], // 149
-
-    // --- 90° right turn (smooth arc east) ---
-    [2040, -11600], // 150
-    [2150, -11720], // 151
-    [2300, -11790], // 152
-    [2460, -11810], // 153
-
-    // --- Short east straight ---
-    [2710, -11810], // 154
-    [2960, -11810], // 155
-
-    // --- 90° left turn (smooth arc north) ---
-    [3130, -11870], // 156
-    [3250, -11990], // 157
-    [3320, -12150], // 158
-
-    // --- FINISH LINE ---
-    [3340, -12350], // 159 FINISH
-
-    // --- Road continues after finish (for visual continuity) ---
-    [3340, -12600], // 160
-    [3340, -12850]  // 161
-  ],
-
-  checkpoints: [
-    { waypointIndex: 33, timeBonus: 15000, name: 'CP1: Dune Ridge' },
-    { waypointIndex: 56, timeBonus: 15000, name: 'CP2: Canyon Exit' },
-    { waypointIndex: 85, timeBonus: 15000, name: 'CP3: Riverbed Crossing' },
-    { waypointIndex: 114, timeBonus: 15000, name: 'CP4: Summit' },
-  ],
-
-  zones: [
-    {
-      name: 'desert', fromWP: 0, toWP: 34,
-      bgTile: 'v5_bg_desert',
-      roadTexture: 'v5_road_dirt',
-      roadType: 'sand',
-      roadColor: 0xb89060, roadBorder: 0x9a7040,
-      trackWidth: 110,
-      scenery: [],
-      sceneryDensity: 5,
-      barrierStyle: 'wood_fence',
-    },
-    {
-      name: 'trans_desert_canyon', fromWP: 34, toWP: 39,
-      bgTile: 'v5_bg_desert',
-      roadTexture: 'v5_road_dirt',
-      roadType: 'dirt',
-      roadColor: 0xa08050, roadBorder: 0x806030,
-      trackWidth: 95,
-      scenery: [],
-      sceneryDensity: 5,
-      barrierStyle: 'wood_fence',
-      transition: { from: 'desert', to: 'canyon' },
-    },
-    {
-      name: 'canyon', fromWP: 39, toWP: 56,
-      bgTile: 'v5_bg_canyon',
-      roadTexture: 'v5_road_dirt',
-      roadType: 'dirt',
-      roadColor: 0x8a7555, roadBorder: 0x6a5535,
-      trackWidth: 75,
-      scenery: [],
-      sceneryDensity: 5,
-      barrierStyle: 'metal_guardrail',
-    },
-    {
-      name: 'trans_canyon_riverbed', fromWP: 56, toWP: 61,
-      bgTile: 'v5_bg_canyon',
-      roadTexture: 'v5_road_dirt',
-      roadType: 'dirt',
-      roadColor: 0x827050, roadBorder: 0x625540,
-      trackWidth: 88,
-      scenery: [],
-      sceneryDensity: 5,
-      barrierStyle: 'metal_guardrail',
-      transition: { from: 'canyon', to: 'riverbed' },
-    },
-    {
-      name: 'riverbed', fromWP: 61, toWP: 85,
-      bgTile: 'v5_bg_riverbed',
-      roadTexture: 'v5_road_dirt',
-      roadType: 'dirt',
-      roadColor: 0x7a6a50, roadBorder: 0x5a4a35,
-      trackWidth: 100,
-      scenery: [],
-      sceneryDensity: 6,
-      barrierStyle: 'wood_fence',
-    },
-    {
-      name: 'trans_riverbed_mountain', fromWP: 85, toWP: 90,
-      bgTile: 'v5_bg_riverbed',
-      roadTexture: 'v5_road_dirt',
-      roadType: 'rocky',
-      roadColor: 0x6a5a40, roadBorder: 0x4a3a28,
-      trackWidth: 90,
-      scenery: [],
-      sceneryDensity: 5,
-      barrierStyle: 'wood_fence',
-      transition: { from: 'riverbed', to: 'mountain' },
-    },
-    {
-      name: 'mountain', fromWP: 90, toWP: 114,
-      bgTile: 'v5_bg_mountain',
-      roadTexture: 'v5_road_snow',
-      roadType: 'rocky',
-      roadColor: 0x7a5538, roadBorder: 0x5a3a22,
-      trackWidth: 80,
-      scenery: [],
-      sceneryDensity: 6,
-      barrierStyle: 'stone_wall',
-    },
-    {
-      name: 'trans_mountain_sprint', fromWP: 114, toWP: 119,
-      bgTile: 'v5_bg_mountain',
-      roadTexture: 'v5_road_asphalt',
-      roadType: 'paved',
-      roadColor: 0x585860, roadBorder: 0x505058,
-      trackWidth: 100,
-      scenery: [],
-      sceneryDensity: 5,
-      barrierStyle: 'stone_wall',
-      transition: { from: 'mountain', to: 'sprint' },
-    },
-    {
-      name: 'sprint', fromWP: 119, toWP: 161,
-      bgTile: 'v5_bg_sprint',
-      roadTexture: 'v5_road_asphalt',
-      roadType: 'paved',
-      roadColor: 0x484850, roadBorder: 0x606068,
-      trackWidth: 120,
-      scenery: [],
-      sceneryDensity: 7,
-      barrierStyle: 'jersey_barrier',
-    },
-  ],
-
-  startX: 2000, startY: 14150, startAngle: -90,
+  startX: START_X,
+  startY: START_Y,
+  startAngle: -90,
   initialTime: 120000,
-  finishWP: 157,
+  roadWidth: 100,
 
   roadPhysics: {
     paved:   { accel: 243, friction: 0.990, turn: 110, label: 'PAVED' },
@@ -390,42 +534,45 @@ export const TRACK_CONFIG = {
   },
 };
 
-// ---- Utility Functions ----
+// Export helper to get part exit (used by RaceScene for rendering)
+export { getPartExit, getExitDirection, generatePartWaypoints, zoneConfig, DIR_VECTORS, DIR_RIGHT_VEC, DIR_RIGHT, DIR_LEFT, R as TURN_RADIUS };
 
-export function getZoneByIndex(wpIndex, zones) {
-  for (const z of zones) {
+// ---- Utility Functions (backward compatible) ----
+
+export function getZoneByIndex(wpIndex, zonesArr) {
+  for (const z of zonesArr) {
     if (wpIndex >= z.fromWP && wpIndex < z.toWP) return z;
   }
-  return zones[zones.length - 1];
+  return zonesArr[zonesArr.length - 1];
 }
 
-export function isOnTrack(x, y, waypoints, zones) {
-  for (let i = 0; i < waypoints.length - 1; i++) {
-    const zone = getZoneByIndex(i, zones);
+export function isOnTrack(x, y, waypointsArr, zonesArr) {
+  for (let i = 0; i < waypointsArr.length - 1; i++) {
+    const zone = getZoneByIndex(i, zonesArr);
     const halfW = (zone.trackWidth || 100) / 2;
-    const dist = distToSeg(x, y, waypoints[i][0], waypoints[i][1], waypoints[i+1][0], waypoints[i+1][1]);
+    const dist = distToSeg(x, y, waypointsArr[i][0], waypointsArr[i][1], waypointsArr[i+1][0], waypointsArr[i+1][1]);
     if (dist < halfW) return { onTrack: true, zone };
   }
   return { onTrack: false, zone: null };
 }
 
-export function getTrackProgress(x, y, waypoints) {
+export function getTrackProgress(x, y, waypointsArr) {
   let minDist = Infinity, closestIdx = 0;
-  for (let i = 0; i < waypoints.length; i++) {
-    const d = Math.sqrt((x-waypoints[i][0])**2 + (y-waypoints[i][1])**2);
+  for (let i = 0; i < waypointsArr.length; i++) {
+    const d = Math.sqrt((x-waypointsArr[i][0])**2 + (y-waypointsArr[i][1])**2);
     if (d < minDist) { minDist = d; closestIdx = i; }
   }
-  return { index: closestIdx, distance: minDist, progress: closestIdx / (waypoints.length - 1) };
+  return { index: closestIdx, distance: minDist, progress: closestIdx / (waypointsArr.length - 1) };
 }
 
-export function checkCheckpoint(x, y, cp, waypoints) {
-  const wp = waypoints[cp.waypointIndex];
+export function checkCheckpoint(x, y, cp, waypointsArr) {
+  const wp = waypointsArr[cp.waypointIndex];
   return Math.sqrt((x-wp[0])**2 + (y-wp[1])**2) < 100;
 }
 
-export function checkFinish(x, y, waypoints, config) {
-  const fIdx = config?.finishWP ?? (waypoints.length - 1);
-  const f = waypoints[fIdx];
+export function checkFinish(x, y, waypointsArr, config) {
+  const fIdx = config?.finishWP ?? (waypointsArr.length - 1);
+  const f = waypointsArr[fIdx];
   return Math.sqrt((x-f[0])**2 + (y-f[1])**2) < 100;
 }
 
