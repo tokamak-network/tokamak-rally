@@ -144,13 +144,23 @@ export class RaceScene extends Phaser.Scene {
     const wp = this.track.waypoints;
     const TILE_SIZE = 512; // v5 DALL-E 심리스 타일 크기
 
-    for (const zone of this.track.zones) {
+    // Draw non-transition zones FIRST (higher depth), then transition zones on top
+    // Sort: main zones first, transition zones second (to blend on top)
+    const sortedZones = [...this.track.zones].sort((a, b) => {
+      if (a.transition && !b.transition) return 1;
+      if (!a.transition && b.transition) return -1;
+      return a.fromWP - b.fromWP;
+    });
+
+    for (const zone of sortedZones) {
       let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
       for (let i=zone.fromWP; i<=Math.min(zone.toWP, wp.length-1); i++) {
         minX=Math.min(minX,wp[i][0]); maxX=Math.max(maxX,wp[i][0]);
         minY=Math.min(minY,wp[i][1]); maxY=Math.max(maxY,wp[i][1]);
       }
-      minX-=600; maxX+=600; minY-=600; maxY+=600;
+      // Smaller padding for transition zones to prevent bleed into adjacent main zones
+      const PAD = zone.transition ? 200 : 600;
+      minX-=PAD; maxX+=PAD; minY-=PAD; maxY+=PAD;
       // Snap to tile grid for seamless tiling
       minX = Math.floor(minX / TILE_SIZE) * TILE_SIZE;
       minY = Math.floor(minY / TILE_SIZE) * TILE_SIZE;
