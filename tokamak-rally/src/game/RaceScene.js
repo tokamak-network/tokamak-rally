@@ -21,13 +21,14 @@ export class RaceScene extends Phaser.Scene {
     this._animals = [];
     this._birdTimer = 5000 + Math.random() * 8000;
 
-    this.drawBackground();
-    this.drawTrack();
-    this.drawSprintOverlay();
-    this.placeBarriers();
-    this.placeScenery();
-    this.placeCheckpoints();
-    this.placeRoadObstacles();
+    console.log('[Race] create() start');
+    this.drawBackground(); console.log('[Race] drawBackground done');
+    this.drawTrack(); console.log('[Race] drawTrack done');
+    this.drawSprintOverlay(); console.log('[Race] drawSprintOverlay done');
+    this.placeBarriers(); console.log('[Race] placeBarriers done');
+    this.placeScenery(); console.log('[Race] placeScenery done');
+    this.placeCheckpoints(); console.log('[Race] placeCheckpoints done');
+    this.placeRoadObstacles(); console.log('[Race] placeRoadObstacles done');
 
     const carTexture = this.textures.exists(`v2_car_${this.selectedCarId}`) ? `v2_car_${this.selectedCarId}` : `car_${this.selectedCarId}`;
     this.player = this.add.sprite(this.track.startX, this.track.startY, carTexture)
@@ -468,6 +469,7 @@ export class RaceScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(4);
 
     // Finish line direction vectors
+    const wLast = wFin, wPrev = wFinPrev;
     const fdx = wLast[0]-wPrev[0], fdy = wLast[1]-wPrev[1];
     const flen = Math.sqrt(fdx*fdx+fdy*fdy) || 1;
     const fnx = -fdy/flen, fny = fdx/flen; // perpendicular to road

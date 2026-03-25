@@ -6,6 +6,7 @@ export class MenuScene extends Phaser.Scene {
   constructor() { super('Menu'); }
 
   create() {
+    console.log('[Menu] create() start');
     this.selectedCar = 0;
     const cx = 400;
 
