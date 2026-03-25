@@ -21,14 +21,6 @@ export class RaceScene extends Phaser.Scene {
     this._animals = [];
     this._birdTimer = 5000 + Math.random() * 8000;
 
-    console.log('[Race] create() start');
-    this.drawBackground(); console.log('[Race] drawBackground done');
-    this.drawTrack(); console.log('[Race] drawTrack done');
-    this.drawSprintOverlay(); console.log('[Race] drawSprintOverlay done');
-    this.placeBarriers(); console.log('[Race] placeBarriers done');
-    this.placeScenery(); console.log('[Race] placeScenery done');
-    this.placeCheckpoints(); console.log('[Race] placeCheckpoints done');
-    this.placeRoadObstacles(); console.log('[Race] placeRoadObstacles done');
 
     const carTexture = this.textures.exists(`v2_car_${this.selectedCarId}`) ? `v2_car_${this.selectedCarId}` : `car_${this.selectedCarId}`;
     this.player = this.add.sprite(this.track.startX, this.track.startY, carTexture)
@@ -475,29 +467,7 @@ export class RaceScene extends Phaser.Scene {
     const fnx = -fdy/flen, fny = fdx/flen; // perpendicular to road
     const fux = fdx/flen, fuy = fdy/flen; // along road direction
 
-    // Sprint zone: barrier collision data (visuals now handled by drawSprintOverlay + placeScenery)
-    const sprintZone = this.track.zones.find(z => z.name === 'sprint');
-    this._sprintBarrierSegments = [];
-    if (sprintZone) {
-      const BDIST = 75;
-      for (let i = sprintZone.fromWP; i <= Math.min(sprintZone.toWP, wp.length-1); i++) {
-        let nx = 0, ny = 0;
-        if (i > sprintZone.fromWP && i < wp.length) {
-          const dx1 = wp[i][0]-wp[i-1][0], dy1 = wp[i][1]-wp[i-1][1];
-          const l1 = Math.sqrt(dx1*dx1+dy1*dy1) || 1;
-          nx -= dy1/l1; ny += dx1/l1;
-        }
-        if (i < Math.min(sprintZone.toWP, wp.length-1)) {
-          const dx2 = wp[i+1][0]-wp[i][0], dy2 = wp[i+1][1]-wp[i][1];
-          const l2 = Math.sqrt(dx2*dx2+dy2*dy2) || 1;
-          nx -= dy2/l2; ny += dx2/l2;
-        }
-        const l = Math.sqrt(nx*nx+ny*ny) || 1;
-        this._sprintBarrierSegments.push({
-          x: wp[i][0], y: wp[i][1], nx: nx/l, ny: ny/l, dist: BDIST
-        });
-      }
-    }
+    // Barrier collision data is now collected in placeBarriers() → this._barrierSegments
 
     // Finish line: banners on both sides of track (parallel to road, NOT crossing it)
     // Placed along the road direction at the finish area, outside track boundaries
@@ -540,12 +510,14 @@ export class RaceScene extends Phaser.Scene {
 
   placeBarriers() {
     const wp = this.track.waypoints;
+    this._barrierSegments = [];
+
     for (const zone of this.track.zones) {
-      // Draw barriers for all zones
       const s = Math.max(0, zone.fromWP);
       const e = Math.min(zone.toWP + 1, wp.length);
       const halfW = (zone.trackWidth || 100) / 2;
-      const barrierDist = halfW + 10;
+      const barrierDist = halfW + 8;
+      const style = zone.barrierStyle || 'wood_fence';
 
       // Compute smoothed normals
       const normals = [];
@@ -565,38 +537,217 @@ export class RaceScene extends Phaser.Scene {
         normals.push([nx/l, ny/l]);
       }
 
-      const colors = {
-        desert: 0x8a6a30, canyon: 0x6a4a30, riverbed: 0x6a5a30,
-        mountain: 0x8a8a80, sprint: 0x888888
+      // Collect collision data for all zones
+      for (let i = s; i < e; i++) {
+        const ni = normals[i - s];
+        this._barrierSegments.push({
+          x: wp[i][0], y: wp[i][1], nx: ni[0], ny: ni[1], dist: barrierDist
+        });
+      }
+
+      // Helper: get barrier point position
+      const bPos = (i, side) => {
+        const ni = normals[i - s];
+        return [wp[i][0] + ni[0] * side * barrierDist, wp[i][1] + ni[1] * side * barrierDist];
       };
-      const barrierColor = colors[zone.name] || 0x888888;
+
+      // Helper: segment angle at waypoint
+      const segAngle = (i) => {
+        const ii = Math.min(i, e - 2);
+        const jj = Math.max(ii, s);
+        const next = Math.min(jj + 1, e - 1);
+        return Math.atan2(wp[next][1] - wp[jj][1], wp[next][0] - wp[jj][0]);
+      };
 
       for (const side of [-1, 1]) {
-        const g = this.add.graphics().setDepth(2);
-        g.lineStyle(8, barrierColor, 0.9);
-        g.beginPath();
-        const n0 = normals[0];
-        g.moveTo(wp[s][0]+n0[0]*side*barrierDist, wp[s][1]+n0[1]*side*barrierDist);
-        for (let i = s+1; i < e; i++) {
-          const ni = normals[i-s];
-          g.lineTo(wp[i][0]+ni[0]*side*barrierDist, wp[i][1]+ni[1]*side*barrierDist);
-        }
-        g.strokePath();
+        if (style === 'wood_fence') {
+          // === Wood fence: brown posts + 2 horizontal rails ===
+          // Rails
+          for (const railOff of [-2, 2]) {
+            const g = this.add.graphics().setDepth(3);
+            g.lineStyle(2, 0x8B6914, 0.9);
+            g.beginPath();
+            const [sx, sy] = bPos(s, side);
+            const n0 = normals[0];
+            g.moveTo(sx + n0[0] * railOff, sy + n0[1] * railOff);
+            for (let i = s + 1; i < e; i++) {
+              const [px, py] = bPos(i, side);
+              const ni = normals[i - s];
+              g.lineTo(px + ni[0] * railOff, py + ni[1] * railOff);
+            }
+            g.strokePath();
+          }
+          // Posts every 30px
+          let dist = 0;
+          for (let i = s; i < e - 1; i++) {
+            const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1];
+            dist += Math.sqrt(dx*dx+dy*dy);
+            if (dist >= 30) {
+              dist = 0;
+              const [px, py] = bPos(i + 1, side);
+              const angle = segAngle(i + 1);
+              const g = this.add.graphics().setDepth(3);
+              g.fillStyle(0x6B4226, 1);
+              g.save && g.save();
+              // Draw post as rotated rect
+              const cos = Math.cos(angle), sin = Math.sin(angle);
+              const hw = 2, hh = 4;
+              g.fillRect(px - hw, py - hh, 4, 8);
+            }
+          }
 
-        // Post markers every 60px
-        let dist = 0;
-        for (let i = s; i < e-1; i++) {
-          const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1];
-          const segLen = Math.sqrt(dx*dx+dy*dy);
-          dist += segLen;
-          if (dist >= 60) {
-            dist = 0;
-            const ni = normals[Math.min(i+1-s, normals.length-1)];
-            const px = wp[i+1][0]+ni[0]*side*barrierDist;
-            const py = wp[i+1][1]+ni[1]*side*barrierDist;
-            const post = this.add.graphics().setDepth(2);
-            post.fillStyle(barrierColor, 1);
-            post.fillCircle(px, py, 3);
+        } else if (style === 'metal_guardrail') {
+          // === Metal guardrail: grey rail + highlight + supports ===
+          const g = this.add.graphics().setDepth(3);
+          // Main rail
+          g.lineStyle(6, 0x808080, 0.95);
+          g.beginPath();
+          const [sx, sy] = bPos(s, side);
+          g.moveTo(sx, sy);
+          for (let i = s + 1; i < e; i++) {
+            const [px, py] = bPos(i, side);
+            g.lineTo(px, py);
+          }
+          g.strokePath();
+          // Highlight
+          const gh = this.add.graphics().setDepth(3);
+          gh.lineStyle(1, 0xC0C0C0, 0.5);
+          gh.beginPath();
+          const ni0 = normals[0];
+          gh.moveTo(sx - ni0[0] * side * 1, sy - ni0[1] * side * 1);
+          for (let i = s + 1; i < e; i++) {
+            const [px, py] = bPos(i, side);
+            const ni = normals[i - s];
+            gh.lineTo(px - ni[0] * side * 1, py - ni[1] * side * 1);
+          }
+          gh.strokePath();
+          // Supports every 40px
+          let dist = 0;
+          for (let i = s; i < e - 1; i++) {
+            const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1];
+            dist += Math.sqrt(dx*dx+dy*dy);
+            if (dist >= 40) {
+              dist = 0;
+              const [px, py] = bPos(i + 1, side);
+              const gs = this.add.graphics().setDepth(3);
+              gs.fillStyle(0x606060, 1);
+              gs.fillRect(px - 1.5, py - 3, 3, 6);
+            }
+          }
+
+        } else if (style === 'stone_wall') {
+          // === Stone wall: thick grey base + snow top + division lines ===
+          const g = this.add.graphics().setDepth(3);
+          // Base
+          g.lineStyle(10, 0x787878, 0.9);
+          g.beginPath();
+          const [sx, sy] = bPos(s, side);
+          g.moveTo(sx, sy);
+          for (let i = s + 1; i < e; i++) {
+            const [px, py] = bPos(i, side);
+            g.lineTo(px, py);
+          }
+          g.strokePath();
+          // Snow top
+          const gs = this.add.graphics().setDepth(3);
+          gs.lineStyle(3, 0xE8E8F0, 0.4);
+          gs.beginPath();
+          const ni0s = normals[0];
+          gs.moveTo(sx - ni0s[0] * side * 2, sy - ni0s[1] * side * 2);
+          for (let i = s + 1; i < e; i++) {
+            const [px, py] = bPos(i, side);
+            const ni = normals[i - s];
+            gs.lineTo(px - ni[0] * side * 2, py - ni[1] * side * 2);
+          }
+          gs.strokePath();
+          // Stone division lines every 20px
+          let dist = 0;
+          for (let i = s; i < e - 1; i++) {
+            const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1];
+            dist += Math.sqrt(dx*dx+dy*dy);
+            if (dist >= 20) {
+              dist = 0;
+              const [px, py] = bPos(i + 1, side);
+              const ni = normals[Math.min(i + 1 - s, normals.length - 1)];
+              const gd = this.add.graphics().setDepth(3);
+              gd.lineStyle(2, 0x585858, 0.7);
+              gd.beginPath();
+              gd.moveTo(px - ni[0] * side * 5, py - ni[1] * side * 5);
+              gd.lineTo(px + ni[0] * side * 5, py + ni[1] * side * 5);
+              gd.strokePath();
+            }
+          }
+
+        } else if (style === 'jersey_barrier') {
+          // === Jersey barrier: concrete base + red/white stripes + highlight ===
+          const g = this.add.graphics().setDepth(3);
+          // Concrete base
+          g.lineStyle(10, 0xCCCCCC, 0.95);
+          g.beginPath();
+          const [sx, sy] = bPos(s, side);
+          g.moveTo(sx, sy);
+          for (let i = s + 1; i < e; i++) {
+            const [px, py] = bPos(i, side);
+            g.lineTo(px, py);
+          }
+          g.strokePath();
+          // Red/white stripe dashes every 12px (6px each)
+          let dist = 0;
+          let stripeIdx = 0;
+          for (let i = s; i < e - 1; i++) {
+            const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1];
+            const segLen = Math.sqrt(dx*dx+dy*dy);
+            const steps = Math.ceil(segLen / 3);
+            for (let t = 0; t < steps; t++) {
+              const frac = t / steps;
+              const px = wp[i][0] + dx * frac, py = wp[i][1] + dy * frac;
+              dist += 3;
+              if (dist >= 12) { dist = 0; stripeIdx++; }
+              const ni = normals[Math.min(i - s, normals.length - 1)];
+              const bx = px + ni[0] * side * barrierDist;
+              const by = py + ni[1] * side * barrierDist;
+              if (dist < 6) {
+                const gs = this.add.graphics().setDepth(3);
+                gs.fillStyle(stripeIdx % 2 === 0 ? 0xCC0000 : 0xFFFFFF, 0.9);
+                gs.fillRect(bx - 1.5, by - 5, 3, 10);
+              }
+            }
+          }
+          // Top highlight
+          const gt = this.add.graphics().setDepth(3);
+          gt.lineStyle(1, 0xFFFFFF, 0.3);
+          gt.beginPath();
+          const ni0t = normals[0];
+          gt.moveTo(sx - ni0t[0] * side * 2, sy - ni0t[1] * side * 2);
+          for (let i = s + 1; i < e; i++) {
+            const [px, py] = bPos(i, side);
+            const ni = normals[i - s];
+            gt.lineTo(px - ni[0] * side * 2, py - ni[1] * side * 2);
+          }
+          gt.strokePath();
+
+          // Sprint streetlights: every 5 waypoints, outside barrier
+          if (zone.name === 'sprint') {
+            for (let i = s; i < e; i += 5) {
+              const ni = normals[i - s];
+              const lx = wp[i][0] + ni[0] * side * (barrierDist + 5);
+              const ly = wp[i][1] + ni[1] * side * (barrierDist + 5);
+              const angle = segAngle(i);
+              // Pole
+              const gp = this.add.graphics().setDepth(3);
+              gp.lineStyle(2, 0x404040, 1);
+              gp.beginPath();
+              gp.moveTo(lx, ly);
+              gp.lineTo(lx + ni[0] * side * 12, ly + ni[1] * side * 12);
+              gp.strokePath();
+              // Light glow
+              const tipX = lx + ni[0] * side * 12, tipY = ly + ni[1] * side * 12;
+              const gl = this.add.graphics().setDepth(3);
+              gl.fillStyle(0xFFDD44, 0.15);
+              gl.fillCircle(tipX, tipY, 8);
+              gl.fillStyle(0xFFDD44, 0.7);
+              gl.fillCircle(tipX, tipY, 3);
+            }
           }
         }
       }
@@ -911,28 +1062,26 @@ export class RaceScene extends Phaser.Scene {
     car.x+=Math.cos(moveRad)*car.speed*dt;
     car.y+=Math.sin(moveRad)*car.speed*dt;
 
-    // Sprint zone banner wall barrier — banners act as solid walls
-    if (this._sprintBarrierSegments && this._sprintBarrierSegments.length > 0) {
-      // Find closest barrier segment to car
+    // Barrier collision — all zones
+    if (this._barrierSegments && this._barrierSegments.length > 0) {
+      // Find closest barrier segment to car (use spatial check for perf)
       let minD = Infinity, closest = null;
-      for (const seg of this._sprintBarrierSegments) {
+      for (const seg of this._barrierSegments) {
         const d = (car.x - seg.x) ** 2 + (car.y - seg.y) ** 2;
         if (d < minD) { minD = d; closest = seg; }
       }
-      if (closest && minD < 150 * 150) {
+      if (closest && minD < 200 * 200) {
         const dx = car.x - closest.x, dy = car.y - closest.y;
-        const perpDist = dx * closest.nx + dy * closest.ny; // signed distance across road
+        const perpDist = dx * closest.nx + dy * closest.ny;
         const absDist = Math.abs(perpDist);
         if (absDist > closest.dist - 5) {
-          // Push car back to barrier edge
           const sign = perpDist > 0 ? 1 : -1;
           const pushDist = closest.dist - 8;
-          // Project car position: keep along-road component, clamp perpendicular
           const alongX = dx - perpDist * closest.nx;
           const alongY = dy - perpDist * closest.ny;
           car.x = closest.x + alongX + closest.nx * sign * pushDist;
           car.y = closest.y + alongY + closest.ny * sign * pushDist;
-          car.speed *= 0.4; // bounce off wall
+          car.speed *= 0.4;
         }
       }
     }
