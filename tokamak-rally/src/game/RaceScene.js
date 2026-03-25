@@ -212,33 +212,60 @@ export class RaceScene extends Phaser.Scene {
       const w = zone.trackWidth || 100;
       const halfW = w / 2;
 
-      // Compute smoothed normals at each waypoint
+      // Subdivide waypoints at sharp corners (>30° angle change) for smooth quads
+      const rawPts = [];
+      for (let i = s; i < e; i++) rawPts.push([wp[i][0], wp[i][1]]);
+      const subPts = [rawPts[0]];
+      for (let i = 1; i < rawPts.length; i++) {
+        if (i < rawPts.length - 1) {
+          const dx1 = rawPts[i][0]-rawPts[i-1][0], dy1 = rawPts[i][1]-rawPts[i-1][1];
+          const dx2 = rawPts[i+1][0]-rawPts[i][0], dy2 = rawPts[i+1][1]-rawPts[i][1];
+          const a1 = Math.atan2(dy1, dx1), a2 = Math.atan2(dy2, dx2);
+          let dAngle = Math.abs(a2 - a1);
+          if (dAngle > Math.PI) dAngle = 2*Math.PI - dAngle;
+          if (dAngle > Math.PI/6) { // >30°: insert midpoints
+            const steps = Math.ceil(dAngle / (Math.PI/12)); // subdivide into ~15° steps
+            for (let t = 1; t <= steps; t++) {
+              const frac = t / (steps + 1);
+              subPts.push([
+                rawPts[i-1][0] + (rawPts[i][0]-rawPts[i-1][0]) * (1-frac*0.5) + (rawPts[i+1][0]-rawPts[i][0]) * frac*0.5,
+                rawPts[i-1][1] + (rawPts[i][1]-rawPts[i-1][1]) * (1-frac*0.5) + (rawPts[i+1][1]-rawPts[i][1]) * frac*0.5,
+              ]);
+            }
+          }
+        }
+        subPts.push(rawPts[i]);
+      }
+
+      // Compute smoothed normals on subdivided points
       const normals = [];
-      for (let i = s; i < e; i++) {
+      for (let i = 0; i < subPts.length; i++) {
         let nx = 0, ny = 0;
-        if (i > s) {
-          const dx = wp[i][0]-wp[i-1][0], dy = wp[i][1]-wp[i-1][1];
+        if (i > 0) {
+          const dx = subPts[i][0]-subPts[i-1][0], dy = subPts[i][1]-subPts[i-1][1];
           const l = Math.sqrt(dx*dx+dy*dy) || 1;
           nx += -dy/l; ny += dx/l;
         }
-        if (i < e-1) {
-          const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1];
+        if (i < subPts.length-1) {
+          const dx = subPts[i+1][0]-subPts[i][0], dy = subPts[i+1][1]-subPts[i][1];
           const l = Math.sqrt(dx*dx+dy*dy) || 1;
           nx += -dy/l; ny += dx/l;
         }
         const l = Math.sqrt(nx*nx+ny*ny) || 1;
         normals.push([nx/l, ny/l]);
       }
+      // Use subPts instead of wp[s..e] for road rendering below
+      const roadPts = subPts;
 
       // ===== TEXTURED ROAD SURFACE via CanvasTexture =====
       const roadTex = zone.roadTexture || null;
       if (roadTex && this.textures.exists(roadTex)) {
-        // Get bounding box for this zone's road
+        // Get bounding box for this zone's road (using subdivided points)
         let minX=Infinity, maxX=-Infinity, minY=Infinity, maxY=-Infinity;
-        for (let i = s; i < e; i++) {
-          const ni = normals[i-s];
-          const lx = wp[i][0] - ni[0]*halfW, ly = wp[i][1] - ni[1]*halfW;
-          const rx = wp[i][0] + ni[0]*halfW, ry = wp[i][1] + ni[1]*halfW;
+        for (let i = 0; i < roadPts.length; i++) {
+          const ni = normals[i];
+          const lx = roadPts[i][0] - ni[0]*halfW, ly = roadPts[i][1] - ni[1]*halfW;
+          const rx = roadPts[i][0] + ni[0]*halfW, ry = roadPts[i][1] + ni[1]*halfW;
           minX = Math.min(minX, lx, rx); maxX = Math.max(maxX, lx, rx);
           minY = Math.min(minY, ly, ry); maxY = Math.max(maxY, ly, ry);
         }
@@ -268,23 +295,27 @@ export class RaceScene extends Phaser.Scene {
           continue; // skip to next zone — don't render canvas texture
         }
 
-        // Draw each segment as a textured quad
+        // Draw each segment as a textured quad (using subdivided points)
         let cumDist = 0;
-        for (let i = 0; i < (e - s) - 1; i++) {
-          const idx = s + i;
+        for (let i = 0; i < roadPts.length - 1; i++) {
           const ni0 = normals[i], ni1 = normals[i+1];
           // Quad corners (in canvas-local coords)
-          const tl = [wp[idx][0] - ni0[0]*halfW - minX, wp[idx][1] - ni0[1]*halfW - minY];
-          const tr = [wp[idx][0] + ni0[0]*halfW - minX, wp[idx][1] + ni0[1]*halfW - minY];
-          const bl = [wp[idx+1][0] - ni1[0]*halfW - minX, wp[idx+1][1] - ni1[1]*halfW - minY];
-          const br = [wp[idx+1][0] + ni1[0]*halfW - minX, wp[idx+1][1] + ni1[1]*halfW - minY];
+          const tl = [roadPts[i][0] - ni0[0]*halfW - minX, roadPts[i][1] - ni0[1]*halfW - minY];
+          const tr = [roadPts[i][0] + ni0[0]*halfW - minX, roadPts[i][1] + ni0[1]*halfW - minY];
+          const bl = [roadPts[i+1][0] - ni1[0]*halfW - minX, roadPts[i+1][1] - ni1[1]*halfW - minY];
+          const br = [roadPts[i+1][0] + ni1[0]*halfW - minX, roadPts[i+1][1] + ni1[1]*halfW - minY];
+
+          // Check for degenerate/flipped quad (cross product check)
+          const cross = (tr[0]-tl[0])*(bl[1]-tl[1]) - (tr[1]-tl[1])*(bl[0]-tl[0]);
+          if (Math.abs(cross) < 1) continue; // skip degenerate quads
 
           // Segment direction for pattern transform
-          const dx = wp[idx+1][0] - wp[idx][0], dy = wp[idx+1][1] - wp[idx][1];
+          const dx = roadPts[i+1][0] - roadPts[i][0], dy = roadPts[i+1][1] - roadPts[i][1];
           const segLen = Math.sqrt(dx*dx + dy*dy);
+          if (segLen < 0.5) { continue; } // skip zero-length segments
           const angle = Math.atan2(dy, dx);
-          const cx = (wp[idx][0] + wp[idx+1][0]) / 2 - minX;
-          const cy = (wp[idx][1] + wp[idx+1][1]) / 2 - minY;
+          const cx = (roadPts[i][0] + roadPts[i+1][0]) / 2 - minX;
+          const cy = (roadPts[i][1] + roadPts[i+1][1]) / 2 - minY;
 
           ctx.save();
           // Clip to the quad shape
@@ -330,16 +361,25 @@ export class RaceScene extends Phaser.Scene {
         g.strokePath();
       }
 
-      // ===== ROAD EDGE MARKINGS (curbs) =====
+      // ===== ROAD EDGE MARKINGS (curbs) — use original waypoints =====
+      // Compute normals for original wp (not subdivided)
+      const curbNormals = [];
+      for (let i = s; i < e; i++) {
+        let nx = 0, ny = 0;
+        if (i > s) { const dx=wp[i][0]-wp[i-1][0],dy=wp[i][1]-wp[i-1][1]; const l=Math.sqrt(dx*dx+dy*dy)||1; nx+=-dy/l; ny+=dx/l; }
+        if (i < e-1) { const dx=wp[i+1][0]-wp[i][0],dy=wp[i+1][1]-wp[i][1]; const l=Math.sqrt(dx*dx+dy*dy)||1; nx+=-dy/l; ny+=dx/l; }
+        const l=Math.sqrt(nx*nx+ny*ny)||1;
+        curbNormals.push([nx/l, ny/l]);
+      }
       const g = this.add.graphics().setDepth(2);
       if (zone.roadType === 'paved') {
         for (const side of [-1, 1]) {
           g.lineStyle(3, 0xdddddd, 0.6);
           g.beginPath();
-          const n0 = normals[0];
+          const n0 = curbNormals[0];
           g.moveTo(wp[s][0]+n0[0]*side*(halfW+1), wp[s][1]+n0[1]*side*(halfW+1));
           for (let i = s+1; i < e; i++) {
-            const ni = normals[i-s];
+            const ni = curbNormals[i-s];
             g.lineTo(wp[i][0]+ni[0]*side*(halfW+1), wp[i][1]+ni[1]*side*(halfW+1));
           }
           g.strokePath();
@@ -349,7 +389,7 @@ export class RaceScene extends Phaser.Scene {
         for (const side of [-1, 1]) {
           const edgePts = [];
           for (let i = s; i < e; i++) {
-            const ni = normals[i-s];
+            const ni = curbNormals[i-s];
             edgePts.push([wp[i][0]+ni[0]*side*(halfW+2), wp[i][1]+ni[1]*side*(halfW+2)]);
           }
           let curbDist = 0;
