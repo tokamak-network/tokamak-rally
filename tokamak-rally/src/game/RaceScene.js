@@ -354,17 +354,23 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // START/FINISH — rotate banners perpendicular to road direction
+    // START/FINISH — rotate banners perpendicular to road direction, scale to track width
     const wp0 = wp[0], wp1 = wp[1];
     const startAngle = Math.atan2(wp1[1]-wp0[1], wp1[0]-wp0[0]) * 180 / Math.PI + 90;
-    this.add.sprite(wp0[0], wp0[1], 'finish_banner').setDepth(3).setAngle(startAngle);
+    const startZone = this.track.zones[0];
+    const startBanner = this.add.sprite(wp0[0], wp0[1], 'finish_banner').setDepth(3).setAngle(startAngle);
+    startBanner.displayWidth = (startZone.trackWidth || 110) + 20; // match road width + curb margin
+    startBanner.scaleY = startBanner.scaleX; // maintain aspect ratio
     this.add.text(wp0[0], wp0[1]-40, '▶ START', {
       fontSize:'16px',fontFamily:'monospace',color:'#f4d35e',fontStyle:'bold',stroke:'#000',strokeThickness:2,
     }).setOrigin(0.5).setDepth(3);
 
     const wLast = wp[wp.length-1], wPrev = wp[wp.length-2];
     const finAngle = Math.atan2(wLast[1]-wPrev[1], wLast[0]-wPrev[0]) * 180 / Math.PI + 90;
-    this.add.sprite(wLast[0], wLast[1], 'finish_banner').setDepth(3).setAngle(finAngle);
+    const finZone = this.track.zones[this.track.zones.length - 1];
+    const finBanner = this.add.sprite(wLast[0], wLast[1], 'finish_banner').setDepth(3).setAngle(finAngle);
+    finBanner.displayWidth = (finZone.trackWidth || 120) + 20;
+    finBanner.scaleY = finBanner.scaleX;
     this.add.text(wLast[0], wLast[1]-40, '🏁 FINISH', {
       fontSize:'16px',fontFamily:'monospace',color:'#e63946',fontStyle:'bold',stroke:'#000',strokeThickness:2,
     }).setOrigin(0.5).setDepth(3);
