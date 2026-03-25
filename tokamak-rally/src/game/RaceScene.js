@@ -365,15 +365,41 @@ export class RaceScene extends Phaser.Scene {
       fontSize:'16px',fontFamily:'monospace',color:'#f4d35e',fontStyle:'bold',stroke:'#000',strokeThickness:2,
     }).setOrigin(0.5).setDepth(3);
 
-    const wLast = wp[wp.length-1], wPrev = wp[wp.length-2];
-    const finAngle = Math.atan2(wLast[1]-wPrev[1], wLast[0]-wPrev[0]) * 180 / Math.PI + 90;
+    // FINISH LINE at WP 159 (actual finish detection point)
+    const finIdx = 159;
+    const wFin = wp[finIdx], wFinPrev = wp[finIdx - 1];
+    const finAngle = Math.atan2(wFin[1]-wFinPrev[1], wFin[0]-wFinPrev[0]) * 180 / Math.PI + 90;
     const finZone = this.track.zones[this.track.zones.length - 1];
-    const finBanner = this.add.sprite(wLast[0], wLast[1], 'finish_banner').setDepth(3).setAngle(finAngle);
-    finBanner.displayWidth = (finZone.trackWidth || 120) + 20;
+    const finTrackW = finZone.trackWidth || 120;
+
+    // Checkered finish line pattern (drawn with Graphics)
+    const finDx = wFin[0]-wFinPrev[0], finDy = wFin[1]-wFinPrev[1];
+    const finLen = Math.sqrt(finDx*finDx+finDy*finDy) || 1;
+    const finNx = -finDy/finLen, finNy = finDx/finLen; // perpendicular to road
+    const finUx = finDx/finLen, finUy = finDy/finLen; // along road
+
+    const checkerG = this.add.graphics().setDepth(3);
+    const SQ = 10; // checker square size
+    const rows = 3;
+    const cols = Math.ceil(finTrackW / SQ);
+    for (let r = 0; r < rows; r++) {
+      for (let c = 0; c < cols; c++) {
+        const isBlack = (r + c) % 2 === 0;
+        checkerG.fillStyle(isBlack ? 0x000000 : 0xffffff, 0.9);
+        // Position each square relative to finish line center
+        const cx = wFin[0] + finNx * (c * SQ - finTrackW/2 + SQ/2) + finUx * (r * SQ - (rows*SQ)/2 + SQ/2);
+        const cy = wFin[1] + finNy * (c * SQ - finTrackW/2 + SQ/2) + finUy * (r * SQ - (rows*SQ)/2 + SQ/2);
+        checkerG.fillRect(cx - SQ/2, cy - SQ/2, SQ, SQ);
+      }
+    }
+
+    // Finish banner
+    const finBanner = this.add.sprite(wFin[0], wFin[1], 'finish_banner').setDepth(4).setAngle(finAngle);
+    finBanner.displayWidth = finTrackW + 20;
     finBanner.scaleY = finBanner.scaleX;
-    this.add.text(wLast[0], wLast[1]-40, '🏁 FINISH', {
-      fontSize:'16px',fontFamily:'monospace',color:'#e63946',fontStyle:'bold',stroke:'#000',strokeThickness:2,
-    }).setOrigin(0.5).setDepth(3);
+    this.add.text(wFin[0], wFin[1]-40, '🏁 FINISH', {
+      fontSize:'18px',fontFamily:'monospace',color:'#e63946',fontStyle:'bold',stroke:'#000',strokeThickness:3,
+    }).setOrigin(0.5).setDepth(4);
 
     // Finish line direction vectors
     const fdx = wLast[0]-wPrev[0], fdy = wLast[1]-wPrev[1];
@@ -440,82 +466,8 @@ export class RaceScene extends Phaser.Scene {
   }
 
   drawSprintOverlay() {
-    // Sprint zone: additional road surface detail (curb strips, shoulder texture)
-    const wp = this.track.waypoints;
-    const spZone = this.track.zones.find(z => z.name === 'sprint');
-    if (!spZone) return;
-
-    const spS = spZone.fromWP, spE = Math.min(spZone.toWP, wp.length-1);
-    const w = spZone.trackWidth || 120;
-    const halfW = w / 2;
-    const g = this.add.graphics().setDepth(1.5);
-
-    // Compute normals
-    const normals = [];
-    for (let i = spS; i <= spE; i++) {
-      let nx = 0, ny = 0;
-      if (i > spS) { const dx = wp[i][0]-wp[i-1][0], dy = wp[i][1]-wp[i-1][1]; const l = Math.sqrt(dx*dx+dy*dy)||1; nx += -dy/l; ny += dx/l; }
-      if (i < spE) { const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1]; const l = Math.sqrt(dx*dx+dy*dy)||1; nx += -dy/l; ny += dx/l; }
-      const l = Math.sqrt(nx*nx+ny*ny)||1;
-      normals.push([nx/l, ny/l]);
-    }
-
-    // Curb strips (red-white) at road edges
-    for (let i = spS; i < spE; i++) {
-      const [x1,y1] = wp[i], [x2,y2] = wp[i+1];
-      const dx = x2-x1, dy = y2-y1, segLen = Math.sqrt(dx*dx+dy*dy);
-      if (segLen < 1) continue;
-      const ux = dx/segLen, uy = dy/segLen;
-      const ni = normals[i - spS];
-
-      // Draw red-white curb dashes at edges
-      for (const side of [-1, 1]) {
-        const edgeDist = halfW + 2;
-        let d = 0;
-        while (d < segLen) {
-          const step = Math.min(8, segLen - d);
-          const isRed = Math.floor(d / 8) % 2 === 0;
-          g.lineStyle(6, isRed ? 0xCC2222 : 0xEEEEEE, 0.8);
-          const sx = x1 + ux*d + ni[0]*side*edgeDist;
-          const sy = y1 + uy*d + ni[1]*side*edgeDist;
-          const ex = x1 + ux*(d+step) + ni[0]*side*edgeDist;
-          const ey = y1 + uy*(d+step) + ni[1]*side*edgeDist;
-          g.beginPath(); g.moveTo(sx, sy); g.lineTo(ex, ey); g.strokePath();
-          d += step;
-        }
-      }
-
-      // Shoulder (grey strip between curb and barrier)
-      for (const side of [-1, 1]) {
-        g.lineStyle(12, 0x555558, 0.4);
-        const sd = halfW + 8;
-        g.beginPath();
-        g.moveTo(x1 + ni[0]*side*sd, y1 + ni[1]*side*sd);
-        g.lineTo(x2 + normals[i+1-spS][0]*side*sd, y2 + normals[i+1-spS][1]*side*sd);
-        g.strokePath();
-      }
-    }
-
-    // Pit lane markings (dashed white lines on road surface)
-    g.lineStyle(2, 0xDDDDDD, 0.3);
-    for (let i = spS; i < spE; i++) {
-      const [x1,y1] = wp[i], [x2,y2] = wp[i+1];
-      const dx = x2-x1, dy = y2-y1, segLen = Math.sqrt(dx*dx+dy*dy);
-      if (segLen < 1) continue;
-      const ux = dx/segLen, uy = dy/segLen;
-      // Dashed center line
-      let d = 0;
-      while (d < segLen) {
-        const step = Math.min(10, segLen - d);
-        if (Math.floor(d / 10) % 2 === 0) {
-          g.beginPath();
-          g.moveTo(x1 + ux*d, y1 + uy*d);
-          g.lineTo(x1 + ux*(d+step), y1 + uy*(d+step));
-          g.strokePath();
-        }
-        d += step;
-      }
-    }
+    // v5: Road texture handles surface detail. Only curbs remain (drawn in drawTrack).
+    // Sprint-specific overlay removed — v5 asphalt texture already has center lines.
   }
 
   placeBarriers() {
@@ -611,353 +563,8 @@ export class RaceScene extends Phaser.Scene {
   }
 
   placeScenery() {
-    const wp = this.track.waypoints;
-
-    // Object scale map — v3 assets (pixel art, already appropriately sized)
-    const scaleMap = {
-      // Desert
-      'v3_desert_cactus': 1.0, 'v3_desert_scrub': 1.0, 'v3_desert_rock_sm': 1.0,
-      'v3_desert_rock_lg': 1.0, 'v3_desert_cow': 1.0, 'v3_desert_hut': 1.0,
-      'v3_desert_fence': 1.0, 'v3_desert_skull': 1.0,
-      // Canyon
-      'v4_canyon_wall': 1.0, 'v4_canyon_pillar': 1.0, 'v3_canyon_debris': 1.0,
-      'v3_canyon_arch': 1.0, 'v3_canyon_bush': 1.0,
-      // Riverbed
-      'v3_riverbed_tree': 1.0, 'v3_riverbed_bush': 1.0, 'v3_riverbed_reeds': 1.0,
-      'v3_riverbed_boulder': 1.0, 'v3_riverbed_bridge': 1.0,
-      // Mountain
-      'v4_mountain_pine': 1.0, 'v3_mountain_cabin': 1.0, 'v3_mountain_rock': 1.0,
-      'v3_mountain_snowman': 1.0, 'v3_mountain_pole': 1.0,
-      // Sprint
-      'v3_sprint_building_tall': 1.0, 'v3_sprint_building_low': 1.0,
-      'v3_sprint_lamp': 1.0, 'v3_sprint_tire_wall': 1.0,
-      'v3_sprint_grandstand': 1.0, 'v3_sprint_ad_board': 1.0, 'v3_sprint_billboard': 1.0,
-      // v4 assets — scaled relative to car (40×56 @ 0.85 = ~34×48px on screen)
-      // Small (30-50% of car ~16px), Medium (60-100% ~32px), Large (100-200% ~55px)
-      // Desert
-      'v4_desert_cactus_tall': 0.115, 'v4_desert_cactus_barrel': 0.103,
-      'v4_desert_rock_sm': 0.088, 'v4_desert_rock_lg': 0.100,
-      'v4_desert_bush': 0.064, 'v4_desert_tumbleweed': 0.060,
-      'v4_desert_hut': 0.160, 'v4_desert_fence': 0.089,
-      'v4_desert_cow': 0.168, 'v4_desert_dry_grass': 0.058,
-      // Canyon
-      'v4_canyon_pillar': 0.111, 'v4_canyon_debris_sm': 0.051,
-      'v4_canyon_wall': 0.054, 'v4_canyon_arch': 0.086,
-      'v4_canyon_dead_bush': 0.052, 'v4_canyon_rock': 0.081,
-      'v4_canyon_debris_lg': 0.069, 'v4_canyon_barrier': 0.073,
-      'v4_canyon_cliff_v': 0.046, 'v4_canyon_cliff_rock_v': 0.068,
-      // Riverbed
-      'v4_riverbed_tree': 0.160, 'v4_riverbed_bush': 0.091,
-      'v4_riverbed_reeds': 0.077, 'v4_riverbed_rock': 0.092,
-      'v4_riverbed_puddle': 0.057, 'v4_riverbed_log': 0.062,
-      'v4_riverbed_bird': 0.060, 'v4_riverbed_bush_low': 0.059,
-      // Mountain
-      'v4_mountain_pine': 0.107, 'v4_mountain_rock_snow': 0.091,
-      'v4_mountain_cabin': 0.166, 'v4_mountain_snowman': 0.090,
-      'v4_mountain_bush': 0.072, 'v4_mountain_sign': 0.094,
-      'v4_mountain_sign_arrow': 0.092, 'v4_mountain_rock_flat': 0.072,
-      'v4_mountain_snow_pile': 0.068, 'v4_mountain_stone_wall': 0.081,
-      // Sprint
-      'v4_sprint_office': 0.171, 'v4_sprint_hotel': 0.159,
-      'v4_sprint_apartment': 0.144, 'v4_sprint_skyscraper': 0.097,
-      'v4_sprint_skyscraper_sm': 0.139, 'v4_sprint_restaurant': 0.159,
-      'v4_sprint_shopping': 0.122, 'v4_sprint_cones': 0.074,
-      'v4_sprint_tires': 0.082, 'v4_sprint_tires_flat': 0.082,
-      'v4_sprint_generator': 0.068, 'v4_sprint_generator_sm': 0.071,
-      'v4_sprint_light': 0.095, 'v4_sprint_grandstand': 0.120,
-      'v4_sprint_jersey': 0.058, 'v4_sprint_fence': 0.059,
-      'v4_sprint_banner': 0.104, 'v4_sprint_tire_stack': 0.077,
-    };
-
-    let turbineCount = 0; // limit turbines
-
-    // Place scenery WELL OUTSIDE road — minimum gap = halfW + 50
-    for (let i=0; i<wp.length-1; i++) {
-      const zone = getZoneByIndex(i, this.track.zones);
-      const [x1,y1]=wp[i],[x2,y2]=wp[i+1];
-      const halfW = (zone.trackWidth||100)/2;
-      const items = zone.scenery||['rock_grey'];
-      const count = zone.sceneryDensity||3;
-      const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
-      if (len<1) continue;
-      const nx=-dy/len, ny=dx/len;
-      for (let j=0;j<count;j++) {
-        const t=Math.random();
-        const bx=x1+dx*t, by=y1+dy*t;
-        const side = Math.random() > 0.5 ? 1 : -1;
-        const dist = halfW + 70 + Math.random()*150;
-        const ox = bx + nx*side*dist, oy = by + ny*side*dist;
-        let tex = items[Math.floor(Math.random()*items.length)];
-
-        // Limit turbines to 2 total (legacy)
-        if (tex === 'v2_mountain_turbine') {
-          if (turbineCount >= 2) { tex = 'v4_mountain_pine'; }
-          else { turbineCount++; }
-        }
-
-        const sc = scaleMap[tex] || 0.8;
-        const spr = this.add.sprite(ox, oy, tex).setDepth(2).setScale(sc);
-
-        // Track cows for animation
-        if (tex === 'v4_desert_cow' || tex === 'v3_desert_cow' || tex === 'v2_desert_cow') {
-          const dir = Math.random() > 0.5 ? 1 : -1;
-          spr.setFlipX(dir < 0);
-          this._animals.push({ type: 'cow', sprite: spr, baseX: ox, baseY: oy, dir, offset: Math.random() * Math.PI * 2 });
-        }
-      }
-    }
-
-    // === CANYON — Thrash Rally style: continuous cliff walls forming narrow gorge ===
-    // Right side cliffs flipped for symmetry. No objects between road and cliffs.
-    const canyonZone = this.track.zones.find(z => z.name === 'canyon');
-    if (canyonZone) {
-      const cS = canyonZone.fromWP, cE = Math.min(canyonZone.toWP, wp.length-1);
-      const cHalfW = (canyonZone.trackWidth || 75) / 2;
-
-      // Compute normals
-      const cNormals = [];
-      for (let i = cS; i <= cE; i++) {
-        let nx = 0, ny = 0;
-        if (i > cS) { const dx = wp[i][0]-wp[i-1][0], dy = wp[i][1]-wp[i-1][1]; const l = Math.sqrt(dx*dx+dy*dy)||1; nx += -dy/l; ny += dx/l; }
-        if (i < cE) { const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1]; const l = Math.sqrt(dx*dx+dy*dy)||1; nx += -dy/l; ny += dx/l; }
-        const l = Math.sqrt(nx*nx+ny*ny)||1;
-        cNormals.push([nx/l, ny/l]);
-      }
-
-      const cliffScale = scaleMap['v4_canyon_cliff_v'] || 0.046;
-      const rockScale = scaleMap['v4_canyon_cliff_rock_v'] || 0.068;
-      const pillarScale = scaleMap['v4_canyon_pillar'] || 0.111;
-      const debrisScale = scaleMap['v4_canyon_debris_sm'] || 0.051;
-      const bushScale = scaleMap['v4_canyon_dead_bush'] || 0.052;
-
-      // Continuous cliff walls — every WP, both sides, comfortable gap from road
-      for (let i = cS; i < cE; i++) {
-        const [x1,y1] = wp[i], [x2,y2] = wp[i+1];
-        const dx = x2-x1, dy = y2-y1, segLen = Math.sqrt(dx*dx+dy*dy);
-        if (segLen < 1) continue;
-        const segAngle = Math.atan2(dy, dx);
-        const ni = cNormals[i - cS];
-
-        for (const side of [-1, 1]) {
-          // Row 1: main cliff wall — gap from road
-          const cliffDist = cHalfW + 25;
-          const cx = x1 + ni[0]*side*cliffDist + dx*0.5;
-          const cy = y1 + ni[1]*side*cliffDist + dy*0.5;
-          const cliff = this.add.sprite(cx, cy, 'v4_canyon_cliff_v')
-            .setDepth(2).setRotation(segAngle).setScale(cliffScale);
-          if (side === 1) cliff.setFlipX(true); // right side mirrored
-
-          // Row 2: rock backing
-          const rockDist = cHalfW + 40;
-          const rx = x1 + ni[0]*side*rockDist + dx*0.5;
-          const ry = y1 + ni[1]*side*rockDist + dy*0.5;
-          const rock = this.add.sprite(rx, ry, 'v4_canyon_cliff_rock_v')
-            .setDepth(1).setRotation(segAngle).setScale(rockScale);
-          if (side === 1) rock.setFlipX(true);
-
-          // Row 3: distant cliff — darker for depth
-          const outerDist = cHalfW + 55;
-          const ox = x1 + ni[0]*side*outerDist + dx*0.5;
-          const oy = y1 + ni[1]*side*outerDist + dy*0.5;
-          const outer = this.add.sprite(ox, oy, 'v4_canyon_cliff_v')
-            .setDepth(0).setRotation(segAngle).setScale(cliffScale * 1.2)
-            .setTint(0x6a4a30);
-          if (side === 1) outer.setFlipX(true);
-        }
-      }
-
-      // Pillars — every 6 WPs, both sides, on cliff line
-      for (let i = cS; i < cE; i += 6) {
-        const ni = cNormals[i - cS];
-        for (const side of [-1, 1]) {
-          const pd = cHalfW + 30;
-          const px = wp[i][0] + ni[0]*side*pd;
-          const py = wp[i][1] + ni[1]*side*pd;
-          this.add.sprite(px, py, 'v4_canyon_pillar').setDepth(3).setScale(pillarScale);
-        }
-      }
-
-      // Debris/dead bush — ONLY behind cliffs (beyond outer row)
-      for (let i = cS; i < cE; i += 3) {
-        const ni = cNormals[i - cS];
-        for (const side of [-1, 1]) {
-          if (Math.random() > 0.5) {
-            const dd = cHalfW + 65 + Math.random()*25;
-            const isBush = Math.random() > 0.5;
-            const tex = isBush ? 'v4_canyon_dead_bush' : 'v4_canyon_debris_sm';
-            const sc = isBush ? bushScale : debrisScale;
-            this.add.sprite(wp[i][0] + ni[0]*side*dd, wp[i][1] + ni[1]*side*dd, tex)
-              .setDepth(0).setScale(sc);
-          }
-        }
-      }
-    }
-
-    // Riverbed — green vegetation along banks
-    const rbZone = this.track.zones.find(z => z.name === 'riverbed');
-    if (rbZone) {
-      for (let i = rbZone.fromWP; i < Math.min(rbZone.toWP, wp.length-1); i++) {
-        const [x1,y1]=wp[i],[x2,y2]=wp[i+1];
-        const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
-        if (len<1) continue;
-        const nx=-dy/len, ny=dx/len;
-        for (let side of [-1, 1]) {
-          for (let j=0;j<2;j++) {
-            const t = j/2 + Math.random()*0.4;
-            if (t > 1) continue;
-            const d = 100/2 + 35 + Math.random()*50;
-            const tex = Math.random() > 0.4 ? 'bush_green' : 'rock_grey';
-            this.add.sprite(x1+dx*t+nx*side*d, y1+dy*t+ny*side*d, tex)
-              .setDepth(2).setScale(0.8);
-          }
-        }
-      }
-    }
-
-    // Oasis palms around CP3 — far from road
-    const cp3wp = this.track.checkpoints[2].waypointIndex;
-    if (cp3wp < wp.length) {
-      const cp3 = wp[cp3wp];
-      for (let i=0;i<14;i++) {
-        const a=Math.random()*Math.PI*2, d=80+Math.random()*100;
-        this.add.sprite(cp3[0]+Math.cos(a)*d,cp3[1]+Math.sin(a)*d,'palm').setDepth(2);
-      }
-    }
-
-    // === SPRINT — Layered city: barrier → fence → grandstand → buildings ===
-    // Per Jaden feedback: strict layer order, seamless, both sides symmetric
-    const spZone = this.track.zones.find(z => z.name === 'sprint');
-    if (spZone) {
-      const spS = spZone.fromWP, spE = Math.min(spZone.toWP, wp.length-1);
-      const spHalfW = (spZone.trackWidth||120)/2;
-
-      // Compute normals
-      const spNormals = [];
-      for (let i = spS; i <= spE; i++) {
-        let nnx = 0, nny = 0;
-        if (i > spS) { const dx = wp[i][0]-wp[i-1][0], dy = wp[i][1]-wp[i-1][1]; const l = Math.sqrt(dx*dx+dy*dy)||1; nnx += -dy/l; nny += dx/l; }
-        if (i < spE) { const dx = wp[i+1][0]-wp[i][0], dy = wp[i+1][1]-wp[i][1]; const l = Math.sqrt(dx*dx+dy*dy)||1; nnx += -dy/l; nny += dx/l; }
-        const l = Math.sqrt(nnx*nnx+nny*nny)||1;
-        spNormals.push([nnx/l, nny/l]);
-      }
-
-      // Layer distances from road center (in px from center):
-      const dBarrier   = spHalfW + 5;   // jersey barrier right at edge
-      const dFence     = spHalfW + 15;  // catch fence behind barrier
-      const dGrand     = spHalfW + 28;  // grandstand behind fence
-      const dBldg1     = spHalfW + 48;  // front building row
-      const dBldg2     = spHalfW + 72;  // back building row
-      const dSkyline   = spHalfW + 100; // far skyline
-
-      for (let i = spS; i < spE; i++) {
-        const [x1,y1] = wp[i], [x2,y2] = wp[i+1];
-        const dx = x2-x1, dy = y2-y1;
-        const segLen = Math.sqrt(dx*dx+dy*dy);
-        if (segLen < 1) continue;
-        const segAngle = Math.atan2(dy, dx);
-        const ni = spNormals[i - spS];
-        const mx = x1+dx*0.5, my = y1+dy*0.5; // midpoint
-
-        for (const side of [-1, 1]) {
-          // L1: Jersey barrier — continuous, every segment
-          this.add.sprite(mx+ni[0]*side*dBarrier, my+ni[1]*side*dBarrier, 'v4_sprint_jersey')
-            .setDepth(5).setRotation(segAngle).setScale(scaleMap['v4_sprint_jersey']||0.058);
-
-          // L2: Catch fence — continuous, every segment
-          this.add.sprite(mx+ni[0]*side*dFence, my+ni[1]*side*dFence, 'v4_sprint_fence')
-            .setDepth(4).setRotation(segAngle).setScale(scaleMap['v4_sprint_fence']||0.059);
-
-          // L3: Grandstand — continuous, every segment
-          this.add.sprite(mx+ni[0]*side*dGrand, my+ni[1]*side*dGrand, 'v4_sprint_grandstand')
-            .setDepth(3).setRotation(segAngle).setScale(scaleMap['v4_sprint_grandstand']||0.120);
-        }
-      }
-
-      // L4: Buildings — every WP for seamless wall, both sides
-      const bldgPool = ['v4_sprint_office','v4_sprint_hotel','v4_sprint_apartment','v4_sprint_restaurant','v4_sprint_shopping'];
-      const skyPool = ['v4_sprint_skyscraper','v4_sprint_skyscraper_sm','v4_sprint_office'];
-      for (let i = spS; i < spE; i++) {
-        const ni = spNormals[i - spS];
-        for (const side of [-1, 1]) {
-          // Front row — seamless wall of buildings
-          const tex1 = bldgPool[(i + (side>0?0:2)) % bldgPool.length];
-          this.add.sprite(wp[i][0]+ni[0]*side*dBldg1, wp[i][1]+ni[1]*side*dBldg1, tex1)
-            .setDepth(2).setScale(scaleMap[tex1]||0.15);
-          // Back row — seamless
-          const tex2 = skyPool[(i + (side>0?1:0)) % skyPool.length];
-          this.add.sprite(wp[i][0]+ni[0]*side*dBldg2, wp[i][1]+ni[1]*side*dBldg2, tex2)
-            .setDepth(1).setScale(scaleMap[tex2]||0.12);
-          // Far skyline row — seamless
-          this.add.sprite(wp[i][0]+ni[0]*side*dSkyline, wp[i][1]+ni[1]*side*dSkyline, 'v4_sprint_skyscraper')
-            .setDepth(0).setScale(scaleMap['v4_sprint_skyscraper']||0.097);
-        }
-      }
-
-      // L6: Street lights — every 4 WPs, both sides, between fence and grandstand
-      for (let i = spS; i < spE; i += 4) {
-        const ni = spNormals[i - spS];
-        for (const side of [-1, 1]) {
-          this.add.sprite(wp[i][0]+ni[0]*side*(dFence+3), wp[i][1]+ni[1]*side*(dFence+3), 'v4_sprint_light')
-            .setDepth(4).setScale(scaleMap['v4_sprint_light']||0.095);
-        }
-      }
-
-      // L7: Banner arches over road — every 10 WPs, scale to trackWidth
-      const bannerScale = (spZone.trackWidth||120) / (483 * (scaleMap['v4_sprint_banner']||0.104));
-      // Use banner original width 483px; we want displayed width = trackWidth
-      const bScale = (spZone.trackWidth||120) / 483;
-      for (let i = spS+5; i < spE-5; i += 10) {
-        const [x1,y1] = wp[i], [x2,y2] = wp[Math.min(i+1, spE)];
-        this.add.sprite(wp[i][0], wp[i][1], 'v4_sprint_banner')
-          .setDepth(8).setRotation(Math.atan2(y2-y1, x2-x1) + Math.PI/2).setScale(bScale);
-      }
-
-      // L8: Tire stacks at sharp corners only
-      for (let i = spS+1; i < spE-1; i++) {
-        const [xp,yp] = wp[i-1], [xc,yc] = wp[i], [xn,yn] = wp[i+1];
-        const cross = (xc-xp)*(yn-yc) - (yc-yp)*(xn-xc);
-        const mag = Math.sqrt((xc-xp)**2+(yc-yp)**2) * Math.sqrt((xn-xc)**2+(yn-yc)**2);
-        if (mag > 0 && Math.abs(cross/mag) > 0.12) {
-          const ni = spNormals[i-spS];
-          const ts = cross > 0 ? -1 : 1;
-          this.add.sprite(xc+ni[0]*ts*(spHalfW+8), yc+ni[1]*ts*(spHalfW+8), 'v4_sprint_tires')
-            .setDepth(5).setScale(scaleMap['v4_sprint_tires']||0.082);
-        }
-      }
-    }
-
-    // Mountain — trees on both sides, well clear of road
-    const mtZone = this.track.zones.find(z => z.name === 'mountain');
-    if (mtZone) {
-      for (let i = mtZone.fromWP; i < Math.min(mtZone.toWP, wp.length-1); i += 2) {
-        const [x1,y1]=wp[i],[x2,y2]=wp[i+1];
-        const dx=x2-x1, dy=y2-y1, len=Math.sqrt(dx*dx+dy*dy);
-        if (len<1) continue;
-        const nx=-dy/len, ny=dx/len;
-        const halfW = 80/2;
-        for (let side of [-1, 1]) {
-          // Single row of trees — far from road
-          for (let j=0;j<2;j++) {
-            const t = j/2 + Math.random()*0.4;
-            if (t > 1) continue;
-            const d = halfW + 60 + Math.random()*50;
-            this.add.sprite(x1+dx*t+nx*side*d, y1+dy*t+ny*side*d, 'v4_mountain_pine')
-              .setDepth(2).setScale(scaleMap['v4_mountain_pine']||0.107);
-          }
-          // Background tree (further out, subtle)
-          if (Math.random() > 0.5) {
-            const t2 = Math.random();
-            const d2 = halfW + 120 + Math.random()*60;
-            this.add.sprite(x1+dx*t2+nx*side*d2, y1+dy*t2+ny*side*d2, 'v4_mountain_pine')
-              .setDepth(1).setScale(scaleMap['v4_mountain_pine']||0.107).setAlpha(0.5);
-          }
-        }
-      }
-    }
-
-    // Mountain→Sprint tunnel removed — smooth zone transition only
-
-    // Podium/press removed — finish line banner only
+    // v5: All old scenery assets removed — v5 DALL-E background tiles handle visuals
+    // Future: add v5-style scenery if needed
   }
 
   // Seeded PRNG (mulberry32) — ensures identical obstacle layout every attempt
