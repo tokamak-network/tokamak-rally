@@ -432,7 +432,7 @@ export class RaceScene extends Phaser.Scene {
     }).setOrigin(0.5).setDepth(3);
 
     // FINISH LINE at WP 159 (actual finish detection point)
-    const finIdx = 159;
+    const finIdx = 157;
     const wFin = wp[finIdx], wFinPrev = wp[finIdx - 1];
     const finAngle = Math.atan2(wFin[1]-wFinPrev[1], wFin[0]-wFinPrev[0]) * 180 / Math.PI + 90;
     const finZone = this.track.zones[this.track.zones.length - 1];
@@ -464,21 +464,9 @@ export class RaceScene extends Phaser.Scene {
     finBanner.displayWidth = finTrackW + 20;
     finBanner.scaleY = finBanner.scaleX;
 
-    // Tokamak Network logo above finish line
-    const finDirX = finDx/finLen, finDirY = finDy/finLen;
-    const logoX = wFin[0] - finDirX * 30; // slightly before finish line
-    const logoY = wFin[1] - finDirY * 30;
-    if (this.textures.exists('tokamak_logo_white')) {
-      const logo = this.add.sprite(logoX, logoY, 'tokamak_logo_white').setDepth(5).setScale(0.15);
-    }
-
-    // FINISH text below logo
-    this.add.text(wFin[0], wFin[1] - 25, '🏁 FINISH', {
+    // FINISH text below checkered line
+    this.add.text(wFin[0], wFin[1] + 20, '🏁 FINISH', {
       fontSize:'18px',fontFamily:'monospace',color:'#e63946',fontStyle:'bold',stroke:'#000',strokeThickness:3,
-    }).setOrigin(0.5).setDepth(5);
-
-    this.add.text(wFin[0], wFin[1] + 25, 'TOKAMAK NETWORK', {
-      fontSize:'10px',fontFamily:'monospace',color:'#4a90e2',fontStyle:'bold',stroke:'#000',strokeThickness:2,
     }).setOrigin(0.5).setDepth(5);
 
     // Barrier collision data is now collected in placeBarriers() → this._barrierSegments

@@ -367,7 +367,7 @@ export const TRACK_CONFIG = {
 
   startX: 2000, startY: 14150, startAngle: -90,
   initialTime: 120000,
-  finishWP: 159,
+  finishWP: 157,
 
   roadPhysics: {
     paved:   { accel: 243, friction: 0.990, turn: 110, label: 'PAVED' },
