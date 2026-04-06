@@ -158,82 +158,89 @@ function computeTurnArc(entryDir, turnAngle, turnDirection) {
   }
 }
 
-// ---- Parts Definition — 70% corners, 30% straights ----
+// ---- Parts Definition ----
+// RULE: No consecutive same-direction turns. 3+ straights between same-dir turns.
 const d = 'desert';
 const parts = [
-  // === S1: START → CP1 (13파츠: 직선3 코너10) ===
-  { type: 'straight',   zone: d },   // 0  가속
-  { type: 'straight',   zone: d },   // 1  풀스피드
-  { type: 'turn_90_r',  zone: d },   // 2  90도우! →E
-  { type: 'straight_h', zone: d },   // 3  동쪽
-  { type: 'turn_90_l',  zone: d },   // 4  90도좌 →N
-  { type: 'turn_90_l',  zone: d },   // 5  바로90좌! →W (Z자!)
-  { type: 'straight_h', zone: d },   // 6  서쪽
-  { type: 'straight_h', zone: d },   // 7  서쪽 멀리
-  { type: 'turn_90_r',  zone: d },   // 8  90도우 →N
-  { type: 'straight',   zone: d },   // 9  짧은가속
-  { type: 'hairpin_r',  zone: d },   // 10 헤어핀우!
-  { type: 'straight',   zone: d },   // 11 회복
-  { type: 'straight',   zone: d },   // 12 CP1
+  // === S1: START → CP1 ===
+  { type: 'straight',   zone: d },   // 가속
+  { type: 'straight',   zone: d },   // 풀스피드
+  { type: 'turn_90_r',  zone: d },   // →E
+  { type: 'straight_h', zone: d },   // 동쪽
+  { type: 'turn_90_l',  zone: d },   // →N
+  { type: 'straight',   zone: d },   // 간격확보
+  { type: 'straight',   zone: d },   // 간격확보
+  { type: 'straight',   zone: d },   // 간격확보 (3개!)
+  { type: 'turn_90_l',  zone: d },   // →W (이제 안전)
+  { type: 'straight_h', zone: d },   // 서쪽
+  { type: 'straight_h', zone: d },   // 서쪽 멀리
+  { type: 'turn_90_r',  zone: d },   // →N
+  { type: 'straight',   zone: d },   // 가속
+  { type: 'hairpin_r',  zone: d },   // 헤어핀우!
+  { type: 'straight',   zone: d },   // CP1
 
-  // === S2: CP1 → CP2 (14파츠: 직선4 코너10) ===
-  { type: 'straight',   zone: d },   // 13 가속
-  { type: 'turn_45_r',  zone: d },   // 14 45도우 →NE
-  { type: 'diag_straight', zone: d },// 15 NE대각선
-  { type: 'turn_90_l',  zone: d },   // 16 90도좌! →NW
-  { type: 'diag_straight', zone: d },// 17 NW대각선
-  { type: 'turn_45_r',  zone: d },   // 18 45도우 →N복귀
-  { type: 'straight',   zone: d },   // 19 가속
-  { type: 'turn_90_r',  zone: d },   // 20 90도우 →E
-  { type: 'straight_h', zone: d },   // 21 동쪽
-  { type: 'straight_h', zone: d },   // 22 동쪽 멀리
-  { type: 'turn_90_l',  zone: d },   // 23 90도좌 →N
-  { type: 'turn_90_l',  zone: d },   // 24 바로90좌 →W (Z자!)
-  { type: 'straight_h', zone: d },   // 25 서쪽
-  { type: 'turn_90_r',  zone: d },   // 26 90도우 →N CP2
+  // === S2: CP1 → CP2 ===
+  { type: 'straight',   zone: d },   // 가속
+  { type: 'turn_45_r',  zone: d },   // →NE
+  { type: 'diag_straight', zone: d },// NE대각선
+  { type: 'turn_90_l',  zone: d },   // →NW
+  { type: 'diag_straight', zone: d },// NW대각선
+  { type: 'turn_45_r',  zone: d },   // →N
+  { type: 'straight',   zone: d },   // 가속
+  { type: 'turn_90_r',  zone: d },   // →E
+  { type: 'straight_h', zone: d },   // 동쪽
+  { type: 'straight_h', zone: d },   // 동쪽 멀리
+  { type: 'turn_90_l',  zone: d },   // →N
+  { type: 'straight',   zone: d },   // 간격확보
+  { type: 'straight',   zone: d },   // 간격확보
+  { type: 'straight',   zone: d },   // 간격확보 (3개!)
+  { type: 'turn_90_l',  zone: d },   // →W (안전)
+  { type: 'straight_h', zone: d },   // 서쪽
+  { type: 'turn_90_r',  zone: d },   // →N CP2
 
-  // === S3: CP2 → CP3 (14파츠: 직선5 코너9) ===
-  { type: 'straight',   zone: d },   // 27 가속
-  { type: 'straight',   zone: d },   // 28 풀스피드
-  { type: 'turn_90_l',  zone: d },   // 29 90도좌 →W
-  { type: 'straight_h', zone: d },   // 30 서쪽
-  { type: 'straight_h', zone: d },   // 31 서쪽 멀리
-  { type: 'turn_90_r',  zone: d },   // 32 90도우 →N
-  { type: 'straight',   zone: d },   // 33 짧은가속
-  { type: 'hairpin_l',  zone: d },   // 34 헤어핀좌!
-  { type: 'turn_90_r',  zone: d },   // 35 90도우 →E
-  { type: 'straight_h', zone: d },   // 36 동쪽
-  { type: 'straight_h', zone: d },   // 37 동쪽 멀리
-  { type: 'straight_h', zone: d },   // 38 동쪽 더멀리
-  { type: 'turn_90_l',  zone: d },   // 39 90도좌 →N
-  { type: 'straight',   zone: d },   // 40 CP3
+  // === S3: CP2 → CP3 ===
+  { type: 'straight',   zone: d },   // 가속
+  { type: 'straight',   zone: d },   // 풀스피드
+  { type: 'turn_90_l',  zone: d },   // →W
+  { type: 'straight_h', zone: d },   // 서쪽
+  { type: 'straight_h', zone: d },   // 서쪽 멀리
+  { type: 'turn_90_r',  zone: d },   // →N
+  { type: 'straight',   zone: d },   // 가속
+  { type: 'hairpin_l',  zone: d },   // 헤어핀좌!
+  { type: 'straight',   zone: d },   // 회복
+  { type: 'turn_90_r',  zone: d },   // →E
+  { type: 'straight_h', zone: d },   // 동쪽
+  { type: 'straight_h', zone: d },   // 동쪽 멀리
+  { type: 'straight_h', zone: d },   // 동쪽 더멀리
+  { type: 'turn_90_l',  zone: d },   // →N
+  { type: 'straight',   zone: d },   // CP3
 
-  // === S4: CP3 → CP4 (14파츠: 직선3 코너11 = 클라이맥스!) ===
-  { type: 'turn_45_l',  zone: d },   // 41 45도좌 →NW
-  { type: 'diag_straight', zone: d },// 42 NW대각선
-  { type: 'turn_90_r',  zone: d },   // 43 90도우! →NE
-  { type: 'diag_straight', zone: d },// 44 NE대각선
-  { type: 'turn_45_l',  zone: d },   // 45 45도좌 →N
-  { type: 'straight',   zone: d },   // 46 짧은가속
-  { type: 'turn_90_r',  zone: d },   // 47 90도우 →E
-  { type: 'straight_h', zone: d },   // 48 동쪽
-  { type: 'turn_90_l',  zone: d },   // 49 90도좌 →N
-  { type: 'turn_90_l',  zone: d },   // 50 바로90좌 →W (Z자!)
-  { type: 'straight_h', zone: d },   // 51 서쪽
-  { type: 'straight_h', zone: d },   // 52 서쪽 멀리
-  { type: 'turn_90_r',  zone: d },   // 53 90도우 →N
-  { type: 'straight',   zone: d },   // 54 CP4
+  // === S4: CP3 → CP4 ===
+  { type: 'turn_45_l',  zone: d },   // →NW
+  { type: 'diag_straight', zone: d },// NW대각선
+  { type: 'turn_90_r',  zone: d },   // →NE
+  { type: 'diag_straight', zone: d },// NE대각선
+  { type: 'turn_45_l',  zone: d },   // →N
+  { type: 'straight',   zone: d },   // 가속
+  { type: 'turn_90_r',  zone: d },   // →E
+  { type: 'straight_h', zone: d },   // 동쪽
+  { type: 'turn_90_l',  zone: d },   // →N
+  { type: 'straight',   zone: d },   // 간격확보
+  { type: 'straight',   zone: d },   // 간격확보
+  { type: 'straight',   zone: d },   // 간격확보 (3개!)
+  { type: 'turn_90_l',  zone: d },   // →W (안전)
+  { type: 'straight_h', zone: d },   // 서쪽
+  { type: 'straight_h', zone: d },   // 서쪽 멀리
+  { type: 'turn_90_r',  zone: d },   // →N
+  { type: 'straight',   zone: d },   // CP4
 
-  // === S5: CP4 → FINISH (10파츠: 코너6 직선4) ===
-  { type: 'turn_90_r',  zone: d },   // 55 90도우 →E
-  { type: 'straight_h', zone: d },   // 56 동쪽
-  { type: 'turn_90_l',  zone: d },   // 57 90도좌 →N
-  { type: 'turn_45_r',  zone: d },   // 58 45도우 →NE
-  { type: 'diag_straight', zone: d },// 59 NE대각선
-  { type: 'turn_45_l',  zone: d },   // 60 45도좌 →N
-  { type: 'straight',   zone: d },   // 61 가속
-  { type: 'straight',   zone: d },   // 62 FINISH
-  { type: 'straight',   zone: d },   // 63 연장
+  // === S5: CP4 → FINISH ===
+  { type: 'turn_90_r',  zone: d },   // →E
+  { type: 'straight_h', zone: d },   // 동쪽
+  { type: 'turn_90_l',  zone: d },   // →N
+  { type: 'straight',   zone: d },   // 가속
+  { type: 'straight',   zone: d },   // FINISH
+  { type: 'straight',   zone: d },   // 연장
 ];
 
 // ---- Exit Direction ----
@@ -467,10 +474,10 @@ function generateZones(partBounds) {
 // ---- Generate checkpoints at specific part indices ----
 function generateCheckpoints(partBounds) {
   const cpDefs = [
-    { partIdx: 12,  name: 'CP1', timeBonus: 15000 },
-    { partIdx: 26,  name: 'CP2', timeBonus: 15000 },
-    { partIdx: 40,  name: 'CP3', timeBonus: 15000 },
-    { partIdx: 54,  name: 'CP4', timeBonus: 15000 },
+    { partIdx: 14,  name: 'CP1', timeBonus: 15000 },
+    { partIdx: 31,  name: 'CP2', timeBonus: 15000 },
+    { partIdx: 46,  name: 'CP3', timeBonus: 15000 },
+    { partIdx: 63,  name: 'CP4', timeBonus: 15000 },
   ];
   const checkpoints = [];
   for (const cp of cpDefs) {
