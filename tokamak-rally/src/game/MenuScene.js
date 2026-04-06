@@ -105,15 +105,11 @@ export class MenuScene extends Phaser.Scene {
     infoBox.fillStyle(0x2a1a08,0.7);
     infoBox.fillRoundedRect(40,455,720,80,8);
 
-    this.add.text(cx,470,'STAGE 1: SAHARA CROSSING  ·  5 Zones  ·  4 Checkpoints',{
+    this.add.text(cx,470,'DESERT RALLY  ·  4 Checkpoints',{
       fontSize:'13px',fontFamily:'monospace',color:'#f1faee',
     }).setOrigin(0.5);
 
-    this.add.text(cx,490,'🏜️Sand→ 🪨Canyon→ 🏞️Riverbed→ ⛰️Mountain→ 🏁Sprint',{
-      fontSize:'11px',fontFamily:'monospace',color:'#8b7355',
-    }).setOrigin(0.5);
-
-    this.add.text(cx,510,'⚠ Obstacles = speed penalty  |  CPs extend time  |  20s initial',{
+    this.add.text(cx,495,'CPs extend time  |  20s initial',{
       fontSize:'10px',fontFamily:'monospace',color:'#d4a76a',
     }).setOrigin(0.5);
 
