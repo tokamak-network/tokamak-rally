@@ -50,8 +50,8 @@ const partTypes = {
   straight:      { fwdDist: 512, xShift: 0 },
   straight_h:    { fwdDist: 512, xShift: 0 },
   diag_straight: { fwdDist: 512, xShift: 0 },
-  hairpin_l:     { fwdDist: 512, xShift: -200 },
-  hairpin_r:     { fwdDist: 512, xShift: 200 },
+  hairpin_l:     { fwdDist: 512, xShift: -400 },
+  hairpin_r:     { fwdDist: 512, xShift: 400 },
   turn_90_l:     { turnRadius: 200, turnAngle: Math.PI / 2 },
   turn_90_r:     { turnRadius: 200, turnAngle: Math.PI / 2 },
   turn_45_l:     { turnRadius: 200, turnAngle: Math.PI / 4 },
@@ -144,84 +144,84 @@ function computeTurnArc(entryDir, turnAngle, turnDirection) {
   }
 }
 
-// ---- Parts Definition (single desert stage, 56 parts) ----
-// Policy: only straight, straight_h, turn_90_r/l, hairpin_r/l
+// ---- Parts Definition (single desert stage) ----
+// Mix of 45°/90° turns + diag straights + hairpins. Diagonals spread the track wide to prevent overlap.
 const parts = [
   // ========================================
-  // 구간 1: START → CP1 (12파츠, 직선 가속 + 첫 90도 + 헤어핀)
+  // 구간 1: START → CP1 — 직선 가속 → 45도로 넓게 벌린 후 90도
   // ========================================
-  { type: 'straight',   zone: 'desert' },  // idx0  가속
-  { type: 'straight',   zone: 'desert' },  // idx1  가속
-  { type: 'straight',   zone: 'desert' },  // idx2  풀 스피드
-  { type: 'turn_90_r',  zone: 'desert' },  // idx3  첫 코너!
-  { type: 'straight_h', zone: 'desert' },  // idx4  동쪽
-  { type: 'turn_90_l',  zone: 'desert' },  // idx5  북 복귀
-  { type: 'straight',   zone: 'desert' },  // idx6  가속
-  { type: 'straight',   zone: 'desert' },  // idx7  가속
-  { type: 'hairpin_r',  zone: 'desert' },  // idx8  U턴
-  { type: 'straight',   zone: 'desert' },  // idx9  회복
-  { type: 'straight',   zone: 'desert' },  // idx10 가속
-  { type: 'straight',   zone: 'desert' },  // idx11 CP1
+  { type: 'straight',      zone: 'desert' },  // idx0  가속
+  { type: 'straight',      zone: 'desert' },  // idx1  가속
+  { type: 'straight',      zone: 'desert' },  // idx2  풀 스피드
+  { type: 'turn_45_r',     zone: 'desert' },  // idx3  45도 우 → NE
+  { type: 'diag_straight', zone: 'desert' },  // idx4  NE 대각선 (공간 확보)
+  { type: 'diag_straight', zone: 'desert' },  // idx5  NE 대각선 계속
+  { type: 'turn_90_l',     zone: 'desert' },  // idx6  90도 좌! → NW (긴장!)
+  { type: 'diag_straight', zone: 'desert' },  // idx7  NW 대각선
+  { type: 'turn_45_r',     zone: 'desert' },  // idx8  45도 우 → N 복귀
+  { type: 'straight',      zone: 'desert' },  // idx9  가속
+  { type: 'straight',      zone: 'desert' },  // idx10 가속
+  { type: 'straight',      zone: 'desert' },  // idx11 CP1
 
   // ========================================
-  // 구간 2: CP1 → CP2 (12파츠, Z자 패턴 + 헤어핀)
+  // 구간 2: CP1 → CP2 — 90도 코너 세트 + 대각선 헤어핀
   // ========================================
-  { type: 'straight',   zone: 'desert' },  // idx12 가속
-  { type: 'straight',   zone: 'desert' },  // idx13 풀 스피드
-  { type: 'turn_90_l',  zone: 'desert' },  // idx14 Z자 시작
-  { type: 'straight_h', zone: 'desert' },  // idx15 서쪽
-  { type: 'turn_90_r',  zone: 'desert' },  // idx16 북 복귀
-  { type: 'turn_90_r',  zone: 'desert' },  // idx17 바로 동쪽 (180도!)
-  { type: 'straight_h', zone: 'desert' },  // idx18 동쪽
-  { type: 'turn_90_l',  zone: 'desert' },  // idx19 북 복귀
-  { type: 'straight',   zone: 'desert' },  // idx20 가속
-  { type: 'straight',   zone: 'desert' },  // idx21 가속
-  { type: 'hairpin_l',  zone: 'desert' },  // idx22 좌 U턴
-  { type: 'straight',   zone: 'desert' },  // idx23 CP2
+  { type: 'straight',      zone: 'desert' },  // idx12 가속
+  { type: 'straight',      zone: 'desert' },  // idx13 풀 스피드
+  { type: 'turn_90_r',     zone: 'desert' },  // idx14 90도 우 → E
+  { type: 'straight_h',    zone: 'desert' },  // idx15 동쪽 직선
+  { type: 'straight_h',    zone: 'desert' },  // idx16 동쪽 계속 (넓게 벌림)
+  { type: 'turn_90_l',     zone: 'desert' },  // idx17 90도 좌 → N 복귀
+  { type: 'straight',      zone: 'desert' },  // idx18 가속
+  { type: 'straight',      zone: 'desert' },  // idx19 가속
+  { type: 'straight',      zone: 'desert' },  // idx20 풀 스피드
+  { type: 'hairpin_r',     zone: 'desert' },  // idx21 우 U턴! (xShift=400으로 넓음)
+  { type: 'straight',      zone: 'desert' },  // idx22 회복
+  { type: 'straight',      zone: 'desert' },  // idx23 CP2
 
   // ========================================
-  // 구간 3: CP2 → CP3 (12파츠, 반대 90도 + 연속 헤어핀)
+  // 구간 3: CP2 → CP3 — 45도 지그재그 + 90도 콤보
   // ========================================
-  { type: 'straight',   zone: 'desert' },  // idx24 가속
-  { type: 'straight',   zone: 'desert' },  // idx25 풀 스피드
-  { type: 'turn_90_l',  zone: 'desert' },  // idx26 서쪽으로
-  { type: 'straight_h', zone: 'desert' },  // idx27 서쪽 직선
-  { type: 'straight_h', zone: 'desert' },  // idx28 서쪽 계속 (긴 수평)
-  { type: 'turn_90_r',  zone: 'desert' },  // idx29 북 복귀
-  { type: 'straight',   zone: 'desert' },  // idx30 가속
-  { type: 'hairpin_r',  zone: 'desert' },  // idx31 우 U턴
-  { type: 'straight',   zone: 'desert' },  // idx32 짧은 회복
-  { type: 'hairpin_l',  zone: 'desert' },  // idx33 좌 U턴 (연속!)
-  { type: 'straight',   zone: 'desert' },  // idx34 가속
-  { type: 'straight',   zone: 'desert' },  // idx35 CP3
+  { type: 'straight',      zone: 'desert' },  // idx24 가속
+  { type: 'straight',      zone: 'desert' },  // idx25 풀 스피드
+  { type: 'turn_45_l',     zone: 'desert' },  // idx26 45도 좌 → NW
+  { type: 'diag_straight', zone: 'desert' },  // idx27 NW 대각선
+  { type: 'turn_90_r',     zone: 'desert' },  // idx28 바로 90도 우! → NE (긴장!)
+  { type: 'diag_straight', zone: 'desert' },  // idx29 NE 대각선
+  { type: 'diag_straight', zone: 'desert' },  // idx30 NE 계속 (넓게)
+  { type: 'turn_90_l',     zone: 'desert' },  // idx31 90도 좌! → NW
+  { type: 'diag_straight', zone: 'desert' },  // idx32 NW 대각선
+  { type: 'turn_45_r',     zone: 'desert' },  // idx33 45도 우 → N 복귀
+  { type: 'straight',      zone: 'desert' },  // idx34 가속
+  { type: 'straight',      zone: 'desert' },  // idx35 CP3
 
   // ========================================
-  // 구간 4: CP3 → CP4 (12파츠, 90도 + Z자 + 헤어핀 = 클라이맥스)
+  // 구간 4: CP3 → CP4 — 클라이맥스: 연속 헤어핀 + 90도 혼합
   // ========================================
-  { type: 'straight',   zone: 'desert' },  // idx36 가속
-  { type: 'turn_90_r',  zone: 'desert' },  // idx37 우로 꺾임
-  { type: 'straight_h', zone: 'desert' },  // idx38 동쪽
-  { type: 'turn_90_l',  zone: 'desert' },  // idx39 북 복귀
-  { type: 'straight',   zone: 'desert' },  // idx40 짧은 직선
-  { type: 'hairpin_r',  zone: 'desert' },  // idx41 U턴!
-  { type: 'straight',   zone: 'desert' },  // idx42 회복
-  { type: 'turn_90_l',  zone: 'desert' },  // idx43 Z자: 좌
-  { type: 'straight_h', zone: 'desert' },  // idx44 서쪽
-  { type: 'turn_90_r',  zone: 'desert' },  // idx45 북 복귀
-  { type: 'straight',   zone: 'desert' },  // idx46 가속
-  { type: 'straight',   zone: 'desert' },  // idx47 CP4
+  { type: 'straight',      zone: 'desert' },  // idx36 가속
+  { type: 'straight',      zone: 'desert' },  // idx37 풀 스피드
+  { type: 'straight',      zone: 'desert' },  // idx38 풀 스피드
+  { type: 'hairpin_l',     zone: 'desert' },  // idx39 좌 U턴! (넓은 xShift)
+  { type: 'straight',      zone: 'desert' },  // idx40 짧은 회복
+  { type: 'turn_45_r',     zone: 'desert' },  // idx41 45도 우 → NE
+  { type: 'turn_45_r',     zone: 'desert' },  // idx42 또 45도 우 → E (합쳐서 90도!)
+  { type: 'straight_h',    zone: 'desert' },  // idx43 동쪽 직선
+  { type: 'turn_90_l',     zone: 'desert' },  // idx44 90도 좌 → N
+  { type: 'straight',      zone: 'desert' },  // idx45 가속
+  { type: 'straight',      zone: 'desert' },  // idx46 가속
+  { type: 'straight',      zone: 'desert' },  // idx47 CP4
 
   // ========================================
-  // 구간 5: CP4 → FINISH (8파츠, 마지막 90도 + 피니시 직선)
+  // 구간 5: CP4 → FINISH — 45도 벌림 후 피니시 직선
   // ========================================
-  { type: 'straight',   zone: 'desert' },  // idx48 가속
-  { type: 'straight',   zone: 'desert' },  // idx49 풀 스피드
-  { type: 'turn_90_r',  zone: 'desert' },  // idx50 마지막 코너
-  { type: 'straight_h', zone: 'desert' },  // idx51 동쪽
-  { type: 'turn_90_l',  zone: 'desert' },  // idx52 북 복귀
-  { type: 'straight',   zone: 'desert' },  // idx53 가속
-  { type: 'straight',   zone: 'desert' },  // idx54 FINISH
-  { type: 'straight',   zone: 'desert' },  // idx55 연장
+  { type: 'straight',      zone: 'desert' },  // idx48 가속
+  { type: 'turn_45_l',     zone: 'desert' },  // idx49 45도 좌 → NW
+  { type: 'diag_straight', zone: 'desert' },  // idx50 NW 대각선
+  { type: 'turn_45_r',     zone: 'desert' },  // idx51 45도 우 → N 복귀
+  { type: 'straight',      zone: 'desert' },  // idx52 가속
+  { type: 'straight',      zone: 'desert' },  // idx53 풀 스피드
+  { type: 'straight',      zone: 'desert' },  // idx54 FINISH
+  { type: 'straight',      zone: 'desert' },  // idx55 연장
 ];
 
 // ---- Exit Direction ----
@@ -451,10 +451,10 @@ function generateZones(partBounds) {
 // ---- Generate checkpoints at specific part indices ----
 function generateCheckpoints(partBounds) {
   const cpDefs = [
-    { partIdx: 11, name: 'CP1', timeBonus: 15000 },
-    { partIdx: 23, name: 'CP2', timeBonus: 15000 },
-    { partIdx: 35, name: 'CP3', timeBonus: 15000 },
-    { partIdx: 47, name: 'CP4', timeBonus: 15000 },
+    { partIdx: 11,  name: 'CP1', timeBonus: 15000 },
+    { partIdx: 23,  name: 'CP2', timeBonus: 15000 },
+    { partIdx: 35,  name: 'CP3', timeBonus: 15000 },
+    { partIdx: 47,  name: 'CP4', timeBonus: 15000 },
   ];
   const checkpoints = [];
   for (const cp of cpDefs) {
@@ -536,6 +536,20 @@ const checkpoints = generateCheckpoints(partBounds);
 const arrowHints = generateArrowHints(parts, waypoints, partBounds);
 
 const finishWP = waypoints.length - 4;
+
+// ---- Road overlap check ----
+const MIN_ROAD_GAP = 120; // road width(100) + barrier(20)
+let overlapCount = 0;
+for (let i = 0; i < waypoints.length; i += 4) {
+  for (let j = i + 20; j < waypoints.length; j += 4) {
+    const dx = waypoints[i][0] - waypoints[j][0];
+    const dy = waypoints[i][1] - waypoints[j][1];
+    const d = Math.sqrt(dx*dx + dy*dy);
+    if (d < MIN_ROAD_GAP) overlapCount++;
+  }
+}
+if (overlapCount > 0) console.warn(`[Track] WARNING: ${overlapCount} road overlap points (gap < ${MIN_ROAD_GAP}px)`);
+else console.log('[Track] No road overlaps detected');
 
 const trackValid = validateTrack(parts);
 console.log(`[Track] Parts: ${parts.length}, Waypoints: ${waypoints.length}, Zones: ${zones.length}, Valid: ${trackValid}`);
