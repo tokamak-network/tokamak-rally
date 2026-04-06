@@ -28,7 +28,7 @@ export class RaceScene extends Phaser.Scene {
     this.placeBarriers();
     this.placeScenery();
     this.placeCheckpoints();
-    this.placeRoadObstacles();
+    // this.placeRoadObstacles(); // obstacles removed — focus on racing
 
     const carTexture = this.textures.exists(`v2_car_${this.selectedCarId}`) ? `v2_car_${this.selectedCarId}` : `car_${this.selectedCarId}`;
     this.player = this.add.sprite(this.track.startX, this.track.startY, carTexture)
@@ -518,7 +518,7 @@ export class RaceScene extends Phaser.Scene {
     const startWP = desertZones[0].fromWP;
     const endWP = Math.min(desertZones[desertZones.length - 1].toWP, wp.length);
     const halfW = 50; // roadWidth 100 / 2
-    const bgHalfW = 128; // parts width 256 / 2
+    const bgHalfW = 350; // expanded for dramatic curves
 
     // Compute normals for the full desert range
     const normals = this.computeNormals(wp, startWP, endWP);
@@ -1043,43 +1043,7 @@ export class RaceScene extends Phaser.Scene {
     };
   }
 
-  placeRoadObstacles() {
-    this.obstacles = [];
-    const rng = this._seededRng(20260309); // fixed seed — same layout every run
-    const wp = this.track.waypoints;
-    const penaltyMap = {
-      obs_tokamak: 0.55, obs_sand_pile: 0.7, obs_tumbleweed: 0.8,
-      obs_fallen_rock: 0.5, obs_rock_debris: 0.6, obs_small_rock: 0.75,
-      obs_puddle: 0.7, obs_mud_patch: 0.65, obs_log: 0.55,
-      obs_rock_slide: 0.45, obs_pothole: 0.65,
-    };
-    const radiusMap = {
-      obs_tokamak: 9, obs_sand_pile: 8, obs_tumbleweed: 6,
-      obs_fallen_rock: 10, obs_rock_debris: 10, obs_small_rock: 7,
-      obs_puddle: 11, obs_mud_patch: 12, obs_log: 9,
-      obs_rock_slide: 14, obs_pothole: 8,
-    };
-
-    for (const zone of this.track.zones) {
-      const cfg = this.track.obstacleConfig[zone.name];
-      if (!cfg) continue;
-      for (let i=zone.fromWP; i<Math.min(zone.toWP,wp.length-1); i++) {
-        if (rng() > cfg.density) continue;
-        const [x1,y1]=wp[i],[x2,y2]=wp[i+1];
-        const t=0.15+rng()*0.7;
-        const bx=x1+(x2-x1)*t, by=y1+(y2-y1)*t;
-        const dx=x2-x1,dy=y2-y1,len=Math.sqrt(dx*dx+dy*dy);
-        if (len<1) continue;
-        const nx=-dy/len,ny=dx/len;
-        const hw=(zone.trackWidth||100)/2;
-        const edgeBias = (rng() > 0.5 ? 1 : -1) * (0.3 + rng() * 0.4) * hw;
-        const ox=bx+nx*edgeBias, oy=by+ny*edgeBias;
-        const type=cfg.types[Math.floor(rng()*cfg.types.length)];
-        const sprite=this.add.sprite(ox,oy,type).setDepth(5).setScale(0.7);
-        this.obstacles.push({x:ox,y:oy,radius:radiusMap[type]||9,type,penalty:penaltyMap[type]||0.6,sprite});
-      }
-    }
-  }
+  placeRoadObstacles() { this.obstacles = []; }
 
   startCountdown() {
     let count=3;
@@ -1112,7 +1076,7 @@ export class RaceScene extends Phaser.Scene {
 
     this.handleInput(dt);
     this.updateCar(dt);
-    this.checkObstacles();
+    // this.checkObstacles(); // obstacles removed
     this.checkProgress();
     this.checkZoneChange();
 
@@ -1202,7 +1166,7 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    this.obstacles.forEach(o=>{if(o.type==='obs_tokamak')o.sprite.angle+=2;});
+    // obstacles removed — no rotation needed
 
     // Sound updates
     const result = isOnTrack(this.carState.x, this.carState.y, this.track.waypoints, this.track.zones);
@@ -1356,25 +1320,7 @@ export class RaceScene extends Phaser.Scene {
     }
   }
 
-  checkObstacles(){
-    if(this.carState.hitCooldown>0)return;
-    const car=this.carState;
-    for(const o of this.obstacles){
-      const d=Math.sqrt((car.x-o.x)**2+(car.y-o.y)**2);
-      if(d<o.radius+10){
-        const effectivePenalty = 1 - (1 - o.penalty) * this.selectedCar.physics.obstaclePenaltyMul;
-        car.speed *= effectivePenalty;
-        car.hitCooldown=800;
-        this.hitFlash.setAlpha(1);
-        this.tweens.add({targets:this.hitFlash,alpha:0,duration:500});
-        soundEngine.playHit();
-        this.cameras.main.shake(200,0.006);
-        const a=Math.atan2(car.y-o.y,car.x-o.x);
-        car.x+=Math.cos(a)*6;car.y+=Math.sin(a)*6;
-        break;
-      }
-    }
-  }
+  checkObstacles() {}
 
   checkProgress(){
     const car=this.carState,rs=this.raceState;

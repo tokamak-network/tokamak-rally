@@ -27,11 +27,11 @@ const DIR_RIGHT_VEC = {
 // ---- Part Types ----
 const partTypes = {
   straight:   { width: 256, height: 512, fwdDist: 512, xShift: 0 },
-  curve_l:    { width: 256, height: 512, fwdDist: 512, xShift: -60 },
-  curve_r:    { width: 256, height: 512, fwdDist: 512, xShift: 60 },
+  curve_l:    { width: 256, height: 512, fwdDist: 512, xShift: -250 },
+  curve_r:    { width: 256, height: 512, fwdDist: 512, xShift: 250 },
   s_curve:    { width: 256, height: 512, fwdDist: 512, xShift: 0 },
-  hairpin_l:  { width: 256, height: 512, fwdDist: 512, xShift: -120 },
-  hairpin_r:  { width: 256, height: 512, fwdDist: 512, xShift: 120 },
+  hairpin_l:  { width: 256, height: 512, fwdDist: 512, xShift: -200 },
+  hairpin_r:  { width: 256, height: 512, fwdDist: 512, xShift: 200 },
   turn_90_l:  { width: 512, height: 512, turnRadius: 200 },
   turn_90_r:  { width: 512, height: 512, turnRadius: 200 },
   straight_h: { width: 512, height: 256, fwdDist: 512, xShift: 0 },
@@ -320,7 +320,7 @@ function generatePartWaypoints(type, x, y, direction) {
   } else if (type === 's_curve') {
     // S-curve: cubic bezier, 10 points
     const dist = partTypes[type].fwdDist;
-    const sway = 50; // how far the S sways
+    const sway = 200; // how far the S sways
     const p0 = [x, y];
     const p1 = [x + right.dx * sway + fwd.dx * dist * 0.25,
                 y + right.dy * sway + fwd.dy * dist * 0.25];
@@ -546,17 +546,7 @@ export const TRACK_CONFIG = {
     offroad: { accel: 83,  friction: 0.945, turn: 85,  label: 'OFF-ROAD' },
   },
 
-  obstacleConfig: {
-    desert:   { types: ['obs_sand_pile', 'obs_tumbleweed', 'obs_small_rock'], density: 0.22 },
-    trans_desert_canyon: { types: ['obs_sand_pile', 'obs_fallen_rock', 'obs_small_rock'], density: 0.20 },
-    canyon:   { types: ['obs_fallen_rock', 'obs_rock_debris', 'obs_small_rock'], density: 0.25 },
-    trans_canyon_riverbed: { types: ['obs_fallen_rock', 'obs_puddle', 'obs_small_rock'], density: 0.20 },
-    riverbed: { types: ['obs_puddle', 'obs_mud_patch', 'obs_log'], density: 0.22 },
-    trans_riverbed_mountain: { types: ['obs_puddle', 'obs_rock_slide', 'obs_small_rock'], density: 0.22 },
-    mountain: { types: ['obs_rock_slide', 'obs_pothole', 'obs_fallen_rock'], density: 0.28 },
-    trans_mountain_sprint: { types: ['obs_pothole', 'obs_small_rock'], density: 0.18 },
-    sprint:   { types: ['obs_small_rock', 'obs_pothole'], density: 0.15 },
-  },
+  obstacleConfig: {},
 };
 
 // Export helper to get part exit (used by RaceScene for rendering)
