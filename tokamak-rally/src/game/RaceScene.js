@@ -1074,12 +1074,9 @@ export class RaceScene extends Phaser.Scene {
   }
 
   setupCornerHUD() {
-    // Arrow indicator — follows car position, appears 0.5s before corner
-    this._cornerArrow = this.add.text(0, 0, '', {
-      fontSize: '32px', color: '#CC0000', fontStyle: 'bold',
-      stroke: '#FFFFFF', strokeThickness: 4,
-    }).setOrigin(0.5).setDepth(200).setAlpha(0);
-    console.log(`[HUD] Corner arrows ready, ${(this.track.arrowHints || []).length} hints`);
+    // Bent arrow drawn on a HUD graphics layer (screen-fixed, above car)
+    this._navGfx = this.add.graphics().setScrollFactor(0).setDepth(200).setVisible(false);
+    console.log(`[HUD] Nav arrows ready, ${(this.track.arrowHints || []).length} hints`);
   }
 
   updateCornerHUD() {
@@ -1087,30 +1084,71 @@ export class RaceScene extends Phaser.Scene {
     if (!hints || !this.carState) return;
     const car = this.carState;
 
-    // Show distance = current speed × 0.5 seconds
-    const showDist = Math.max(200, Math.abs(car.speed) * 0.5);
+    // Show distance = speed × 0.5s, minimum 80px
+    const showDist = Math.max(80, Math.abs(car.speed) * 0.5);
 
-    let nearest = null, nearestDist = Infinity;
-    for (let i = 0; i < hints.length; i++) {
-      const dx = car.x - hints[i].x, dy = car.y - hints[i].y;
+    let showHint = null, showDst = Infinity;
+    for (const h of hints) {
+      const dx = h.x - car.x, dy = h.y - car.y;
       const d = Math.sqrt(dx*dx + dy*dy);
-      if (d < showDist && d < nearestDist && hints[i].y < car.y) {
-        nearestDist = d;
-        nearest = hints[i];
+      // Corner must be ahead (not passed) and within range
+      if (d < showDist && d > 15 && d < showDst) {
+        // Check ahead: corner Y should be less than car Y (north = Y decreasing)
+        // But also handle east/west movement, so use dot product with car direction
+        const carRad = Phaser.Math.DegToRad(car.angle);
+        const dot = dx * Math.cos(carRad) + dy * Math.sin(carRad);
+        if (dot > 0) { // corner is ahead of car
+          showDst = d;
+          showHint = h;
+        }
       }
     }
 
-    if (nearest) {
-      const arrow = nearest.direction === 'right' ? '→' : '←';
-      this._cornerArrow.setText(arrow);
-      // Position above car in world space
-      this._cornerArrow.setPosition(car.x, car.y - 50);
-      const alpha = Math.min(1, (showDist - nearestDist) / (showDist * 0.5));
-      this._cornerArrow.setAlpha(alpha);
+    this._navGfx.clear();
+    if (showHint) {
+      this._navGfx.setVisible(true);
+      // Draw bent arrow at screen center, above car (~40px up from center)
+      const cx = 400, cy = 260; // screen center area, slightly above car
+      const sz = 22;
+
+      const ea = showHint.entryAngle;
+      const xa = showHint.exitAngle;
+
+      // Tail: entry direction (where road comes FROM)
+      const tailX = cx - Math.cos(ea) * sz;
+      const tailY = cy - Math.sin(ea) * sz;
+      // Bend point: center
+      const midX = cx, midY = cy;
+      // Head: exit direction (where road GOES)
+      const headX = cx + Math.cos(xa) * sz;
+      const headY = cy + Math.sin(xa) * sz;
+
+      // White outline
+      this._navGfx.lineStyle(7, 0xFFFFFF, 0.9);
+      this._navGfx.beginPath();
+      this._navGfx.moveTo(tailX, tailY);
+      this._navGfx.lineTo(midX, midY);
+      this._navGfx.lineTo(headX, headY);
+      this._navGfx.strokePath();
+
+      // Red body
+      this._navGfx.lineStyle(4, 0xCC0000, 1.0);
+      this._navGfx.beginPath();
+      this._navGfx.moveTo(tailX, tailY);
+      this._navGfx.lineTo(midX, midY);
+      this._navGfx.lineTo(headX, headY);
+      this._navGfx.strokePath();
+
+      // Arrowhead triangle at tip
+      const triSz = 8;
+      const tipX = headX + Math.cos(xa) * triSz;
+      const tipY = headY + Math.sin(xa) * triSz;
+      const px = -Math.sin(xa) * triSz * 0.6;
+      const py = Math.cos(xa) * triSz * 0.6;
+      this._navGfx.fillStyle(0xCC0000, 1.0);
+      this._navGfx.fillTriangle(tipX, tipY, headX + px, headY + py, headX - px, headY - py);
     } else {
-      if (this._cornerArrow.alpha > 0) {
-        this._cornerArrow.setAlpha(Math.max(0, this._cornerArrow.alpha - 0.1));
-      }
+      this._navGfx.setVisible(false);
     }
   }
 
