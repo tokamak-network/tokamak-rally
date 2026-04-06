@@ -1083,13 +1083,9 @@ export class RaceScene extends Phaser.Scene {
     for (let i = 0; i < hints.length; i++) {
       const h = hints[i];
       try {
-        // Small arrow on road: white border + red fill + direction symbol
-        this.add.circle(h.x, h.y, 18, 0xFFFFFF, 0.8).setDepth(8);
-        this.add.circle(h.x, h.y, 14, 0xCC0000, 0.95).setDepth(9);
-        const txt = h.direction === 'right' ? '▶' : '◀';
-        this.add.text(h.x, h.y, txt, {
-          fontSize: '16px', color: '#FFFFFF', fontStyle: 'bold',
-        }).setOrigin(0.5).setDepth(10);
+        // Red circle marker on road (depth 100 for guaranteed visibility)
+        this.add.circle(h.x, h.y, 30, 0xCC0000, 0.9).setDepth(100);
+        this.add.circle(h.x, h.y, 34, 0xFFFFFF, 0.7).setDepth(99);
         console.log(`[Arrow ${i}] at (${Math.round(h.x)}, ${Math.round(h.y)}) ${h.direction} ${h.severity}`);
       } catch (e) {
         console.error(`[Arrow ${i}] FAILED:`, e);
