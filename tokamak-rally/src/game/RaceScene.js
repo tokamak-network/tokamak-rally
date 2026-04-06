@@ -722,25 +722,6 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // ===== 2b. TIRE TRACKS on road (depth 1) =====
-    const gTire = this.add.graphics().setDepth(1);
-    for (const zone of allZones) {
-      const s = zone.fromWP, e = Math.min(zone.toWP, wp.length);
-      const zc = zoneConfig[zone.name];
-      const tireColor = zc ? ((zc.roadColor & 0xFEFEFE) >> 1) + ((zc.roadColor & 0xFEFEFE) >> 2) : 0xA08860;
-      for (const trackOff of [-12, 12]) {
-        gTire.lineStyle(2, tireColor, 0.15);
-        gTire.beginPath();
-        const ni0 = normals[s - startWP];
-        gTire.moveTo(wp[s][0] + ni0[0] * trackOff, wp[s][1] + ni0[1] * trackOff);
-        for (let i = s + 1; i < e; i++) {
-          const ni = normals[i - startWP];
-          gTire.lineTo(wp[i][0] + ni[0] * trackOff, wp[i][1] + ni[1] * trackOff);
-        }
-        gTire.strokePath();
-      }
-    }
-
     // ===== 3. CURB MARKERS (depth 2) =====
     const CURB_DASH = 10, CURB_W = 4;
     for (const zone of allZones) {
@@ -1089,70 +1070,43 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // ===== 5. CORNER PREVIEW ARROWS (depth 4, Thrash Rally style) =====
+    // ===== 5. CORNER PREVIEW ARROWS (depth 4) =====
     const hints = this.track.arrowHints || [];
     for (const hint of hints) {
       const g = this.add.graphics().setDepth(4);
-      const cx = hint.x, cy = hint.y;
-      const ra = hint.roadAngle; // road direction angle
+      const ax = hint.x, ay = hint.y;
+      const ra = hint.roadAngle;
       const sign = hint.direction === 'right' ? 1 : -1;
 
-      // Size based on severity (car is ~40px, arrows should be 2-3x)
-      let size = 25;
-      if (hint.severity === 'sharp') size = 35;
-      if (hint.severity === 'hairpin') size = 45;
+      // Size by severity
+      let sz = 30;
+      if (hint.severity === 'sharp') sz = 40;
+      if (hint.severity === 'hairpin') sz = 50;
 
-      // Arrow points perpendicular to road direction
-      const perpAngle = ra + sign * Math.PI / 2;
-      // Arrow tip (pointing in turn direction)
-      const tipX = cx + Math.cos(perpAngle) * size;
-      const tipY = cy + Math.sin(perpAngle) * size;
-      // Arrow base corners (perpendicular to arrow direction)
-      const bw = size * 0.55;
-      const bx = cx - Math.cos(perpAngle) * size * 0.2; // slightly back
-      const by = cy - Math.sin(perpAngle) * size * 0.2;
-      const bLx = bx + Math.cos(ra) * bw;
-      const bLy = by + Math.sin(ra) * bw;
-      const bRx = bx - Math.cos(ra) * bw;
-      const bRy = by - Math.sin(ra) * bw;
-      // Tail (shaft of arrow, extends opposite to turn direction)
-      const tailLen = size * 0.8;
-      const tLx = bLx - Math.cos(perpAngle) * tailLen;
-      const tLy = bLy - Math.sin(perpAngle) * tailLen;
-      const tRx = bRx - Math.cos(perpAngle) * tailLen;
-      const tRy = bRy - Math.sin(perpAngle) * tailLen;
-      // Narrow shaft
-      const sw = size * 0.2;
-      const sLx = bx + Math.cos(ra) * sw - Math.cos(perpAngle) * tailLen;
-      const sLy = by + Math.sin(ra) * sw - Math.sin(perpAngle) * tailLen;
-      const sRx = bx - Math.cos(ra) * sw - Math.cos(perpAngle) * tailLen;
-      const sRy = by - Math.sin(ra) * sw - Math.sin(perpAngle) * tailLen;
+      // Arrow points perpendicular to road, indicating turn direction
+      const pa = ra + sign * Math.PI / 2; // perpendicular angle toward turn
+      // Triangle tip
+      const tipX = ax + Math.cos(pa) * sz;
+      const tipY = ay + Math.sin(pa) * sz;
+      // Triangle base (wide, across road direction)
+      const hw = sz * 0.5;
+      const b1x = ax + Math.cos(ra) * hw;
+      const b1y = ay + Math.sin(ra) * hw;
+      const b2x = ax - Math.cos(ra) * hw;
+      const b2y = ay - Math.sin(ra) * hw;
 
-      // White outline (slightly larger)
-      g.fillStyle(0xFFFFFF, 0.85);
-      g.beginPath();
-      g.moveTo(tipX, tipY);
-      g.lineTo(bLx + Math.cos(ra) * 3, bLy + Math.sin(ra) * 3);
-      g.lineTo(bx + Math.cos(ra) * sw + Math.cos(ra) * 3, by + Math.sin(ra) * sw + Math.sin(ra) * 3);
-      g.lineTo(sLx + Math.cos(ra) * 3, sLy + Math.sin(ra) * 3);
-      g.lineTo(sRx - Math.cos(ra) * 3, sRy - Math.sin(ra) * 3);
-      g.lineTo(bx - Math.cos(ra) * sw - Math.cos(ra) * 3, by - Math.sin(ra) * sw - Math.sin(ra) * 3);
-      g.lineTo(bRx - Math.cos(ra) * 3, bRy - Math.sin(ra) * 3);
-      g.closePath();
-      g.fillPath();
+      // White outline triangle (larger)
+      g.fillStyle(0xFFFFFF, 0.9);
+      const out = 4;
+      g.fillTriangle(
+        tipX + Math.cos(pa) * out, tipY + Math.sin(pa) * out,
+        b1x + Math.cos(ra) * out, b1y + Math.sin(ra) * out,
+        b2x - Math.cos(ra) * out, b2y - Math.sin(ra) * out
+      );
 
-      // Red body
+      // Red triangle body
       g.fillStyle(0xCC0000, 0.95);
-      g.beginPath();
-      g.moveTo(tipX, tipY);
-      g.lineTo(bLx, bLy);
-      g.lineTo(bx + Math.cos(ra) * sw, by + Math.sin(ra) * sw);
-      g.lineTo(sLx, sLy);
-      g.lineTo(sRx, sRy);
-      g.lineTo(bx - Math.cos(ra) * sw, by - Math.sin(ra) * sw);
-      g.lineTo(bRx, bRy);
-      g.closePath();
-      g.fillPath();
+      g.fillTriangle(tipX, tipY, b1x, b1y, b2x, b2y);
     }
   }
 

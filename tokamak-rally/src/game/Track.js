@@ -295,18 +295,64 @@ function generatePartWaypoints(type, x, y, direction) {
       pts.push([x + fwd.dx * dist * t, y + fwd.dy * dist * t]);
     }
   } else if (type === 'hairpin_l' || type === 'hairpin_r') {
-    const shift = pt.xShift;
-    const dist = pt.fwdDist;
-    const p0 = [x, y];
-    const p1 = [x + right.dx * shift * 1.8 + fwd.dx * dist * 0.3,
-                y + right.dy * shift * 1.8 + fwd.dy * dist * 0.3];
-    const p2 = [x + right.dx * shift * 1.8 + fwd.dx * dist * 0.7,
-                y + right.dy * shift * 1.8 + fwd.dy * dist * 0.7];
-    const p3 = [x + right.dx * shift + fwd.dx * dist,
-                y + right.dy * shift + fwd.dy * dist];
-    for (let i = 0; i < 12; i++) {
-      const t = i / 12;
-      pts.push(cubicBezier(p0, p1, p2, p3, t));
+    // Sharp ㄷ-shaped hairpin: straight → 90° arc → horizontal → 90° arc → straight
+    const shift = pt.xShift; // ±200
+    const dist = pt.fwdDist; // 512
+    const side = type === 'hairpin_r' ? 1 : -1;
+    const arcR = 50; // tight 90° arc radius
+    const legLen = (dist - 2 * arcR) / 2; // straight leg length before/after arcs
+    const horizLen = Math.abs(shift) - 2 * arcR; // horizontal section length
+
+    // Phase 1: straight entry (fwd direction)
+    for (let i = 0; i < 3; i++) {
+      const t = i / 3;
+      pts.push([x + fwd.dx * legLen * t, y + fwd.dy * legLen * t]);
+    }
+
+    // Phase 2: first 90° arc (fwd → side direction)
+    const a1cx = x + fwd.dx * legLen + right.dx * side * arcR;
+    const a1cy = y + fwd.dy * legLen + right.dy * side * arcR;
+    for (let i = 0; i <= 4; i++) {
+      const t = i / 4;
+      // Rotate from -side*right back to fwd direction by 90°
+      const cos_t = Math.cos(t * Math.PI / 2);
+      const sin_t = Math.sin(t * Math.PI / 2);
+      pts.push([
+        a1cx + (-right.dx * side * arcR) * cos_t + (fwd.dx * arcR) * sin_t,
+        a1cy + (-right.dy * side * arcR) * cos_t + (fwd.dy * arcR) * sin_t
+      ]);
+    }
+
+    // Phase 3: horizontal section (side direction)
+    const hStartX = a1cx + fwd.dx * arcR;
+    const hStartY = a1cy + fwd.dy * arcR;
+    for (let i = 1; i <= 3; i++) {
+      const t = i / 4;
+      pts.push([
+        hStartX + right.dx * side * horizLen * t,
+        hStartY + right.dy * side * horizLen * t
+      ]);
+    }
+
+    // Phase 4: second 90° arc (side → fwd direction, continues forward)
+    const a2cx = hStartX + right.dx * side * horizLen + fwd.dx * (-arcR);
+    const a2cy = hStartY + right.dy * side * horizLen + fwd.dy * (-arcR);
+    for (let i = 0; i <= 4; i++) {
+      const t = i / 4;
+      const cos_t = Math.cos(t * Math.PI / 2);
+      const sin_t = Math.sin(t * Math.PI / 2);
+      pts.push([
+        a2cx + (fwd.dx * arcR) * cos_t + (right.dx * side * arcR) * sin_t,
+        a2cy + (fwd.dy * arcR) * cos_t + (right.dy * side * arcR) * sin_t
+      ]);
+    }
+
+    // Phase 5: straight exit (fwd direction, offset by shift)
+    const exitX = a2cx + right.dx * side * arcR;
+    const exitY = a2cy + right.dy * side * arcR;
+    for (let i = 1; i <= 2; i++) {
+      const t = i / 3;
+      pts.push([exitX + fwd.dx * legLen * t, exitY + fwd.dy * legLen * t]);
     }
   } else if (type === 'turn_90_r' || type === 'turn_45_r') {
     const arc = computeTurnArc(direction, pt.turnAngle, 'right');
