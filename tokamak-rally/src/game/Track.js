@@ -158,90 +158,108 @@ function computeTurnArc(entryDir, turnAngle, turnDirection) {
   }
 }
 
-// ---- Parts Definition ----
-// RULE: No consecutive same-direction turns. 3+ straights between same-dir turns.
-const d = 'desert';
-const parts = [
-  // === S1: START → CP1 ===
-  { type: 'straight',   zone: d },   // 가속
-  { type: 'straight',   zone: d },   // 풀스피드
-  { type: 'turn_90_r',  zone: d },   // →E
-  { type: 'straight_h', zone: d },   // 동쪽
-  { type: 'turn_90_l',  zone: d },   // →N
-  { type: 'straight',   zone: d },   // 간격확보
-  { type: 'straight',   zone: d },   // 간격확보
-  { type: 'straight',   zone: d },   // 간격확보 (3개!)
-  { type: 'turn_90_l',  zone: d },   // →W (이제 안전)
-  { type: 'straight_h', zone: d },   // 서쪽
-  { type: 'straight_h', zone: d },   // 서쪽 멀리
-  { type: 'turn_90_r',  zone: d },   // →N
-  { type: 'straight',   zone: d },   // 가속
-  { type: 'hairpin_r',  zone: d },   // 헤어핀우!
-  { type: 'straight',   zone: d },   // CP1
+// ---- Safe Layout Generator ----
+// Builds layout part-by-part, checking overlap at each step.
+// If a part would cause overlap, inserts straights until safe.
+const SAFE_GAP = 250; // minimum distance between non-adjacent road segments
 
-  // === S2: CP1 → CP2 ===
-  { type: 'straight',   zone: d },   // 가속
-  { type: 'turn_45_r',  zone: d },   // →NE
-  { type: 'diag_straight', zone: d },// NE대각선
-  { type: 'turn_90_l',  zone: d },   // →NW
-  { type: 'diag_straight', zone: d },// NW대각선
-  { type: 'turn_45_r',  zone: d },   // →N
-  { type: 'straight',   zone: d },   // 가속
-  { type: 'turn_90_r',  zone: d },   // →E
-  { type: 'straight_h', zone: d },   // 동쪽
-  { type: 'straight_h', zone: d },   // 동쪽 멀리
-  { type: 'turn_90_l',  zone: d },   // →N
-  { type: 'straight',   zone: d },   // 간격확보
-  { type: 'straight',   zone: d },   // 간격확보
-  { type: 'straight',   zone: d },   // 간격확보 (3개!)
-  { type: 'turn_90_l',  zone: d },   // →W (안전)
-  { type: 'straight_h', zone: d },   // 서쪽
-  { type: 'turn_90_r',  zone: d },   // →N CP2
+function generateSafeLayout() {
+  const d = 'desert';
+  // Skeleton: desired maneuvers. 'S' = auto-insert straights for safety.
+  // Between maneuver groups, the generator ensures enough spacing.
+  const skeleton = [
+    // S1: opening + east detour
+    'straight', 'straight',
+    'turn_90_r', 'straight_h', 'straight_h', 'turn_90_l',
+    // S1: west detour (needs spacing from east)
+    'turn_90_l', 'straight_h', 'straight_h', 'turn_90_r',
+    'hairpin_r',
+    'CP1',
+    // S2: diagonal section
+    'turn_45_r', 'diag_straight', 'turn_90_l', 'diag_straight', 'turn_45_r',
+    // S2: east detour
+    'turn_90_r', 'straight_h', 'straight_h', 'turn_90_l',
+    'CP2',
+    // S3: west detour
+    'turn_90_l', 'straight_h', 'straight_h', 'turn_90_r',
+    'hairpin_l',
+    // S3: east long detour
+    'turn_90_r', 'straight_h', 'straight_h', 'straight_h', 'turn_90_l',
+    'CP3',
+    // S4: diagonal
+    'turn_45_l', 'diag_straight', 'turn_90_r', 'diag_straight', 'turn_45_l',
+    // S4: east detour
+    'turn_90_r', 'straight_h', 'turn_90_l',
+    'CP4',
+    // S5: final
+    'turn_90_r', 'straight_h', 'turn_90_l',
+    'straight', 'straight', 'straight',
+  ];
 
-  // === S3: CP2 → CP3 ===
-  { type: 'straight',   zone: d },   // 가속
-  { type: 'straight',   zone: d },   // 풀스피드
-  { type: 'turn_90_l',  zone: d },   // →W
-  { type: 'straight_h', zone: d },   // 서쪽
-  { type: 'straight_h', zone: d },   // 서쪽 멀리
-  { type: 'turn_90_r',  zone: d },   // →N
-  { type: 'straight',   zone: d },   // 가속
-  { type: 'hairpin_l',  zone: d },   // 헤어핀좌!
-  { type: 'straight',   zone: d },   // 회복
-  { type: 'turn_90_r',  zone: d },   // →E
-  { type: 'straight_h', zone: d },   // 동쪽
-  { type: 'straight_h', zone: d },   // 동쪽 멀리
-  { type: 'straight_h', zone: d },   // 동쪽 더멀리
-  { type: 'turn_90_l',  zone: d },   // →N
-  { type: 'straight',   zone: d },   // CP3
+  const result = [];
+  const allWaypoints = []; // accumulated waypoints for overlap checking
+  let x = 2000, y = 14200, dir = 'north';
+  const cpIndices = []; // part indices for checkpoints
 
-  // === S4: CP3 → CP4 ===
-  { type: 'turn_45_l',  zone: d },   // →NW
-  { type: 'diag_straight', zone: d },// NW대각선
-  { type: 'turn_90_r',  zone: d },   // →NE
-  { type: 'diag_straight', zone: d },// NE대각선
-  { type: 'turn_45_l',  zone: d },   // →N
-  { type: 'straight',   zone: d },   // 가속
-  { type: 'turn_90_r',  zone: d },   // →E
-  { type: 'straight_h', zone: d },   // 동쪽
-  { type: 'turn_90_l',  zone: d },   // →N
-  { type: 'straight',   zone: d },   // 간격확보
-  { type: 'straight',   zone: d },   // 간격확보
-  { type: 'straight',   zone: d },   // 간격확보 (3개!)
-  { type: 'turn_90_l',  zone: d },   // →W (안전)
-  { type: 'straight_h', zone: d },   // 서쪽
-  { type: 'straight_h', zone: d },   // 서쪽 멀리
-  { type: 'turn_90_r',  zone: d },   // →N
-  { type: 'straight',   zone: d },   // CP4
+  function addPart(type) {
+    const part = { type, zone: d };
+    // Generate waypoints for this part
+    const pts = generatePartWaypoints(type, x, y, dir);
+    // Check overlap against all existing waypoints (skip last 8 = current part's neighbors)
+    const safeStart = Math.max(0, allWaypoints.length - 8);
+    for (let ni = 0; ni < pts.length; ni++) {
+      for (let ei = 0; ei < safeStart; ei++) {
+        const dx = pts[ni][0] - allWaypoints[ei][0];
+        const dy = pts[ni][1] - allWaypoints[ei][1];
+        if (dx*dx + dy*dy < SAFE_GAP * SAFE_GAP) {
+          return false; // overlap!
+        }
+      }
+    }
+    // Safe — commit this part
+    result.push(part);
+    if (result.length === 1) allWaypoints.push(...pts);
+    else for (let i = 1; i < pts.length; i++) allWaypoints.push(pts[i]);
+    const exit = getPartExit(type, x, y, dir);
+    x = exit.x; y = exit.y; dir = exit.direction;
+    return true;
+  }
 
-  // === S5: CP4 → FINISH ===
-  { type: 'turn_90_r',  zone: d },   // →E
-  { type: 'straight_h', zone: d },   // 동쪽
-  { type: 'turn_90_l',  zone: d },   // →N
-  { type: 'straight',   zone: d },   // 가속
-  { type: 'straight',   zone: d },   // FINISH
-  { type: 'straight',   zone: d },   // 연장
-];
+  function addStraightsUntilSafe(nextType, maxTries) {
+    // Try adding the nextType directly
+    if (addPart(nextType)) return true;
+    // If overlap, add straights to gain distance
+    const straightType = (dir === 'east' || dir === 'west') ? 'straight_h' :
+                         (dir === 'northeast' || dir === 'northwest' || dir === 'southeast' || dir === 'southwest') ? 'diag_straight' :
+                         'straight';
+    for (let t = 0; t < (maxTries || 10); t++) {
+      addPart(straightType); // straights always safe (moving forward)
+      if (addPart(nextType)) return true;
+    }
+    console.error(`[SafeLayout] Could not place ${nextType} after ${maxTries || 10} straights`);
+    return false;
+  }
+
+  for (const item of skeleton) {
+    if (item.startsWith('CP')) {
+      // Add a straight for the checkpoint
+      addPart('straight');
+      cpIndices.push(result.length - 1);
+      continue;
+    }
+    if (item === 'straight' || item === 'straight_h' || item === 'diag_straight') {
+      addPart(item);
+    } else {
+      // Turn/hairpin — try to add, insert straights if overlap
+      addStraightsUntilSafe(item, 8);
+    }
+  }
+
+  console.log(`[SafeLayout] Generated ${result.length} parts, ${cpIndices.length} CPs, 0 overlaps by construction`);
+  return { parts: result, cpIndices };
+}
+
+const { parts: parts, cpIndices: _cpIdx } = generateSafeLayout();
 
 // ---- Exit Direction ----
 function getExitDirection(type, entryDir) {
@@ -473,12 +491,9 @@ function generateZones(partBounds) {
 
 // ---- Generate checkpoints at specific part indices ----
 function generateCheckpoints(partBounds) {
-  const cpDefs = [
-    { partIdx: 14,  name: 'CP1', timeBonus: 15000 },
-    { partIdx: 31,  name: 'CP2', timeBonus: 15000 },
-    { partIdx: 46,  name: 'CP3', timeBonus: 15000 },
-    { partIdx: 63,  name: 'CP4', timeBonus: 15000 },
-  ];
+  const cpDefs = _cpIdx.map((idx, i) => ({
+    partIdx: idx, name: `CP${i + 1}`, timeBonus: 15000,
+  }));
   const checkpoints = [];
   for (const cp of cpDefs) {
     if (cp.partIdx < partBounds.length) {
