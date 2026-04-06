@@ -27,11 +27,11 @@ const DIR_RIGHT_VEC = {
 // ---- Part Types ----
 const partTypes = {
   straight:   { width: 256, height: 512, fwdDist: 512, xShift: 0 },
-  curve_l:    { width: 256, height: 512, fwdDist: 512, xShift: -40 },
-  curve_r:    { width: 256, height: 512, fwdDist: 512, xShift: 40 },
+  curve_l:    { width: 256, height: 512, fwdDist: 512, xShift: -60 },
+  curve_r:    { width: 256, height: 512, fwdDist: 512, xShift: 60 },
   s_curve:    { width: 256, height: 512, fwdDist: 512, xShift: 0 },
-  hairpin_l:  { width: 256, height: 512, fwdDist: 512, xShift: -80 },
-  hairpin_r:  { width: 256, height: 512, fwdDist: 512, xShift: 80 },
+  hairpin_l:  { width: 256, height: 512, fwdDist: 512, xShift: -120 },
+  hairpin_r:  { width: 256, height: 512, fwdDist: 512, xShift: 120 },
   turn_90_l:  { width: 512, height: 512, turnRadius: 200 },
   turn_90_r:  { width: 512, height: 512, turnRadius: 200 },
   straight_h: { width: 512, height: 256, fwdDist: 512, xShift: 0 },
@@ -137,17 +137,22 @@ const zoneConfig = {
 
 // ---- Parts Definition ----
 const parts = [
-  // === ZONE 1: DESERT (넓은 사바나, 완만한 조합) ===
-  { type: 'straight', zone: 'desert' },
-  { type: 'straight', zone: 'desert' },
-  { type: 'curve_l', zone: 'desert' },
-  { type: 'straight', zone: 'desert' },
-  { type: 'curve_r', zone: 'desert' },
-  { type: 'straight', zone: 'desert' },
-  { type: 's_curve', zone: 'desert' },
-  { type: 'straight', zone: 'desert' },
-  { type: 'hairpin_r', zone: 'desert' },
-  { type: 'straight', zone: 'desert' },
+  // === ZONE 1: DESERT (Thrash Rally 패턴 — 15 parts) ===
+  { type: 'straight',  zone: 'desert' },   // #1  START
+  { type: 'straight',  zone: 'desert' },   // #2  가속 구간
+  { type: 'straight',  zone: 'desert' },   // #3  풀 스피드
+  { type: 'curve_r',   zone: 'desert' },   // #4  첫 변주 진입
+  { type: 'curve_l',   zone: 'desert' },   // #5  연속 S자 (직선 없이 바로)
+  { type: 'curve_r',   zone: 'desert' },   // #6  S자 마무리
+  { type: 'straight',  zone: 'desert' },   // #7  12시 복귀, 재가속
+  { type: 'straight',  zone: 'desert' },   // #8  속도 올리기
+  { type: 'hairpin_r', zone: 'desert' },   // #9  급 U턴
+  { type: 'straight',  zone: 'desert' },   // #10 짧은 회복
+  { type: 'hairpin_l', zone: 'desert' },   // #11 반대 U턴
+  { type: 'straight',  zone: 'desert' },   // #12 12시 복귀
+  { type: 's_curve',   zone: 'desert' },   // #13 마지막 변주
+  { type: 'straight',  zone: 'desert' },   // #14 CP1 향해 가속
+  { type: 'straight',  zone: 'desert' },   // #15 체크포인트 구간
 
   // === TRANSITION: DESERT → CANYON ===
   { type: 'straight', zone: 'trans_desert_canyon' },
