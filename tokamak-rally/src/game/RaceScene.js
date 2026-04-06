@@ -22,6 +22,7 @@ export class RaceScene extends Phaser.Scene {
     this._birdTimer = 5000 + Math.random() * 8000;
 
     this.renderTrackParts();
+    this.renderCornerArrows();
     this.placeCheckpoints();
     // this.placeRoadObstacles(); // obstacles removed — focus on racing
 
@@ -1070,19 +1071,31 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // ===== 5. CORNER PREVIEW ARROWS (on road surface) =====
-    const hints = this.track.arrowHints || [];
+  }
+
+  renderCornerArrows() {
+    const hints = this.track.arrowHints;
+    if (!hints || hints.length === 0) {
+      console.warn('[Arrows] No arrow hints found!');
+      return;
+    }
     console.log(`[Arrows] Rendering ${hints.length} corner arrows`);
-    for (const hint of hints) {
-      // Big red circle on the road
-      const c = this.add.circle(hint.x, hint.y, 35, 0xCC0000, 0.9).setDepth(5);
-      // White border
-      this.add.circle(hint.x, hint.y, 39, 0xFFFFFF, 0.6).setDepth(4);
-      // Arrow text: ◀ or ▶
-      const arrow = hint.direction === 'right' ? '▶' : '◀';
-      this.add.text(hint.x, hint.y, arrow, {
-        fontSize: '40px', color: '#FFFFFF', fontStyle: 'bold',
-      }).setOrigin(0.5).setDepth(6);
+    for (let i = 0; i < hints.length; i++) {
+      const h = hints[i];
+      try {
+        // White circle border
+        this.add.circle(h.x, h.y, 42, 0xFFFFFF, 0.7).setDepth(8);
+        // Red circle
+        this.add.circle(h.x, h.y, 36, 0xCC0000, 0.95).setDepth(9);
+        // Direction text
+        const txt = h.direction === 'right' ? '▶' : '◀';
+        this.add.text(h.x, h.y, txt, {
+          fontSize: '44px', color: '#FFFFFF', fontStyle: 'bold',
+        }).setOrigin(0.5).setDepth(10);
+        console.log(`[Arrow ${i}] at (${Math.round(h.x)}, ${Math.round(h.y)}) ${h.direction} ${h.severity}`);
+      } catch (e) {
+        console.error(`[Arrow ${i}] FAILED:`, e);
+      }
     }
   }
 
