@@ -137,24 +137,35 @@ const zoneConfig = {
 
 // ---- Parts Definition ----
 const parts = [
-  // === ZONE 1: DESERT (Thrash Rally 패턴 — 15 parts) ===
-  { type: 'straight',  zone: 'desert' },   // #1  START
-  { type: 'straight',  zone: 'desert' },   // #2  가속 구간
-  { type: 'straight',  zone: 'desert' },   // #3  풀 스피드
-  { type: 'curve_r',   zone: 'desert' },   // #4  첫 변주 진입
-  { type: 'curve_l',   zone: 'desert' },   // #5  연속 S자 (직선 없이 바로)
-  { type: 'curve_r',   zone: 'desert' },   // #6  S자 마무리
-  { type: 'straight',  zone: 'desert' },   // #7  12시 복귀, 재가속
-  { type: 'straight',  zone: 'desert' },   // #8  속도 올리기
-  { type: 'hairpin_r', zone: 'desert' },   // #9  급 U턴
-  { type: 'straight',  zone: 'desert' },   // #10 짧은 회복
-  { type: 'hairpin_l', zone: 'desert' },   // #11 반대 U턴
-  { type: 'straight',  zone: 'desert' },   // #12 12시 복귀
-  { type: 's_curve',   zone: 'desert' },   // #13 마지막 변주
-  { type: 'straight',  zone: 'desert' },   // #14 CP1 향해 가속
-  { type: 'straight',  zone: 'desert' },   // #15 체크포인트 구간
+  // === ZONE 1: DESERT — 90도 코너 + 헤어핀 다이���믹 코스 ===
+  // 오프닝: 긴 직선으로 가속
+  { type: 'straight',   zone: 'desert' },   // #1  START
+  { type: 'straight',   zone: 'desert' },   // #2  가속
+  { type: 'straight',   zone: 'desert' },   // #3  풀 스피드
+  // 첫 90도 코너 세트: 우회전 → 수평 → 좌회전
+  { type: 'turn_90_r',  zone: 'desert' },   // #4  확 꺾임!
+  { type: 'straight_h', zone: 'desert' },   // #5  동쪽 직선
+  { type: 'turn_90_l',  zone: 'desert' },   // #6  북쪽 복귀
+  // 짧은 직선 후 헤어핀
+  { type: 'straight',   zone: 'desert' },   // #7  회복 가속
+  { type: 'hairpin_r',  zone: 'desert' },   // #8  우측 U턴!
+  // 직선으로 재가속
+  { type: 'straight',   zone: 'desert' },   // #9  가속
+  // 두 번째 90도 코너 세트: 반대 방향
+  { type: 'turn_90_l',  zone: 'desert' },   // #10 좌로 꺾임!
+  { type: 'straight_h', zone: 'desert' },   // #11 서쪽 직���
+  { type: 'turn_90_r',  zone: 'desert' },   // #12 북쪽 복귀
+  // 직선 후 헤어핀 ��속
+  { type: 'straight',   zone: 'desert' },   // #13 가속
+  { type: 'hairpin_l',  zone: 'desert' },   // #14 좌측 U턴!
+  { type: 'straight',   zone: 'desert' },   // #15 짧은 회복
+  { type: 'hairpin_r',  zone: 'desert' },   // #16 우측 U턴! (연속 헤어핀)
+  // ���무리: 직선으로 ���크포인트
+  { type: 'straight',   zone: 'desert' },   // #17 CP1 향해 가속
+  { type: 'straight',   zone: 'desert' },   // #18 체크포인트 구간
 
   // === TRANSITION: DESERT → CANYON ===
+  { type: 'straight', zone: 'trans_desert_canyon' },
   { type: 'straight', zone: 'trans_desert_canyon' },
 
   // === ZONE 2: CANYON (좁고 거친, 헤어핀+S커브) ===
