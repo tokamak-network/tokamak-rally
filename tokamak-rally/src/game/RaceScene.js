@@ -530,6 +530,53 @@ export class RaceScene extends Phaser.Scene {
       return detailSeed / 2147483647;
     };
 
+    // ===== 0. BASE FILL — covers curve inner gaps =====
+    // Compute bounding box of entire desert+transition area
+    let globalMinX = Infinity, globalMaxX = -Infinity;
+    let globalMinY = Infinity, globalMaxY = -Infinity;
+    for (let i = startWP; i < endWP; i++) {
+      const ni = normals[i - startWP];
+      for (const side of [-1, 1]) {
+        const px = wp[i][0] + ni[0] * side * (bgHalfW + 100);
+        const py = wp[i][1] + ni[1] * side * (bgHalfW + 100);
+        globalMinX = Math.min(globalMinX, px);
+        globalMaxX = Math.max(globalMaxX, px);
+        globalMinY = Math.min(globalMinY, py);
+        globalMaxY = Math.max(globalMaxY, py);
+      }
+      globalMinX = Math.min(globalMinX, wp[i][0]);
+      globalMaxX = Math.max(globalMaxX, wp[i][0]);
+      globalMinY = Math.min(globalMinY, wp[i][1]);
+      globalMaxY = Math.max(globalMaxY, wp[i][1]);
+    }
+    const pad = 200;
+    globalMinX -= pad; globalMaxX += pad;
+    globalMinY -= pad; globalMaxY += pad;
+
+    // Desert base: solid desert color
+    const gBase = this.add.graphics().setDepth(-1);
+    gBase.fillStyle(0xD2B48C, 1);
+    gBase.fillRect(globalMinX, globalMinY, globalMaxX - globalMinX, globalMaxY - globalMinY);
+
+    // Transition base: canyon color over transition WP range
+    const transZone = desertZones.find(z => z.name === 'trans_desert_canyon');
+    if (transZone) {
+      const ts = transZone.fromWP, te = Math.min(transZone.toWP, wp.length);
+      let tMinX = Infinity, tMaxX = -Infinity, tMinY = Infinity, tMaxY = -Infinity;
+      for (let i = ts; i < te; i++) {
+        const ni = normals[i - startWP];
+        for (const side of [-1, 1]) {
+          const px = wp[i][0] + ni[0] * side * (bgHalfW + 100);
+          const py = wp[i][1] + ni[1] * side * (bgHalfW + 100);
+          tMinX = Math.min(tMinX, px); tMaxX = Math.max(tMaxX, px);
+          tMinY = Math.min(tMinY, py); tMaxY = Math.max(tMaxY, py);
+        }
+      }
+      tMinX -= pad; tMaxX += pad; tMinY -= pad; tMaxY += pad;
+      gBase.fillStyle(0x8B6914, 1);
+      gBase.fillRect(tMinX, tMinY, tMaxX - tMinX, tMaxY - tMinY);
+    }
+
     // ===== 1. BACKGROUND (depth 0) =====
     for (const dz of desertZones) {
       const s = dz.fromWP, e = Math.min(dz.toWP, wp.length);
