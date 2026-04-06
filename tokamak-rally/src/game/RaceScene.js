@@ -1071,66 +1071,46 @@ export class RaceScene extends Phaser.Scene {
     }
 
     // ===== 5. CORNER PREVIEW ARROWS (depth 10) =====
+    // Use Phaser game objects (not Graphics) for guaranteed visibility
     const hints = this.track.arrowHints || [];
     console.log(`[Arrows] Rendering ${hints.length} corner arrows`);
     for (const hint of hints) {
-      const g = this.add.graphics().setDepth(10);
       const ax = hint.x, ay = hint.y;
-      const ra = hint.roadAngle;
+      const ra = hint.roadAngle; // road direction in radians
       const sign = hint.direction === 'right' ? 1 : -1;
 
-      // Large sizes: 60/70/80 by severity
       let sz = 60;
       if (hint.severity === 'sharp') sz = 70;
       if (hint.severity === 'hairpin') sz = 80;
 
-      // Chevron arrow pointing in turn direction, oriented along road
-      const pa = ra + sign * Math.PI / 2; // perpendicular toward turn
+      // Arrow direction: perpendicular to road, pointing into the turn
+      const pa = ra + sign * Math.PI / 2;
 
-      // Arrowhead triangle (pointing sideways into turn)
-      const tipX = ax + Math.cos(pa) * sz * 0.6;
-      const tipY = ay + Math.sin(pa) * sz * 0.6;
-      const hw = sz * 0.45;
+      // Triangle head vertices (pointing into turn direction)
+      const tipX = ax + Math.cos(pa) * sz * 0.7;
+      const tipY = ay + Math.sin(pa) * sz * 0.7;
+      const hw = sz * 0.5;
       const b1x = ax + Math.cos(ra) * hw;
       const b1y = ay + Math.sin(ra) * hw;
       const b2x = ax - Math.cos(ra) * hw;
       const b2y = ay - Math.sin(ra) * hw;
 
-      // White outline (5px bigger)
-      g.fillStyle(0xFFFFFF, 0.95);
-      const o = 5;
-      g.fillTriangle(
-        tipX + Math.cos(pa) * o, tipY + Math.sin(pa) * o,
-        b1x + Math.cos(ra) * o + Math.cos(pa + Math.PI) * o, b1y + Math.sin(ra) * o + Math.sin(pa + Math.PI) * o,
-        b2x - Math.cos(ra) * o + Math.cos(pa + Math.PI) * o, b2y - Math.sin(ra) * o + Math.sin(pa + Math.PI) * o
+      // White outline circle behind arrow (simple, guaranteed visible)
+      this.add.circle(ax, ay, sz * 0.55, 0xFFFFFF, 0.4).setDepth(9);
+
+      // Red triangle using Phaser.GameObjects.Triangle
+      const tri = this.add.triangle(0, 0, tipX, tipY, b1x, b1y, b2x, b2y, 0xCC0000, 1.0);
+      tri.setOrigin(0, 0).setDepth(10);
+
+      // White border triangle (slightly bigger)
+      const bo = 6;
+      const triW = this.add.triangle(0, 0,
+        tipX + Math.cos(pa) * bo, tipY + Math.sin(pa) * bo,
+        b1x + Math.cos(ra) * bo, b1y + Math.sin(ra) * bo,
+        b2x - Math.cos(ra) * bo, b2y - Math.sin(ra) * bo,
+        0xFFFFFF, 0.9
       );
-
-      // Red body
-      g.fillStyle(0xCC0000, 1.0);
-      g.fillTriangle(tipX, tipY, b1x, b1y, b2x, b2y);
-
-      // Shaft rectangle (tail extending opposite to turn)
-      const shaftLen = sz * 0.5;
-      const shaftW = sz * 0.15;
-      const sx = ax - Math.cos(pa) * shaftLen * 0.5;
-      const sy = ay - Math.sin(pa) * shaftLen * 0.5;
-      // 4 corners of shaft
-      const s1x = sx + Math.cos(ra) * shaftW, s1y = sy + Math.sin(ra) * shaftW;
-      const s2x = sx - Math.cos(ra) * shaftW, s2y = sy - Math.sin(ra) * shaftW;
-      const s3x = s2x - Math.cos(pa) * shaftLen, s3y = s2y - Math.sin(pa) * shaftLen;
-      const s4x = s1x - Math.cos(pa) * shaftLen, s4y = s1y - Math.sin(pa) * shaftLen;
-      // White outline shaft
-      g.fillStyle(0xFFFFFF, 0.95);
-      g.beginPath(); g.moveTo(s1x + o * Math.cos(ra), s1y + o * Math.sin(ra));
-      g.lineTo(s4x + o * Math.cos(ra), s4y + o * Math.sin(ra));
-      g.lineTo(s3x - o * Math.cos(ra), s3y - o * Math.sin(ra));
-      g.lineTo(s2x - o * Math.cos(ra), s2y - o * Math.sin(ra));
-      g.closePath(); g.fillPath();
-      // Red shaft
-      g.fillStyle(0xCC0000, 1.0);
-      g.beginPath(); g.moveTo(s1x, s1y); g.lineTo(s4x, s4y);
-      g.lineTo(s3x, s3y); g.lineTo(s2x, s2y);
-      g.closePath(); g.fillPath();
+      triW.setOrigin(0, 0).setDepth(9);
     }
   }
 
