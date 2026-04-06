@@ -559,21 +559,33 @@ const arrowHints = generateArrowHints(parts, waypoints, partBounds);
 
 const finishWP = waypoints.length - 4;
 
-// ---- Road overlap check (strict: every WP, gap>10, threshold 150px) ----
-const MIN_ROAD_GAP = 150; // road(100) + barrier(20) + margin(30)
-let overlapCount = 0;
-for (let i = 0; i < waypoints.length; i++) {
-  for (let j = i + 10; j < waypoints.length; j++) {
-    const dx = waypoints[i][0] - waypoints[j][0];
-    const dy = waypoints[i][1] - waypoints[j][1];
-    if (dx*dx + dy*dy < MIN_ROAD_GAP * MIN_ROAD_GAP) {
-      overlapCount++;
-      if (overlapCount <= 5) console.error(`[Track] OVERLAP: WP${i} ↔ WP${j} = ${Math.round(Math.sqrt(dx*dx+dy*dy))}px`);
+// ---- Road overlap check (part-based, 250px threshold) ----
+const MIN_ROAD_GAP = 250; // road(100)+curb(20)+barrier(20)+bg(90)=230, round up
+function checkOverlaps(wp, pb) {
+  const errors = [];
+  for (let i = 0; i < pb.length; i++) {
+    for (let j = i + 3; j < pb.length; j++) { // skip adjacent 2 parts
+      for (let wi = pb[i].startWP; wi <= pb[i].endWP; wi++) {
+        for (let wj = pb[j].startWP; wj <= pb[j].endWP; wj++) {
+          const dx = wp[wi][0] - wp[wj][0], dy = wp[wi][1] - wp[wj][1];
+          if (dx*dx + dy*dy < MIN_ROAD_GAP * MIN_ROAD_GAP) {
+            errors.push({ pi: i, pj: j, wi, wj, dist: Math.round(Math.sqrt(dx*dx+dy*dy)) });
+          }
+        }
+      }
     }
   }
+  return errors;
 }
-if (overlapCount > 0) console.error(`[Track] ERROR: ${overlapCount} road overlaps (gap < ${MIN_ROAD_GAP}px)`);
-else console.log('[Track] No road overlaps (150px threshold) ✓');
+const overlapErrors = checkOverlaps(waypoints, partBounds);
+if (overlapErrors.length > 0) {
+  console.error(`[Overlap] ERROR: ${overlapErrors.length} conflicts found (< ${MIN_ROAD_GAP}px)`);
+  overlapErrors.slice(0, 5).forEach(e =>
+    console.error(`  part ${e.pi} WP${e.wi} ↔ part ${e.pj} WP${e.wj} = ${e.dist}px`)
+  );
+} else {
+  console.log(`[Overlap] 0 conflicts found (${MIN_ROAD_GAP}px threshold) ✓`);
+}
 
 const trackValid = validateTrack(parts);
 console.log(`[Track] Parts: ${parts.length}, Waypoints: ${waypoints.length}, Zones: ${zones.length}, Valid: ${trackValid}`);

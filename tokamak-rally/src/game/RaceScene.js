@@ -1084,20 +1084,17 @@ export class RaceScene extends Phaser.Scene {
     if (!hints || !this.carState) return;
     const car = this.carState;
 
-    // Show distance = speed × 0.5s, minimum 80px
-    const showDist = Math.max(80, Math.abs(car.speed) * 0.5);
+    // Show distance = speed × 0.3s, minimum 50px
+    const showDist = Math.max(50, Math.abs(car.speed) * 0.3);
 
     let showHint = null, showDst = Infinity;
     for (const h of hints) {
       const dx = h.x - car.x, dy = h.y - car.y;
       const d = Math.sqrt(dx*dx + dy*dy);
-      // Corner must be ahead (not passed) and within range
-      if (d < showDist && d > 15 && d < showDst) {
-        // Check ahead: corner Y should be less than car Y (north = Y decreasing)
-        // But also handle east/west movement, so use dot product with car direction
+      if (d < showDist && d > 10 && d < showDst) {
         const carRad = Phaser.Math.DegToRad(car.angle);
         const dot = dx * Math.cos(carRad) + dy * Math.sin(carRad);
-        if (dot > 0) { // corner is ahead of car
+        if (dot > 0) {
           showDst = d;
           showHint = h;
         }
@@ -1107,45 +1104,49 @@ export class RaceScene extends Phaser.Scene {
     this._navGfx.clear();
     if (showHint) {
       this._navGfx.setVisible(true);
-      // Draw bent arrow at screen center, above car (~40px up from center)
-      const cx = 400, cy = 260; // screen center area, slightly above car
-      const sz = 22;
+      const cx = 400, cy = 260;
+      const sz = 45;
 
       const ea = showHint.entryAngle;
       const xa = showHint.exitAngle;
 
-      // Tail: entry direction (where road comes FROM)
       const tailX = cx - Math.cos(ea) * sz;
       const tailY = cy - Math.sin(ea) * sz;
-      // Bend point: center
       const midX = cx, midY = cy;
-      // Head: exit direction (where road GOES)
       const headX = cx + Math.cos(xa) * sz;
       const headY = cy + Math.sin(xa) * sz;
 
-      // White outline
-      this._navGfx.lineStyle(7, 0xFFFFFF, 0.9);
+      // Dark background circle
+      this._navGfx.fillStyle(0x000000, 0.3);
+      this._navGfx.fillCircle(cx, cy, 55);
+
+      // White outline (thick)
+      this._navGfx.lineStyle(14, 0xFFFFFF, 0.9);
       this._navGfx.beginPath();
       this._navGfx.moveTo(tailX, tailY);
       this._navGfx.lineTo(midX, midY);
       this._navGfx.lineTo(headX, headY);
       this._navGfx.strokePath();
 
-      // Red body
-      this._navGfx.lineStyle(4, 0xCC0000, 1.0);
+      // Red body (thick)
+      this._navGfx.lineStyle(10, 0xCC0000, 0.95);
       this._navGfx.beginPath();
       this._navGfx.moveTo(tailX, tailY);
       this._navGfx.lineTo(midX, midY);
       this._navGfx.lineTo(headX, headY);
       this._navGfx.strokePath();
 
-      // Arrowhead triangle at tip
-      const triSz = 8;
+      // Large arrowhead triangle
+      const triSz = 20;
       const tipX = headX + Math.cos(xa) * triSz;
       const tipY = headY + Math.sin(xa) * triSz;
       const px = -Math.sin(xa) * triSz * 0.6;
       const py = Math.cos(xa) * triSz * 0.6;
-      this._navGfx.fillStyle(0xCC0000, 1.0);
+      this._navGfx.fillStyle(0xFFFFFF, 0.9);
+      this._navGfx.fillTriangle(tipX + Math.cos(xa)*3, tipY + Math.sin(xa)*3,
+        headX + px + Math.cos(xa)*3, headY + py + Math.sin(xa)*3,
+        headX - px + Math.cos(xa)*3, headY - py + Math.sin(xa)*3);
+      this._navGfx.fillStyle(0xCC0000, 0.95);
       this._navGfx.fillTriangle(tipX, tipY, headX + px, headY + py, headX - px, headY - py);
     } else {
       this._navGfx.setVisible(false);
