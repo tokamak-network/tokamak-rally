@@ -21,6 +21,7 @@ export class RaceScene extends Phaser.Scene {
     this._animals = [];
     this._birdTimer = 5000 + Math.random() * 8000;
 
+    this.renderDesertParts();
     this.drawBackground();
     this.drawTrack();
     this.drawSprintOverlay();
@@ -154,6 +155,9 @@ export class RaceScene extends Phaser.Scene {
     });
 
     for (const zone of sortedZones) {
+      // Skip desert zones — rendered by renderDesertParts()
+      if (zone.name === 'desert' || zone.name === 'trans_desert_canyon') continue;
+
       const s = zone.fromWP, e = Math.min(zone.toWP, wp.length - 1);
 
       // Collect unique tile grid positions near the road
@@ -207,6 +211,9 @@ export class RaceScene extends Phaser.Scene {
     const TEX_SIZE = 512; // road texture tile size
 
     for (const zone of this.track.zones) {
+      // Skip desert zones — rendered by renderDesertParts()
+      if (zone.name === 'desert' || zone.name === 'trans_desert_canyon') continue;
+
       const s = Math.max(0, zone.fromWP);
       const e = Math.min(zone.toWP+1, wp.length);
       const w = zone.trackWidth || 100;
@@ -477,11 +484,281 @@ export class RaceScene extends Phaser.Scene {
     // Sprint-specific overlay removed — v5 asphalt texture already has center lines.
   }
 
+  // ---- Utility: compute smoothed normals for a waypoint range ----
+  computeNormals(waypoints, startWP, endWP) {
+    const normals = [];
+    for (let i = startWP; i < endWP; i++) {
+      let nx = 0, ny = 0;
+      if (i > startWP) {
+        const dx = waypoints[i][0] - waypoints[i-1][0], dy = waypoints[i][1] - waypoints[i-1][1];
+        const l = Math.sqrt(dx*dx + dy*dy) || 1;
+        nx += -dy/l; ny += dx/l;
+      }
+      if (i < endWP - 1) {
+        const dx = waypoints[i+1][0] - waypoints[i][0], dy = waypoints[i+1][1] - waypoints[i][1];
+        const l = Math.sqrt(dx*dx + dy*dy) || 1;
+        nx += -dy/l; ny += dx/l;
+      }
+      const l = Math.sqrt(nx*nx + ny*ny) || 1;
+      normals.push([nx/l, ny/l]);
+    }
+    return normals;
+  }
+
+  // ---- Parts-based rendering: Desert zone ----
+  renderDesertParts() {
+    const wp = this.track.waypoints;
+    const zones = this.track.zones;
+    this._desertBarrierSegments = [];
+
+    // Find desert + transition zone WP range
+    const desertZones = zones.filter(z => z.name === 'desert' || z.name === 'trans_desert_canyon');
+    if (desertZones.length === 0) return;
+
+    const startWP = desertZones[0].fromWP;
+    const endWP = Math.min(desertZones[desertZones.length - 1].toWP, wp.length);
+    const halfW = 50; // roadWidth 100 / 2
+    const bgHalfW = 128; // parts width 256 / 2
+
+    // Compute normals for the full desert range
+    const normals = this.computeNormals(wp, startWP, endWP);
+
+    // Seeded RNG for deterministic sand detail
+    let detailSeed = 12345;
+    const detailRng = () => {
+      detailSeed = (detailSeed * 16807 + 0) % 2147483647;
+      return detailSeed / 2147483647;
+    };
+
+    // ===== 1. BACKGROUND (depth 0) =====
+    for (const dz of desertZones) {
+      const s = dz.fromWP, e = Math.min(dz.toWP, wp.length);
+      const isTransition = dz.name === 'trans_desert_canyon';
+      const totalWP = e - s;
+
+      const gBg = this.add.graphics().setDepth(0);
+
+      for (let i = s; i < e - 1; i++) {
+        const ni = normals[i - startWP];
+        const niNext = normals[Math.min(i + 1 - startWP, normals.length - 1)];
+
+        // Background color — transition blends desert→canyon
+        let bgColor = 0xD2B48C; // desert
+        if (isTransition && totalWP > 0) {
+          const p = (i - s) / totalWP;
+          const r1 = 0xD2, g1 = 0xB4, b1 = 0x8C; // desert
+          const r2 = 0x8B, g2 = 0x69, b2 = 0x14; // canyon
+          const r = Math.round(r1 + (r2 - r1) * p);
+          const g = Math.round(g1 + (g2 - g1) * p);
+          const b = Math.round(b1 + (b2 - b1) * p);
+          bgColor = (r << 16) | (g << 8) | b;
+        }
+
+        // Draw background quad on each side (left and right of road)
+        for (const side of [-1, 1]) {
+          const innerOff = halfW + 2; // just outside road edge
+          const outerOff = bgHalfW;
+
+          // Current point
+          const ix = wp[i][0] + ni[0] * side * innerOff;
+          const iy = wp[i][1] + ni[1] * side * innerOff;
+          const ox = wp[i][0] + ni[0] * side * outerOff;
+          const oy = wp[i][1] + ni[1] * side * outerOff;
+
+          // Next point
+          const ixN = wp[i+1][0] + niNext[0] * side * innerOff;
+          const iyN = wp[i+1][1] + niNext[1] * side * innerOff;
+          const oxN = wp[i+1][0] + niNext[0] * side * outerOff;
+          const oyN = wp[i+1][1] + niNext[1] * side * outerOff;
+
+          gBg.fillStyle(bgColor, 1);
+          gBg.beginPath();
+          gBg.moveTo(ix, iy);
+          gBg.lineTo(ox, oy);
+          gBg.lineTo(oxN, oyN);
+          gBg.lineTo(ixN, iyN);
+          gBg.closePath();
+          gBg.fillPath();
+        }
+      }
+
+      // Sand detail: small grains and larger spots
+      const gDetail = this.add.graphics().setDepth(0);
+      for (let i = s; i < e; i += 2) {
+        const ni = normals[i - startWP];
+        for (let d = 0; d < 6; d++) {
+          const side = detailRng() > 0.5 ? 1 : -1;
+          const offset = halfW + 4 + detailRng() * (bgHalfW - halfW - 8);
+          const along = (detailRng() - 0.5) * 60;
+          const dx = wp[i][0] + ni[0] * side * offset;
+          const dy = wp[i][1] + ni[1] * side * offset;
+          const fwd = i < e - 1 ?
+            [wp[i+1][0] - wp[i][0], wp[i+1][1] - wp[i][1]] : [0, -1];
+          const fLen = Math.sqrt(fwd[0]*fwd[0] + fwd[1]*fwd[1]) || 1;
+          const px = dx + (fwd[0]/fLen) * along;
+          const py = dy + (fwd[1]/fLen) * along;
+
+          if (detailRng() > 0.6) {
+            // Larger spot (bush/rock hint)
+            const r = 8 + detailRng() * 4;
+            gDetail.fillStyle(0xA08850, 0.2);
+            gDetail.fillCircle(px, py, r);
+          } else {
+            // Small grain
+            const r = 3 + detailRng() * 2;
+            gDetail.fillStyle(0xC4A06C, 0.3);
+            gDetail.fillCircle(px, py, r);
+          }
+        }
+      }
+    }
+
+    // ===== 2. ROAD (depth 1) =====
+    const gRoad = this.add.graphics().setDepth(1);
+    for (const dz of desertZones) {
+      const s = dz.fromWP, e = Math.min(dz.toWP, wp.length);
+      const isTransition = dz.name === 'trans_desert_canyon';
+      const totalWP = e - s;
+
+      // Road border (wider, subtler)
+      let borderColor = 0x8a6a30;
+      gRoad.lineStyle(120, borderColor, 0.4);
+      gRoad.beginPath();
+      gRoad.moveTo(wp[s][0], wp[s][1]);
+      for (let i = s + 1; i < e; i++) gRoad.lineTo(wp[i][0], wp[i][1]);
+      gRoad.strokePath();
+
+      // Road surface
+      if (isTransition) {
+        // Draw segment by segment with blending color
+        for (let i = s; i < e - 1; i++) {
+          const p = totalWP > 0 ? (i - s) / totalWP : 0;
+          const r1 = 0x9B, g1 = 0x7B, b1 = 0x4A; // desert road
+          const r2 = 0x7B, g2 = 0x5B, b2 = 0x2A; // canyon road
+          const r = Math.round(r1 + (r2 - r1) * p);
+          const g = Math.round(g1 + (g2 - g1) * p);
+          const b = Math.round(b1 + (b2 - b1) * p);
+          const roadColor = (r << 16) | (g << 8) | b;
+          gRoad.lineStyle(100, roadColor, 1);
+          gRoad.beginPath();
+          gRoad.moveTo(wp[i][0], wp[i][1]);
+          gRoad.lineTo(wp[i+1][0], wp[i+1][1]);
+          gRoad.strokePath();
+        }
+      } else {
+        gRoad.lineStyle(100, 0x9B7B4A, 1);
+        gRoad.beginPath();
+        gRoad.moveTo(wp[s][0], wp[s][1]);
+        for (let i = s + 1; i < e; i++) gRoad.lineTo(wp[i][0], wp[i][1]);
+        gRoad.strokePath();
+      }
+    }
+
+    // ===== 3. CURB MARKERS (depth 2) =====
+    const CURB_DASH = 10, CURB_W = 4;
+    for (const dz of desertZones) {
+      const s = dz.fromWP, e = Math.min(dz.toWP, wp.length);
+      const gCurb = this.add.graphics().setDepth(2);
+
+      for (const side of [-1, 1]) {
+        const edgePts = [];
+        for (let i = s; i < e; i++) {
+          const ni = normals[i - startWP];
+          edgePts.push([wp[i][0] + ni[0] * side * (halfW + 2), wp[i][1] + ni[1] * side * (halfW + 2)]);
+        }
+        let curbDist = 0;
+        for (let i = 0; i < edgePts.length - 1; i++) {
+          const dx = edgePts[i+1][0] - edgePts[i][0], dy = edgePts[i+1][1] - edgePts[i][1];
+          const segLen = Math.sqrt(dx*dx + dy*dy);
+          if (segLen < 1) continue;
+          const ux = dx/segLen, uy = dy/segLen;
+          let pos = 0;
+          while (pos < segLen) {
+            const step = Math.min(CURB_DASH, segLen - pos);
+            const isRed = (Math.floor(curbDist / CURB_DASH) % 2 === 0);
+            gCurb.lineStyle(CURB_W, isRed ? 0xCC0000 : 0xFFFFFF, 0.7);
+            const x1 = edgePts[i][0] + ux * pos, y1 = edgePts[i][1] + uy * pos;
+            const x2 = edgePts[i][0] + ux * (pos + step), y2 = edgePts[i][1] + uy * (pos + step);
+            gCurb.beginPath(); gCurb.moveTo(x1, y1); gCurb.lineTo(x2, y2); gCurb.strokePath();
+            pos += step;
+            curbDist += step;
+          }
+        }
+      }
+    }
+
+    // ===== 4. BARRIERS — wood fence (depth 3) =====
+    const barrierDist = halfW + 8;
+    for (const dz of desertZones) {
+      const s = dz.fromWP, e = Math.min(dz.toWP, wp.length);
+
+      // Collect barrier collision data
+      for (let i = s; i < e; i++) {
+        const ni = normals[i - startWP];
+        this._desertBarrierSegments.push({
+          x: wp[i][0], y: wp[i][1], nx: ni[0], ny: ni[1], dist: barrierDist
+        });
+      }
+
+      const bPos = (i, side) => {
+        const ni = normals[i - startWP];
+        return [wp[i][0] + ni[0] * side * barrierDist, wp[i][1] + ni[1] * side * barrierDist];
+      };
+
+      for (const side of [-1, 1]) {
+        // Rails (2 horizontal lines offset ±2px from barrier center)
+        for (const railOff of [-2, 2]) {
+          const gRail = this.add.graphics().setDepth(3);
+          gRail.lineStyle(2, 0x8B6914, 0.9);
+          gRail.beginPath();
+          const [sx, sy] = bPos(s, side);
+          const n0 = normals[0];
+          gRail.moveTo(sx + n0[0] * railOff, sy + n0[1] * railOff);
+          for (let i = s + 1; i < e; i++) {
+            const [px, py] = bPos(i, side);
+            const ni = normals[i - startWP];
+            gRail.lineTo(px + ni[0] * railOff, py + ni[1] * railOff);
+          }
+          gRail.strokePath();
+        }
+
+        // Main fence line
+        const gFence = this.add.graphics().setDepth(3);
+        gFence.lineStyle(4, 0x6B4226, 0.9);
+        gFence.beginPath();
+        const [sx, sy] = bPos(s, side);
+        gFence.moveTo(sx, sy);
+        for (let i = s + 1; i < e; i++) {
+          const [px, py] = bPos(i, side);
+          gFence.lineTo(px, py);
+        }
+        gFence.strokePath();
+
+        // Posts every 30px
+        const gPosts = this.add.graphics().setDepth(3);
+        gPosts.fillStyle(0x8B6914, 1);
+        let dist = 0;
+        for (let i = s; i < e - 1; i++) {
+          const dx = wp[i+1][0] - wp[i][0], dy = wp[i+1][1] - wp[i][1];
+          dist += Math.sqrt(dx*dx + dy*dy);
+          if (dist >= 30) {
+            dist = 0;
+            const [px, py] = bPos(i + 1, side);
+            gPosts.fillCircle(px, py, 3);
+          }
+        }
+      }
+    }
+  }
+
   placeBarriers() {
     const wp = this.track.waypoints;
     this._barrierSegments = [];
 
     for (const zone of this.track.zones) {
+      // Skip desert zones — rendered by renderDesertParts()
+      if (zone.name === 'desert' || zone.name === 'trans_desert_canyon') continue;
+
       const s = Math.max(0, zone.fromWP);
       const e = Math.min(zone.toWP + 1, wp.length);
       const halfW = (zone.trackWidth || 100) / 2;
@@ -1031,11 +1308,34 @@ export class RaceScene extends Phaser.Scene {
     car.x+=Math.cos(moveRad)*car.speed*dt;
     car.y+=Math.sin(moveRad)*car.speed*dt;
 
-    // Barrier collision — all zones
+    // Barrier collision — all zones (Canyon~Sprint via placeBarriers)
     if (this._barrierSegments && this._barrierSegments.length > 0) {
       // Find closest barrier segment to car (use spatial check for perf)
       let minD = Infinity, closest = null;
       for (const seg of this._barrierSegments) {
+        const d = (car.x - seg.x) ** 2 + (car.y - seg.y) ** 2;
+        if (d < minD) { minD = d; closest = seg; }
+      }
+      if (closest && minD < 200 * 200) {
+        const dx = car.x - closest.x, dy = car.y - closest.y;
+        const perpDist = dx * closest.nx + dy * closest.ny;
+        const absDist = Math.abs(perpDist);
+        if (absDist > closest.dist - 5) {
+          const sign = perpDist > 0 ? 1 : -1;
+          const pushDist = closest.dist - 8;
+          const alongX = dx - perpDist * closest.nx;
+          const alongY = dy - perpDist * closest.ny;
+          car.x = closest.x + alongX + closest.nx * sign * pushDist;
+          car.y = closest.y + alongY + closest.ny * sign * pushDist;
+          car.speed *= 0.4;
+        }
+      }
+    }
+
+    // Barrier collision — Desert zone (via renderDesertParts)
+    if (this._desertBarrierSegments && this._desertBarrierSegments.length > 0) {
+      let minD = Infinity, closest = null;
+      for (const seg of this._desertBarrierSegments) {
         const d = (car.x - seg.x) ** 2 + (car.y - seg.y) ** 2;
         if (d < minD) { minD = d; closest = seg; }
       }
