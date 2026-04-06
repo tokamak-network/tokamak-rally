@@ -52,10 +52,10 @@ const partTypes = {
   diag_straight: { fwdDist: 512, xShift: 0 },
   hairpin_l:     { fwdDist: 512, xShift: -400 },
   hairpin_r:     { fwdDist: 512, xShift: 400 },
-  turn_90_l:     { turnRadius: 200, turnAngle: Math.PI / 2 },
-  turn_90_r:     { turnRadius: 200, turnAngle: Math.PI / 2 },
-  turn_45_l:     { turnRadius: 200, turnAngle: Math.PI / 4 },
-  turn_45_r:     { turnRadius: 200, turnAngle: Math.PI / 4 },
+  turn_90_l:     { turnRadius: 400, turnAngle: Math.PI / 2 },
+  turn_90_r:     { turnRadius: 400, turnAngle: Math.PI / 2 },
+  turn_45_l:     { turnRadius: 400, turnAngle: Math.PI / 4 },
+  turn_45_r:     { turnRadius: 400, turnAngle: Math.PI / 4 },
 };
 
 // ---- Zone Configuration ----
@@ -117,7 +117,7 @@ const zoneConfig = {
 };
 
 // ---- Turn arc computation (generalized for 8 directions) ----
-const R = 200; // turn radius
+const R = 400; // turn radius (wide enough to prevent inner-corner overlap)
 
 function computeTurnArc(entryDir, turnAngle, turnDirection) {
   const rv = DIR_RIGHT_VEC[entryDir];
