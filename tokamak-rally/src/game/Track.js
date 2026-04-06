@@ -166,17 +166,8 @@ const parts = [
   // === CP1 ===
   { type: 'straight',      zone: 'desert' },  // #12 체크포인트 1
 
-  // === 섹션 4: 변형 Z패턴 (45도) ===
-  { type: 'straight',      zone: 'desert' },  // #13 가속
-  { type: 'turn_45_l',     zone: 'desert' },  // #14 45도 좌 (→ NW)
-  { type: 'diag_straight', zone: 'desert' },  // #15 NW 대각선
-  { type: 'turn_45_r',     zone: 'desert' },  // #16 45도 우 (→ N 복귀)
-  { type: 'turn_45_r',     zone: 'desert' },  // #17 45도 우 (→ NE) 방향 전환!
-  { type: 'diag_straight', zone: 'desert' },  // #18 NE 대각선
-  { type: 'turn_45_l',     zone: 'desert' },  // #19 45도 좌 (→ N 복귀)
-
   // === CP2 ===
-  { type: 'straight',      zone: 'desert' },  // #20 체크포인트 2
+  { type: 'straight',      zone: 'desert' },  // #13 체크포인트 2
 
   // === 섹션 5: 정석 Z패턴 (90도) ===
   { type: 'straight',      zone: 'desert' },  // #21 가속
@@ -395,12 +386,12 @@ function generateZones(partBounds) {
 
 // ---- Generate checkpoints at specific part indices ----
 function generateCheckpoints(partBounds) {
-  // CP parts: #12→idx11, #20→idx19, #28→idx27, #40→idx39
+  // CP parts (0-indexed): #12→idx11, #13→idx12, #21→idx20, #33→idx32
   const cpDefs = [
     { partIdx: 11, name: 'CP1: Dune Ridge',    timeBonus: 15000 },
-    { partIdx: 19, name: 'CP2: Oasis Mirage',   timeBonus: 15000 },
-    { partIdx: 27, name: 'CP3: Sandstorm Pass',  timeBonus: 15000 },
-    { partIdx: 39, name: 'CP4: Final Dune',      timeBonus: 15000 },
+    { partIdx: 12, name: 'CP2: Oasis Mirage',   timeBonus: 15000 },
+    { partIdx: 20, name: 'CP3: Sandstorm Pass',  timeBonus: 15000 },
+    { partIdx: 32, name: 'CP4: Final Dune',      timeBonus: 15000 },
   ];
   const checkpoints = [];
   for (const cp of cpDefs) {
