@@ -40,86 +40,104 @@ const partTypes = {
 // ---- Zone Configuration ----
 const zoneConfig = {
   desert: {
-    bgColor: 0xD4A574,
-    roadColor: 0xB89060,
-    edgeColor: 0x8B6914,
+    bgColor: 0xD2B48C,
+    roadColor: 0x9B7B4A,
+    edgeColor: 0x8a6a30,
     roadType: 'sand',
     trackWidth: 100,
+    barrierColor: 0x8a6a30,
     barrierStyle: 'wood_fence',
+    label: 'Desert',
   },
   trans_desert_canyon: {
-    bgColor: 0xC49564,
-    roadColor: 0xA08050,
-    edgeColor: 0x7A5A20,
+    bgColor: 0xC4A06C,
+    roadColor: 0x8B6B3A,
+    edgeColor: 0x7a5a20,
     roadType: 'dirt',
     trackWidth: 100,
+    barrierColor: 0x7a5a20,
     barrierStyle: 'wood_fence',
+    label: 'Transition',
     transition: { from: 'desert', to: 'canyon' },
   },
   canyon: {
-    bgColor: 0x8B4513,
-    roadColor: 0x7A6550,
-    edgeColor: 0x5A4530,
+    bgColor: 0x8B6914,
+    roadColor: 0x7B5B2A,
+    edgeColor: 0x6a4a30,
     roadType: 'dirt',
     trackWidth: 100,
+    barrierColor: 0x6a4a30,
     barrierStyle: 'metal_guardrail',
+    label: 'Canyon',
   },
   trans_canyon_riverbed: {
-    bgColor: 0x6A6030,
-    roadColor: 0x6A5A40,
-    edgeColor: 0x4A3A28,
+    bgColor: 0x6B8B3A,
+    roadColor: 0x6B6B3A,
+    edgeColor: 0x5a6a20,
     roadType: 'dirt',
     trackWidth: 100,
+    barrierColor: 0x5a6a20,
     barrierStyle: 'metal_guardrail',
+    label: 'Transition',
     transition: { from: 'canyon', to: 'riverbed' },
   },
   riverbed: {
-    bgColor: 0x5A7A4A,
-    roadColor: 0x6A5A40,
-    edgeColor: 0x4A3A28,
+    bgColor: 0x4A7A4A,
+    roadColor: 0x7B6B3A,
+    edgeColor: 0x6a5a30,
     roadType: 'dirt',
     trackWidth: 100,
+    barrierColor: 0x6a5a30,
     barrierStyle: 'wood_fence',
+    label: 'Riverbed',
   },
   trans_riverbed_mountain: {
-    bgColor: 0x5A7060,
-    roadColor: 0x6A5A40,
-    edgeColor: 0x4A3A28,
+    bgColor: 0x6A8A6A,
+    roadColor: 0x8B8B7A,
+    edgeColor: 0x7a7a70,
     roadType: 'rocky',
     trackWidth: 100,
+    barrierColor: 0x7a7a70,
     barrierStyle: 'wood_fence',
+    label: 'Transition',
     transition: { from: 'riverbed', to: 'mountain' },
   },
   mountain: {
-    bgColor: 0x6A7A8A,
-    roadColor: 0x7A6050,
-    edgeColor: 0x4A4A50,
+    bgColor: 0xE8E8F0,
+    roadColor: 0xB0B0A8,
+    edgeColor: 0x8a8a80,
     roadType: 'rocky',
     trackWidth: 100,
+    barrierColor: 0x8a8a80,
     barrierStyle: 'stone_wall',
+    label: 'Mountain',
   },
   trans_mountain_sprint: {
-    bgColor: 0x505060,
-    roadColor: 0x585860,
-    edgeColor: 0x505058,
+    bgColor: 0xA0A0A8,
+    roadColor: 0x606060,
+    edgeColor: 0x888888,
     roadType: 'paved',
     trackWidth: 100,
+    barrierColor: 0x888888,
     barrierStyle: 'stone_wall',
+    label: 'Transition',
     transition: { from: 'mountain', to: 'sprint' },
   },
   sprint: {
     bgColor: 0x3A3A42,
-    roadColor: 0x484850,
-    edgeColor: 0x606068,
+    roadColor: 0x2A2A2A,
+    edgeColor: 0x888888,
     roadType: 'paved',
     trackWidth: 100,
+    barrierColor: 0x888888,
     barrierStyle: 'jersey_barrier',
+    label: 'Sprint',
   },
 };
 
 // ---- Parts Definition ----
 const parts = [
-  // === ZONE 1: DESERT ===
+  // === ZONE 1: DESERT (넓은 사바나, 완만한 조합) ===
   { type: 'straight', zone: 'desert' },
   { type: 'straight', zone: 'desert' },
   { type: 'curve_l', zone: 'desert' },
@@ -133,60 +151,58 @@ const parts = [
 
   // === TRANSITION: DESERT → CANYON ===
   { type: 'straight', zone: 'trans_desert_canyon' },
-  { type: 'straight', zone: 'trans_desert_canyon' },
 
-  // === ZONE 2: CANYON ===
+  // === ZONE 2: CANYON (좁고 거친, 헤어핀+S커브) ===
   { type: 'straight', zone: 'canyon' },
   { type: 'curve_r', zone: 'canyon' },
-  { type: 'curve_l', zone: 'canyon' },
   { type: 'straight', zone: 'canyon' },
-  { type: 'turn_90_r', zone: 'canyon' },
-  { type: 'straight_h', zone: 'canyon' },
-  { type: 'turn_90_l', zone: 'canyon' },
+  { type: 'hairpin_l', zone: 'canyon' },
+  { type: 'straight', zone: 'canyon' },
+  { type: 's_curve', zone: 'canyon' },
   { type: 'straight', zone: 'canyon' },
 
   // === TRANSITION: CANYON → RIVERBED ===
   { type: 'straight', zone: 'trans_canyon_riverbed' },
-  { type: 'straight', zone: 'trans_canyon_riverbed' },
 
-  // === ZONE 3: RIVERBED ===
-  { type: 'straight', zone: 'riverbed' },
-  { type: 's_curve', zone: 'riverbed' },
+  // === ZONE 3: RIVERBED (습지, 중간 난이도) ===
   { type: 'straight', zone: 'riverbed' },
   { type: 'curve_l', zone: 'riverbed' },
   { type: 'curve_r', zone: 'riverbed' },
   { type: 'straight', zone: 'riverbed' },
-  { type: 'hairpin_l', zone: 'riverbed' },
+  { type: 'hairpin_r', zone: 'riverbed' },
+  { type: 'straight', zone: 'riverbed' },
+  { type: 'curve_l', zone: 'riverbed' },
   { type: 'straight', zone: 'riverbed' },
 
   // === TRANSITION: RIVERBED → MOUNTAIN ===
   { type: 'straight', zone: 'trans_riverbed_mountain' },
-  { type: 'straight', zone: 'trans_riverbed_mountain' },
 
-  // === ZONE 4: MOUNTAIN ===
+  // === ZONE 4: MOUNTAIN (산악, turn_90 사용 금지) ===
   { type: 'straight', zone: 'mountain' },
   { type: 'curve_l', zone: 'mountain' },
   { type: 'straight', zone: 'mountain' },
-  { type: 'hairpin_r', zone: 'mountain' },
   { type: 'curve_r', zone: 'mountain' },
+  { type: 'straight', zone: 'mountain' },
+  { type: 'hairpin_l', zone: 'mountain' },
   { type: 'straight', zone: 'mountain' },
 
   // === TRANSITION: MOUNTAIN → SPRINT ===
   { type: 'straight', zone: 'trans_mountain_sprint' },
-  { type: 'straight', zone: 'trans_mountain_sprint' },
 
-  // === ZONE 5: SPRINT ===
+  // === ZONE 5: SPRINT (도심 격자, 직선+90도) ===
   { type: 'straight', zone: 'sprint' },
   { type: 'straight', zone: 'sprint' },
   { type: 'turn_90_r', zone: 'sprint' },
   { type: 'straight_h', zone: 'sprint' },
   { type: 'turn_90_l', zone: 'sprint' },
+  { type: 'straight', zone: 'sprint' },
   { type: 'straight', zone: 'sprint' },
   { type: 'turn_90_l', zone: 'sprint' },
   { type: 'straight_h', zone: 'sprint' },
   { type: 'turn_90_r', zone: 'sprint' },
   { type: 'straight', zone: 'sprint' },
   { type: 'straight', zone: 'sprint' },  // FINISH
+  { type: 'straight', zone: 'sprint' },  // post-finish extension
 ];
 
 // ---- Turn arc configurations (pre-computed for each direction) ----
@@ -490,7 +506,11 @@ const checkpoints = generateCheckpoints(partBounds);
 const finishWP = waypoints.length - 4;
 
 // Validate on load
-validateTrack(parts);
+const trackValid = validateTrack(parts);
+console.log(`[Track] Parts: ${parts.length}, Waypoints: ${waypoints.length}, Zones: ${zones.length}, Valid: ${trackValid}`);
+console.log(`[Track] Zone breakdown:`, zones.map(z => `${z.name}(WP ${z.fromWP}-${z.toWP})`).join(', '));
+console.log(`[Track] Checkpoints:`, checkpoints.map(cp => `${cp.name}@WP${cp.waypointIndex}`).join(', '));
+console.log(`[Track] Finish WP: ${finishWP}, Total track length: ${Math.round(Math.sqrt((waypoints[waypoints.length-1][0]-waypoints[0][0])**2+(waypoints[waypoints.length-1][1]-waypoints[0][1])**2))}px`);
 
 export const TRACK_CONFIG = {
   name: 'Stage 1: Sahara Crossing',
