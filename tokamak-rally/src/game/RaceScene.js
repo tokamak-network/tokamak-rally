@@ -22,8 +22,8 @@ export class RaceScene extends Phaser.Scene {
     this._birdTimer = 5000 + Math.random() * 8000;
 
     this.renderTrackParts();
-    this.renderCornerArrows();
     this.placeCheckpoints();
+    this.setupCornerHUD();
     // this.placeRoadObstacles(); // obstacles removed — focus on racing
 
     const carTexture = this.textures.exists(`v2_car_${this.selectedCarId}`) ? `v2_car_${this.selectedCarId}` : `car_${this.selectedCarId}`;
@@ -1073,22 +1073,50 @@ export class RaceScene extends Phaser.Scene {
 
   }
 
-  renderCornerArrows() {
+  setupCornerHUD() {
+    // HUD arrow — appears on screen when approaching a corner, disappears after passing
+    this._cornerHUD = this.add.text(400, 200, '', {
+      fontSize: '80px', color: '#CC0000', fontStyle: 'bold',
+      stroke: '#FFFFFF', strokeThickness: 6,
+    }).setOrigin(0.5).setScrollFactor(0).setDepth(200).setAlpha(0);
+    this._cornerHUDActive = false;
+    this._lastArrowIdx = -1;
+    console.log(`[HUD] Corner arrow HUD ready, ${(this.track.arrowHints || []).length} hints loaded`);
+  }
+
+  updateCornerHUD() {
     const hints = this.track.arrowHints;
-    if (!hints || hints.length === 0) {
-      console.warn('[Arrows] No arrow hints found!');
-      return;
-    }
-    console.log(`[Arrows] Rendering ${hints.length} corner arrows`);
+    if (!hints || hints.length === 0) return;
+    const car = this.carState;
+    if (!car) return;
+
+    let nearest = null, nearestDist = Infinity, nearestIdx = -1;
     for (let i = 0; i < hints.length; i++) {
-      const h = hints[i];
-      try {
-        // Red circle marker on road (depth 100 for guaranteed visibility)
-        this.add.circle(h.x, h.y, 30, 0xCC0000, 0.9).setDepth(100);
-        this.add.circle(h.x, h.y, 34, 0xFFFFFF, 0.7).setDepth(99);
-        console.log(`[Arrow ${i}] at (${Math.round(h.x)}, ${Math.round(h.y)}) ${h.direction} ${h.severity}`);
-      } catch (e) {
-        console.error(`[Arrow ${i}] FAILED:`, e);
+      const dx = car.x - hints[i].x, dy = car.y - hints[i].y;
+      const d = Math.sqrt(dx*dx + dy*dy);
+      // Only show arrows that are AHEAD (within 600px) and not yet passed
+      if (d < 600 && d < nearestDist) {
+        // Check if corner is ahead by comparing Y (track goes north = Y decreasing)
+        if (hints[i].y < car.y) { // corner is ahead (north)
+          nearestDist = d;
+          nearest = hints[i];
+          nearestIdx = i;
+        }
+      }
+    }
+
+    if (nearest && nearestDist < 600) {
+      const arrow = nearest.direction === 'right' ? '▶▶' : '◀◀';
+      const label = nearest.severity === 'hairpin' ? '⚠ ' + arrow : arrow;
+      this._cornerHUD.setText(label);
+      // Fade in as you approach (600→0 = 0→1 alpha)
+      const alpha = Math.min(1, (600 - nearestDist) / 300);
+      this._cornerHUD.setAlpha(alpha);
+      this._lastArrowIdx = nearestIdx;
+    } else {
+      // Fade out
+      if (this._cornerHUD.alpha > 0) {
+        this._cornerHUD.setAlpha(Math.max(0, this._cornerHUD.alpha - 0.05));
       }
     }
   }
@@ -1172,6 +1200,7 @@ export class RaceScene extends Phaser.Scene {
     // this.checkObstacles(); // obstacles removed
     this.checkProgress();
     this.checkZoneChange();
+    this.updateCornerHUD();
 
     this.player.x=this.carState.x; this.player.y=this.carState.y;
     this.player.angle=this.carState.angle-90;
