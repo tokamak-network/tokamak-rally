@@ -1070,47 +1070,19 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // ===== 5. CORNER PREVIEW ARROWS (depth 10) =====
-    // Use Phaser game objects (not Graphics) for guaranteed visibility
+    // ===== 5. CORNER PREVIEW ARROWS (on road surface) =====
     const hints = this.track.arrowHints || [];
     console.log(`[Arrows] Rendering ${hints.length} corner arrows`);
     for (const hint of hints) {
-      const ax = hint.x, ay = hint.y;
-      const ra = hint.roadAngle; // road direction in radians
-      const sign = hint.direction === 'right' ? 1 : -1;
-
-      let sz = 60;
-      if (hint.severity === 'sharp') sz = 70;
-      if (hint.severity === 'hairpin') sz = 80;
-
-      // Arrow direction: perpendicular to road, pointing into the turn
-      const pa = ra + sign * Math.PI / 2;
-
-      // Triangle head vertices (pointing into turn direction)
-      const tipX = ax + Math.cos(pa) * sz * 0.7;
-      const tipY = ay + Math.sin(pa) * sz * 0.7;
-      const hw = sz * 0.5;
-      const b1x = ax + Math.cos(ra) * hw;
-      const b1y = ay + Math.sin(ra) * hw;
-      const b2x = ax - Math.cos(ra) * hw;
-      const b2y = ay - Math.sin(ra) * hw;
-
-      // White outline circle behind arrow (simple, guaranteed visible)
-      this.add.circle(ax, ay, sz * 0.55, 0xFFFFFF, 0.4).setDepth(9);
-
-      // Red triangle using Phaser.GameObjects.Triangle
-      const tri = this.add.triangle(0, 0, tipX, tipY, b1x, b1y, b2x, b2y, 0xCC0000, 1.0);
-      tri.setOrigin(0, 0).setDepth(10);
-
-      // White border triangle (slightly bigger)
-      const bo = 6;
-      const triW = this.add.triangle(0, 0,
-        tipX + Math.cos(pa) * bo, tipY + Math.sin(pa) * bo,
-        b1x + Math.cos(ra) * bo, b1y + Math.sin(ra) * bo,
-        b2x - Math.cos(ra) * bo, b2y - Math.sin(ra) * bo,
-        0xFFFFFF, 0.9
-      );
-      triW.setOrigin(0, 0).setDepth(9);
+      // Big red circle on the road
+      const c = this.add.circle(hint.x, hint.y, 35, 0xCC0000, 0.9).setDepth(5);
+      // White border
+      this.add.circle(hint.x, hint.y, 39, 0xFFFFFF, 0.6).setDepth(4);
+      // Arrow text: ◀ or ▶
+      const arrow = hint.direction === 'right' ? '▶' : '◀';
+      this.add.text(hint.x, hint.y, arrow, {
+        fontSize: '40px', color: '#FFFFFF', fontStyle: 'bold',
+      }).setOrigin(0.5).setDepth(6);
     }
   }
 

@@ -145,83 +145,83 @@ function computeTurnArc(entryDir, turnAngle, turnDirection) {
 }
 
 // ---- Parts Definition (single desert stage) ----
-// Mix of 45°/90° turns + diag straights + hairpins. Diagonals spread the track wide to prevent overlap.
+// Snake pattern: always north, detours alternate east/west. NEVER crosses itself.
 const parts = [
   // ========================================
-  // 구간 1: START → CP1 — 직선 가속 → 45도로 넓게 벌린 후 90도
+  // 구간 1: START → CP1 — 직선 + 동쪽 우회
   // ========================================
-  { type: 'straight',      zone: 'desert' },  // idx0  가속
-  { type: 'straight',      zone: 'desert' },  // idx1  가속
-  { type: 'straight',      zone: 'desert' },  // idx2  풀 스피드
-  { type: 'turn_45_r',     zone: 'desert' },  // idx3  45도 우 → NE
-  { type: 'diag_straight', zone: 'desert' },  // idx4  NE 대각선 (공간 확보)
-  { type: 'diag_straight', zone: 'desert' },  // idx5  NE 대각선 계속
-  { type: 'turn_90_l',     zone: 'desert' },  // idx6  90도 좌! → NW (긴장!)
-  { type: 'diag_straight', zone: 'desert' },  // idx7  NW 대각선
-  { type: 'turn_45_r',     zone: 'desert' },  // idx8  45도 우 → N 복귀
-  { type: 'straight',      zone: 'desert' },  // idx9  가속
-  { type: 'straight',      zone: 'desert' },  // idx10 가속
-  { type: 'straight',      zone: 'desert' },  // idx11 CP1
+  { type: 'straight',   zone: 'desert' },  // idx0
+  { type: 'straight',   zone: 'desert' },  // idx1
+  { type: 'straight',   zone: 'desert' },  // idx2
+  { type: 'straight',   zone: 'desert' },  // idx3  풀 스피드
+  { type: 'turn_90_r',  zone: 'desert' },  // idx4  → E
+  { type: 'straight_h', zone: 'desert' },  // idx5  동쪽
+  { type: 'straight_h', zone: 'desert' },  // idx6  동쪽 (넓게)
+  { type: 'turn_90_l',  zone: 'desert' },  // idx7  → N
+  { type: 'straight',   zone: 'desert' },  // idx8
+  { type: 'straight',   zone: 'desert' },  // idx9
+  { type: 'straight',   zone: 'desert' },  // idx10
+  { type: 'straight',   zone: 'desert' },  // idx11 CP1
 
   // ========================================
-  // 구간 2: CP1 → CP2 — 90도 코너 세트 + 대각선 헤어핀
+  // 구간 2: CP1 → CP2 — 서쪽 우회 + 헤어핀
   // ========================================
-  { type: 'straight',      zone: 'desert' },  // idx12 가속
-  { type: 'straight',      zone: 'desert' },  // idx13 풀 스피드
-  { type: 'turn_90_r',     zone: 'desert' },  // idx14 90도 우 → E
-  { type: 'straight_h',    zone: 'desert' },  // idx15 동쪽 직선
-  { type: 'straight_h',    zone: 'desert' },  // idx16 동쪽 계속 (넓게 벌림)
-  { type: 'turn_90_l',     zone: 'desert' },  // idx17 90도 좌 → N 복귀
-  { type: 'straight',      zone: 'desert' },  // idx18 가속
-  { type: 'straight',      zone: 'desert' },  // idx19 가속
-  { type: 'straight',      zone: 'desert' },  // idx20 풀 스피드
-  { type: 'hairpin_r',     zone: 'desert' },  // idx21 우 U턴! (xShift=400으로 넓음)
-  { type: 'straight',      zone: 'desert' },  // idx22 회복
-  { type: 'straight',      zone: 'desert' },  // idx23 CP2
+  { type: 'straight',   zone: 'desert' },  // idx12
+  { type: 'straight',   zone: 'desert' },  // idx13
+  { type: 'turn_90_l',  zone: 'desert' },  // idx14 → W
+  { type: 'straight_h', zone: 'desert' },  // idx15 서쪽
+  { type: 'turn_90_r',  zone: 'desert' },  // idx16 → N
+  { type: 'straight',   zone: 'desert' },  // idx17
+  { type: 'straight',   zone: 'desert' },  // idx18
+  { type: 'straight',   zone: 'desert' },  // idx19 풀 스피드
+  { type: 'hairpin_r',  zone: 'desert' },  // idx20 우 U턴!
+  { type: 'straight',   zone: 'desert' },  // idx21
+  { type: 'straight',   zone: 'desert' },  // idx22
+  { type: 'straight',   zone: 'desert' },  // idx23 CP2
 
   // ========================================
-  // 구간 3: CP2 → CP3 — 45도 지그재그 + 90도 콤보
+  // 구간 3: CP2 → CP3 — 동쪽 긴 우회
   // ========================================
-  { type: 'straight',      zone: 'desert' },  // idx24 가속
-  { type: 'straight',      zone: 'desert' },  // idx25 풀 스피드
-  { type: 'turn_45_l',     zone: 'desert' },  // idx26 45도 좌 → NW
-  { type: 'diag_straight', zone: 'desert' },  // idx27 NW 대각선
-  { type: 'turn_90_r',     zone: 'desert' },  // idx28 바로 90도 우! → NE (긴장!)
-  { type: 'diag_straight', zone: 'desert' },  // idx29 NE 대각선
-  { type: 'diag_straight', zone: 'desert' },  // idx30 NE 계속 (넓게)
-  { type: 'turn_90_l',     zone: 'desert' },  // idx31 90도 좌! → NW
-  { type: 'diag_straight', zone: 'desert' },  // idx32 NW 대각선
-  { type: 'turn_45_r',     zone: 'desert' },  // idx33 45도 우 → N 복귀
-  { type: 'straight',      zone: 'desert' },  // idx34 가속
-  { type: 'straight',      zone: 'desert' },  // idx35 CP3
+  { type: 'straight',   zone: 'desert' },  // idx24
+  { type: 'straight',   zone: 'desert' },  // idx25
+  { type: 'straight',   zone: 'desert' },  // idx26 풀 스피드
+  { type: 'turn_90_r',  zone: 'desert' },  // idx27 → E
+  { type: 'straight_h', zone: 'desert' },  // idx28 동쪽
+  { type: 'straight_h', zone: 'desert' },  // idx29 동쪽
+  { type: 'straight_h', zone: 'desert' },  // idx30 동쪽 (길게)
+  { type: 'turn_90_l',  zone: 'desert' },  // idx31 → N
+  { type: 'straight',   zone: 'desert' },  // idx32
+  { type: 'straight',   zone: 'desert' },  // idx33
+  { type: 'straight',   zone: 'desert' },  // idx34
+  { type: 'straight',   zone: 'desert' },  // idx35 CP3
 
   // ========================================
-  // 구간 4: CP3 → CP4 — 클라이맥스: 연속 헤어핀 + 90도 혼합
+  // 구간 4: CP3 → CP4 — 서쪽 우회 + 헤어핀
   // ========================================
-  { type: 'straight',      zone: 'desert' },  // idx36 가속
-  { type: 'straight',      zone: 'desert' },  // idx37 풀 스피드
-  { type: 'straight',      zone: 'desert' },  // idx38 풀 스피드
-  { type: 'hairpin_l',     zone: 'desert' },  // idx39 좌 U턴! (넓은 xShift)
-  { type: 'straight',      zone: 'desert' },  // idx40 짧은 회복
-  { type: 'turn_45_r',     zone: 'desert' },  // idx41 45도 우 → NE
-  { type: 'turn_45_r',     zone: 'desert' },  // idx42 또 45도 우 → E (합쳐서 90도!)
-  { type: 'straight_h',    zone: 'desert' },  // idx43 동쪽 직선
-  { type: 'turn_90_l',     zone: 'desert' },  // idx44 90도 좌 → N
-  { type: 'straight',      zone: 'desert' },  // idx45 가속
-  { type: 'straight',      zone: 'desert' },  // idx46 가속
-  { type: 'straight',      zone: 'desert' },  // idx47 CP4
+  { type: 'straight',   zone: 'desert' },  // idx36
+  { type: 'straight',   zone: 'desert' },  // idx37
+  { type: 'turn_90_l',  zone: 'desert' },  // idx38 → W
+  { type: 'straight_h', zone: 'desert' },  // idx39 서쪽
+  { type: 'straight_h', zone: 'desert' },  // idx40 서쪽
+  { type: 'turn_90_r',  zone: 'desert' },  // idx41 → N
+  { type: 'straight',   zone: 'desert' },  // idx42
+  { type: 'hairpin_l',  zone: 'desert' },  // idx43 좌 U턴!
+  { type: 'straight',   zone: 'desert' },  // idx44
+  { type: 'straight',   zone: 'desert' },  // idx45
+  { type: 'straight',   zone: 'desert' },  // idx46
+  { type: 'straight',   zone: 'desert' },  // idx47 CP4
 
   // ========================================
-  // 구간 5: CP4 → FINISH — 45도 벌림 후 피니시 직선
+  // 구간 5: CP4 → FINISH — 동쪽 우회 후 피니시
   // ========================================
-  { type: 'straight',      zone: 'desert' },  // idx48 가속
-  { type: 'turn_45_l',     zone: 'desert' },  // idx49 45도 좌 → NW
-  { type: 'diag_straight', zone: 'desert' },  // idx50 NW 대각선
-  { type: 'turn_45_r',     zone: 'desert' },  // idx51 45도 우 → N 복귀
-  { type: 'straight',      zone: 'desert' },  // idx52 가속
-  { type: 'straight',      zone: 'desert' },  // idx53 풀 스피드
-  { type: 'straight',      zone: 'desert' },  // idx54 FINISH
-  { type: 'straight',      zone: 'desert' },  // idx55 연장
+  { type: 'straight',   zone: 'desert' },  // idx48
+  { type: 'turn_90_r',  zone: 'desert' },  // idx49 → E
+  { type: 'straight_h', zone: 'desert' },  // idx50 동쪽
+  { type: 'turn_90_l',  zone: 'desert' },  // idx51 → N
+  { type: 'straight',   zone: 'desert' },  // idx52
+  { type: 'straight',   zone: 'desert' },  // idx53
+  { type: 'straight',   zone: 'desert' },  // idx54 FINISH
+  { type: 'straight',   zone: 'desert' },  // idx55 연장
 ];
 
 // ---- Exit Direction ----
