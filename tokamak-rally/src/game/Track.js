@@ -431,6 +431,38 @@ export function validateTrack(partsList) {
   return true;
 }
 
+// ---- Generate corner arrow hints ----
+function generateArrowHints(partsList, waypointsArr, partBoundsArr) {
+  const hints = [];
+  for (let i = 0; i < partsList.length; i++) {
+    const type = partsList[i].type;
+    if (!type.startsWith('turn_') && !type.startsWith('hairpin')) continue;
+
+    const isRight = type.includes('_r');
+    const bounds = partBoundsArr[i];
+    const arrowWP = Math.max(0, bounds.startWP - 4);
+
+    let severity = 'mild';
+    if (type.includes('90')) severity = 'sharp';
+    if (type.includes('hairpin')) severity = 'hairpin';
+
+    // Compute road direction at arrow position
+    const nextWP = Math.min(arrowWP + 1, waypointsArr.length - 1);
+    const fdx = waypointsArr[nextWP][0] - waypointsArr[arrowWP][0];
+    const fdy = waypointsArr[nextWP][1] - waypointsArr[arrowWP][1];
+    const roadAngle = Math.atan2(fdy, fdx);
+
+    hints.push({
+      x: waypointsArr[arrowWP][0],
+      y: waypointsArr[arrowWP][1],
+      direction: isRight ? 'right' : 'left',
+      severity,
+      roadAngle,
+    });
+  }
+  return hints;
+}
+
 // ---- Build TRACK_CONFIG ----
 const START_X = 2000;
 const START_Y = 14200;
@@ -438,6 +470,7 @@ const START_Y = 14200;
 const { waypoints, partBounds } = generateWaypoints(parts, START_X, START_Y);
 const zones = generateZones(partBounds);
 const checkpoints = generateCheckpoints(partBounds);
+const arrowHints = generateArrowHints(parts, waypoints, partBounds);
 
 const finishWP = waypoints.length - 4;
 
@@ -458,6 +491,7 @@ export const TRACK_CONFIG = {
   waypoints,
   zones,
   checkpoints,
+  arrowHints,
   finishWP,
 
   startX: START_X,

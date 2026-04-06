@@ -602,13 +602,30 @@ export class RaceScene extends Phaser.Scene {
         }
       }
 
-      // Terrain detail: small grains and spots
+      // Road edge grass/dirt line — darkened strip just outside road
+      const gEdge = this.add.graphics().setDepth(0);
+      const edgeStripColor = zoneBg > 0x808080 ? 0x907840 : 0x505050;
+      for (const side of [-1, 1]) {
+        gEdge.lineStyle(5, edgeStripColor, 0.35);
+        gEdge.beginPath();
+        const ni0 = normals[s - startWP];
+        gEdge.moveTo(wp[s][0] + ni0[0] * side * (halfW + 4), wp[s][1] + ni0[1] * side * (halfW + 4));
+        for (let i = s + 1; i < e; i++) {
+          const ni = normals[i - startWP];
+          gEdge.lineTo(wp[i][0] + ni[0] * side * (halfW + 4), wp[i][1] + ni[1] * side * (halfW + 4));
+        }
+        gEdge.strokePath();
+      }
+
+      // Terrain detail: dense layered objects (small grains + shrubs + rocks)
       const detailColor1 = zoneBg > 0x808080 ? 0xA08850 : 0x606060;
       const detailColor2 = zoneBg > 0x808080 ? 0xC4A06C : 0x808080;
+      const detailColor3 = zoneBg > 0x808080 ? 0x8A7040 : 0x4A4A4A;
       const gDetail = this.add.graphics().setDepth(0);
       for (let i = s; i < e; i += 2) {
         const ni = normals[i - startWP];
-        for (let d = 0; d < 6; d++) {
+        // 10 details per segment (denser than before)
+        for (let d = 0; d < 10; d++) {
           const side = detailRng() > 0.5 ? 1 : -1;
           const offset = halfW + 4 + detailRng() * (bgHalfW - halfW - 8);
           const along = (detailRng() - 0.5) * 60;
@@ -620,15 +637,40 @@ export class RaceScene extends Phaser.Scene {
           const px = dx + (fwd[0]/fLen) * along;
           const py = dy + (fwd[1]/fLen) * along;
 
-          if (detailRng() > 0.6) {
-            const r = 8 + detailRng() * 4;
+          const roll = detailRng();
+          if (roll > 0.85) {
+            // Large rock/bush (rare)
+            const r = 12 + detailRng() * 6;
+            gDetail.fillStyle(detailColor3, 0.25);
+            gDetail.fillCircle(px, py, r);
+            gDetail.fillStyle(detailColor1, 0.15);
+            gDetail.fillCircle(px - 2, py - 2, r * 0.7);
+          } else if (roll > 0.55) {
+            // Medium shrub
+            const r = 6 + detailRng() * 5;
             gDetail.fillStyle(detailColor1, 0.2);
             gDetail.fillCircle(px, py, r);
           } else {
-            const r = 3 + detailRng() * 2;
+            // Small grain
+            const r = 2 + detailRng() * 3;
             gDetail.fillStyle(detailColor2, 0.3);
             gDetail.fillCircle(px, py, r);
           }
+        }
+      }
+
+      // Barrier-adjacent detail: small rocks/grass near barrier line
+      const gBarrierDetail = this.add.graphics().setDepth(0);
+      for (let i = s; i < e; i += 3) {
+        const ni = normals[i - startWP];
+        for (const side of [-1, 1]) {
+          if (detailRng() > 0.4) continue;
+          const bOff = halfW + 10 + detailRng() * 8;
+          const bx = wp[i][0] + ni[0] * side * bOff;
+          const by = wp[i][1] + ni[1] * side * bOff;
+          const r = 2 + detailRng() * 3;
+          gBarrierDetail.fillStyle(detailColor3, 0.3);
+          gBarrierDetail.fillCircle(bx, by, r);
         }
       }
     }
@@ -677,6 +719,25 @@ export class RaceScene extends Phaser.Scene {
         gRoad.moveTo(wp[s][0], wp[s][1]);
         for (let i = s + 1; i < e; i++) gRoad.lineTo(wp[i][0], wp[i][1]);
         gRoad.strokePath();
+      }
+    }
+
+    // ===== 2b. TIRE TRACKS on road (depth 1) =====
+    const gTire = this.add.graphics().setDepth(1);
+    for (const zone of allZones) {
+      const s = zone.fromWP, e = Math.min(zone.toWP, wp.length);
+      const zc = zoneConfig[zone.name];
+      const tireColor = zc ? ((zc.roadColor & 0xFEFEFE) >> 1) + ((zc.roadColor & 0xFEFEFE) >> 2) : 0xA08860;
+      for (const trackOff of [-12, 12]) {
+        gTire.lineStyle(2, tireColor, 0.15);
+        gTire.beginPath();
+        const ni0 = normals[s - startWP];
+        gTire.moveTo(wp[s][0] + ni0[0] * trackOff, wp[s][1] + ni0[1] * trackOff);
+        for (let i = s + 1; i < e; i++) {
+          const ni = normals[i - startWP];
+          gTire.lineTo(wp[i][0] + ni[0] * trackOff, wp[i][1] + ni[1] * trackOff);
+        }
+        gTire.strokePath();
       }
     }
 
@@ -1028,37 +1089,70 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // ===== 5. CORNER PREVIEW ARROWS (depth 2) =====
-    const cornerTypes = ['turn_90_l','turn_90_r','turn_45_l','turn_45_r','hairpin_l','hairpin_r'];
-    const arrowG = this.add.graphics().setDepth(2);
-    const pb = this.track.partBounds;
-    for (let i = 0; i < pb.length; i++) {
-      if (!cornerTypes.includes(pb[i].type)) continue;
-      const turnDir = pb[i].type.includes('_r') ? 'right' : 'left';
-      // Place arrow 3 waypoints before the corner start
-      const arrowWP = Math.max(0, pb[i].startWP - 3);
-      const ax = wp[arrowWP][0], ay = wp[arrowWP][1];
-      // Compute forward direction from adjacent waypoints
-      const nextWP = Math.min(arrowWP + 1, wp.length - 1);
-      const fdx = wp[nextWP][0] - wp[arrowWP][0];
-      const fdy = wp[nextWP][1] - wp[arrowWP][1];
-      const fLen = Math.sqrt(fdx * fdx + fdy * fdy) || 1;
-      const fwdAngle = Math.atan2(fdy, fdx);
-      const arrowAngle = turnDir === 'right' ? fwdAngle + Math.PI / 4 : fwdAngle - Math.PI / 4;
-      const size = 20;
-      const tipX = ax + Math.cos(arrowAngle) * size;
-      const tipY = ay + Math.sin(arrowAngle) * size;
-      const bLx = ax + Math.cos(arrowAngle + 2.5) * size * 0.6;
-      const bLy = ay + Math.sin(arrowAngle + 2.5) * size * 0.6;
-      const bRx = ax + Math.cos(arrowAngle - 2.5) * size * 0.6;
-      const bRy = ay + Math.sin(arrowAngle - 2.5) * size * 0.6;
-      arrowG.fillStyle(0xCC0000, 0.9);
-      arrowG.beginPath();
-      arrowG.moveTo(tipX, tipY);
-      arrowG.lineTo(bLx, bLy);
-      arrowG.lineTo(bRx, bRy);
-      arrowG.closePath();
-      arrowG.fillPath();
+    // ===== 5. CORNER PREVIEW ARROWS (depth 4, Thrash Rally style) =====
+    const hints = this.track.arrowHints || [];
+    for (const hint of hints) {
+      const g = this.add.graphics().setDepth(4);
+      const cx = hint.x, cy = hint.y;
+      const ra = hint.roadAngle; // road direction angle
+      const sign = hint.direction === 'right' ? 1 : -1;
+
+      // Size based on severity (car is ~40px, arrows should be 2-3x)
+      let size = 25;
+      if (hint.severity === 'sharp') size = 35;
+      if (hint.severity === 'hairpin') size = 45;
+
+      // Arrow points perpendicular to road direction
+      const perpAngle = ra + sign * Math.PI / 2;
+      // Arrow tip (pointing in turn direction)
+      const tipX = cx + Math.cos(perpAngle) * size;
+      const tipY = cy + Math.sin(perpAngle) * size;
+      // Arrow base corners (perpendicular to arrow direction)
+      const bw = size * 0.55;
+      const bx = cx - Math.cos(perpAngle) * size * 0.2; // slightly back
+      const by = cy - Math.sin(perpAngle) * size * 0.2;
+      const bLx = bx + Math.cos(ra) * bw;
+      const bLy = by + Math.sin(ra) * bw;
+      const bRx = bx - Math.cos(ra) * bw;
+      const bRy = by - Math.sin(ra) * bw;
+      // Tail (shaft of arrow, extends opposite to turn direction)
+      const tailLen = size * 0.8;
+      const tLx = bLx - Math.cos(perpAngle) * tailLen;
+      const tLy = bLy - Math.sin(perpAngle) * tailLen;
+      const tRx = bRx - Math.cos(perpAngle) * tailLen;
+      const tRy = bRy - Math.sin(perpAngle) * tailLen;
+      // Narrow shaft
+      const sw = size * 0.2;
+      const sLx = bx + Math.cos(ra) * sw - Math.cos(perpAngle) * tailLen;
+      const sLy = by + Math.sin(ra) * sw - Math.sin(perpAngle) * tailLen;
+      const sRx = bx - Math.cos(ra) * sw - Math.cos(perpAngle) * tailLen;
+      const sRy = by - Math.sin(ra) * sw - Math.sin(perpAngle) * tailLen;
+
+      // White outline (slightly larger)
+      g.fillStyle(0xFFFFFF, 0.85);
+      g.beginPath();
+      g.moveTo(tipX, tipY);
+      g.lineTo(bLx + Math.cos(ra) * 3, bLy + Math.sin(ra) * 3);
+      g.lineTo(bx + Math.cos(ra) * sw + Math.cos(ra) * 3, by + Math.sin(ra) * sw + Math.sin(ra) * 3);
+      g.lineTo(sLx + Math.cos(ra) * 3, sLy + Math.sin(ra) * 3);
+      g.lineTo(sRx - Math.cos(ra) * 3, sRy - Math.sin(ra) * 3);
+      g.lineTo(bx - Math.cos(ra) * sw - Math.cos(ra) * 3, by - Math.sin(ra) * sw - Math.sin(ra) * 3);
+      g.lineTo(bRx - Math.cos(ra) * 3, bRy - Math.sin(ra) * 3);
+      g.closePath();
+      g.fillPath();
+
+      // Red body
+      g.fillStyle(0xCC0000, 0.95);
+      g.beginPath();
+      g.moveTo(tipX, tipY);
+      g.lineTo(bLx, bLy);
+      g.lineTo(bx + Math.cos(ra) * sw, by + Math.sin(ra) * sw);
+      g.lineTo(sLx, sLy);
+      g.lineTo(sRx, sRy);
+      g.lineTo(bx - Math.cos(ra) * sw, by - Math.sin(ra) * sw);
+      g.lineTo(bRx, bRy);
+      g.closePath();
+      g.fillPath();
     }
   }
 
