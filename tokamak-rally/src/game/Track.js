@@ -27,9 +27,6 @@ const DIR_RIGHT_VEC = {
 // ---- Part Types ----
 const partTypes = {
   straight:   { width: 256, height: 512, fwdDist: 512, xShift: 0 },
-  curve_l:    { width: 256, height: 512, fwdDist: 512, xShift: -250 },
-  curve_r:    { width: 256, height: 512, fwdDist: 512, xShift: 250 },
-  s_curve:    { width: 256, height: 512, fwdDist: 512, xShift: 0 },
   hairpin_l:  { width: 256, height: 512, fwdDist: 512, xShift: -200 },
   hairpin_r:  { width: 256, height: 512, fwdDist: 512, xShift: 200 },
   turn_90_l:  { width: 512, height: 512, turnRadius: 200 },
@@ -230,9 +227,6 @@ const TURN_90_L_CFG = {
 function getExitDirection(type, entryDir) {
   switch (type) {
     case 'straight':
-    case 'curve_l':
-    case 'curve_r':
-    case 's_curve':
     case 'hairpin_l':
     case 'hairpin_r':
     case 'straight_h':
@@ -301,33 +295,6 @@ function generatePartWaypoints(type, x, y, direction) {
     for (let i = 0; i < 4; i++) {
       const t = i / 4;
       pts.push([x + fwd.dx * dist * t, y + fwd.dy * dist * t]);
-    }
-  } else if (type === 'curve_l' || type === 'curve_r') {
-    // Quadratic bezier, 8 points
-    const shift = partTypes[type].xShift;
-    const dist = partTypes[type].fwdDist;
-    const p0 = [x, y];
-    const p1 = [x + fwd.dx * dist * 0.5 + right.dx * shift * 1.3,
-                y + fwd.dy * dist * 0.5 + right.dy * shift * 1.3];
-    const p2 = [x + fwd.dx * dist + right.dx * shift,
-                y + fwd.dy * dist + right.dy * shift];
-    for (let i = 0; i < 8; i++) {
-      const t = i / 8;
-      pts.push(quadBezier(p0, p1, p2, t));
-    }
-  } else if (type === 's_curve') {
-    // S-curve: cubic bezier, 10 points
-    const dist = partTypes[type].fwdDist;
-    const sway = 200; // how far the S sways
-    const p0 = [x, y];
-    const p1 = [x + right.dx * sway + fwd.dx * dist * 0.25,
-                y + right.dy * sway + fwd.dy * dist * 0.25];
-    const p2 = [x - right.dx * sway + fwd.dx * dist * 0.75,
-                y - right.dy * sway + fwd.dy * dist * 0.75];
-    const p3 = [x + fwd.dx * dist, y + fwd.dy * dist];
-    for (let i = 0; i < 10; i++) {
-      const t = i / 10;
-      pts.push(cubicBezier(p0, p1, p2, p3, t));
     }
   } else if (type === 'hairpin_l' || type === 'hairpin_r') {
     // U-shaped curve, 12 points via cubic bezier
