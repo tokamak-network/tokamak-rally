@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TRACK_CONFIG, isOnTrack, getTrackProgress, getZoneByIndex, checkCheckpoint, checkFinish, zoneConfig } from './Track.js';
+import { TRACK_CONFIG, isOnTrack, getTrackProgress, getZoneByIndex, checkCheckpoint, checkFinish, zoneConfig, DIR_VECTORS } from './Track.js';
 import { CARS } from './Cars.js';
 import { wallet } from '../web3/wallet.js';
 import { soundEngine } from './SoundEngine.js';
@@ -1026,6 +1026,39 @@ export class RaceScene extends Phaser.Scene {
           }
         }
       }
+    }
+
+    // ===== 5. CORNER PREVIEW ARROWS (depth 2) =====
+    const cornerTypes = ['turn_90_l','turn_90_r','turn_45_l','turn_45_r','hairpin_l','hairpin_r'];
+    const arrowG = this.add.graphics().setDepth(2);
+    const pb = this.track.partBounds;
+    for (let i = 0; i < pb.length; i++) {
+      if (!cornerTypes.includes(pb[i].type)) continue;
+      const turnDir = pb[i].type.includes('_r') ? 'right' : 'left';
+      // Place arrow 3 waypoints before the corner start
+      const arrowWP = Math.max(0, pb[i].startWP - 3);
+      const ax = wp[arrowWP][0], ay = wp[arrowWP][1];
+      // Compute forward direction from adjacent waypoints
+      const nextWP = Math.min(arrowWP + 1, wp.length - 1);
+      const fdx = wp[nextWP][0] - wp[arrowWP][0];
+      const fdy = wp[nextWP][1] - wp[arrowWP][1];
+      const fLen = Math.sqrt(fdx * fdx + fdy * fdy) || 1;
+      const fwdAngle = Math.atan2(fdy, fdx);
+      const arrowAngle = turnDir === 'right' ? fwdAngle + Math.PI / 4 : fwdAngle - Math.PI / 4;
+      const size = 20;
+      const tipX = ax + Math.cos(arrowAngle) * size;
+      const tipY = ay + Math.sin(arrowAngle) * size;
+      const bLx = ax + Math.cos(arrowAngle + 2.5) * size * 0.6;
+      const bLy = ay + Math.sin(arrowAngle + 2.5) * size * 0.6;
+      const bRx = ax + Math.cos(arrowAngle - 2.5) * size * 0.6;
+      const bRy = ay + Math.sin(arrowAngle - 2.5) * size * 0.6;
+      arrowG.fillStyle(0xCC0000, 0.9);
+      arrowG.beginPath();
+      arrowG.moveTo(tipX, tipY);
+      arrowG.lineTo(bLx, bLy);
+      arrowG.lineTo(bRx, bRy);
+      arrowG.closePath();
+      arrowG.fillPath();
     }
   }
 

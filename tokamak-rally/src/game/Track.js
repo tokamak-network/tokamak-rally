@@ -1,37 +1,61 @@
 /**
- * Track v3.0 — Parts-based track system
- * Track is defined as a sequence of "parts" (straight, curve, turn, hairpin, etc.)
- * Waypoints are auto-generated from parts for backward compatibility.
- * Phase 1: Programmatic rendering (solid colors + patterns)
- * Phase 2: DALL-E image replacement
+ * Track v4.0 — 8-direction parts-based track system
+ * Supports N/NE/E/SE/S/SW/W/NW directions, 45° and 90° turns,
+ * diagonal straights, and hairpins.
  */
 
-// ---- Direction Helpers ----
+// ---- Direction Helpers (8-direction) ----
 const DIR_VECTORS = {
-  north: { dx: 0, dy: -1 },
-  south: { dx: 0, dy: 1 },
-  east:  { dx: 1, dy: 0 },
-  west:  { dx: -1, dy: 0 },
+  north:     { dx: 0,     dy: -1 },
+  northeast: { dx: 0.707, dy: -0.707 },
+  east:      { dx: 1,     dy: 0 },
+  southeast: { dx: 0.707, dy: 0.707 },
+  south:     { dx: 0,     dy: 1 },
+  southwest: { dx: -0.707, dy: 0.707 },
+  west:      { dx: -1,    dy: 0 },
+  northwest: { dx: -0.707, dy: -0.707 },
 };
 
-const DIR_RIGHT = { north: 'east', east: 'south', south: 'west', west: 'north' };
-const DIR_LEFT  = { north: 'west', west: 'south', south: 'east', east: 'north' };
+const DIR_RIGHT = {
+  north: 'east', northeast: 'southeast', east: 'south', southeast: 'southwest',
+  south: 'west', southwest: 'northwest', west: 'north', northwest: 'northeast',
+};
+const DIR_LEFT = {
+  north: 'west', northeast: 'northwest', east: 'north', southeast: 'northeast',
+  south: 'east', southwest: 'southeast', west: 'south', northwest: 'southwest',
+};
+
+const DIR_45_RIGHT = {
+  north: 'northeast', northeast: 'east', east: 'southeast', southeast: 'south',
+  south: 'southwest', southwest: 'west', west: 'northwest', northwest: 'north',
+};
+const DIR_45_LEFT = {
+  north: 'northwest', northwest: 'west', west: 'southwest', southwest: 'south',
+  south: 'southeast', southeast: 'east', east: 'northeast', northeast: 'north',
+};
 
 const DIR_RIGHT_VEC = {
-  north: { dx: 1, dy: 0 },
-  east:  { dx: 0, dy: 1 },
-  south: { dx: -1, dy: 0 },
-  west:  { dx: 0, dy: -1 },
+  north:     { dx: 1,     dy: 0 },
+  northeast: { dx: 0.707, dy: 0.707 },
+  east:      { dx: 0,     dy: 1 },
+  southeast: { dx: -0.707, dy: 0.707 },
+  south:     { dx: -1,    dy: 0 },
+  southwest: { dx: -0.707, dy: -0.707 },
+  west:      { dx: 0,     dy: -1 },
+  northwest: { dx: 0.707, dy: -0.707 },
 };
 
 // ---- Part Types ----
 const partTypes = {
-  straight:   { width: 256, height: 512, fwdDist: 512, xShift: 0 },
-  hairpin_l:  { width: 256, height: 512, fwdDist: 512, xShift: -200 },
-  hairpin_r:  { width: 256, height: 512, fwdDist: 512, xShift: 200 },
-  turn_90_l:  { width: 512, height: 512, turnRadius: 200 },
-  turn_90_r:  { width: 512, height: 512, turnRadius: 200 },
-  straight_h: { width: 512, height: 256, fwdDist: 512, xShift: 0 },
+  straight:      { fwdDist: 512, xShift: 0 },
+  straight_h:    { fwdDist: 512, xShift: 0 },
+  diag_straight: { fwdDist: 512, xShift: 0 },
+  hairpin_l:     { fwdDist: 512, xShift: -200 },
+  hairpin_r:     { fwdDist: 512, xShift: 200 },
+  turn_90_l:     { turnRadius: 200, turnAngle: Math.PI / 2 },
+  turn_90_r:     { turnRadius: 200, turnAngle: Math.PI / 2 },
+  turn_45_l:     { turnRadius: 200, turnAngle: Math.PI / 4 },
+  turn_45_r:     { turnRadius: 200, turnAngle: Math.PI / 4 },
 };
 
 // ---- Zone Configuration ----
@@ -47,194 +71,167 @@ const zoneConfig = {
     label: 'Desert',
   },
   trans_desert_canyon: {
-    bgColor: 0xC4A06C,
-    roadColor: 0x8B6B3A,
-    edgeColor: 0x7a5a20,
-    roadType: 'dirt',
-    trackWidth: 100,
-    barrierColor: 0x7a5a20,
-    barrierStyle: 'wood_fence',
-    label: 'Transition',
+    bgColor: 0xC4A06C, roadColor: 0x8B6B3A, edgeColor: 0x7a5a20,
+    roadType: 'dirt', trackWidth: 100, barrierColor: 0x7a5a20,
+    barrierStyle: 'wood_fence', label: 'Transition',
     transition: { from: 'desert', to: 'canyon' },
   },
   canyon: {
-    bgColor: 0x8B6914,
-    roadColor: 0x7B5B2A,
-    edgeColor: 0x6a4a30,
-    roadType: 'dirt',
-    trackWidth: 100,
-    barrierColor: 0x6a4a30,
-    barrierStyle: 'metal_guardrail',
-    label: 'Canyon',
+    bgColor: 0x8B6914, roadColor: 0x7B5B2A, edgeColor: 0x6a4a30,
+    roadType: 'dirt', trackWidth: 100, barrierColor: 0x6a4a30,
+    barrierStyle: 'metal_guardrail', label: 'Canyon',
   },
   trans_canyon_riverbed: {
-    bgColor: 0x6B8B3A,
-    roadColor: 0x6B6B3A,
-    edgeColor: 0x5a6a20,
-    roadType: 'dirt',
-    trackWidth: 100,
-    barrierColor: 0x5a6a20,
-    barrierStyle: 'metal_guardrail',
-    label: 'Transition',
+    bgColor: 0x6B8B3A, roadColor: 0x6B6B3A, edgeColor: 0x5a6a20,
+    roadType: 'dirt', trackWidth: 100, barrierColor: 0x5a6a20,
+    barrierStyle: 'metal_guardrail', label: 'Transition',
     transition: { from: 'canyon', to: 'riverbed' },
   },
   riverbed: {
-    bgColor: 0x4A7A4A,
-    roadColor: 0x7B6B3A,
-    edgeColor: 0x6a5a30,
-    roadType: 'dirt',
-    trackWidth: 100,
-    barrierColor: 0x6a5a30,
-    barrierStyle: 'wood_fence',
-    label: 'Riverbed',
+    bgColor: 0x4A7A4A, roadColor: 0x7B6B3A, edgeColor: 0x6a5a30,
+    roadType: 'dirt', trackWidth: 100, barrierColor: 0x6a5a30,
+    barrierStyle: 'wood_fence', label: 'Riverbed',
   },
   trans_riverbed_mountain: {
-    bgColor: 0x6A8A6A,
-    roadColor: 0x8B8B7A,
-    edgeColor: 0x7a7a70,
-    roadType: 'rocky',
-    trackWidth: 100,
-    barrierColor: 0x7a7a70,
-    barrierStyle: 'wood_fence',
-    label: 'Transition',
+    bgColor: 0x6A8A6A, roadColor: 0x8B8B7A, edgeColor: 0x7a7a70,
+    roadType: 'rocky', trackWidth: 100, barrierColor: 0x7a7a70,
+    barrierStyle: 'wood_fence', label: 'Transition',
     transition: { from: 'riverbed', to: 'mountain' },
   },
   mountain: {
-    bgColor: 0xE8E8F0,
-    roadColor: 0xB0B0A8,
-    edgeColor: 0x8a8a80,
-    roadType: 'rocky',
-    trackWidth: 100,
-    barrierColor: 0x8a8a80,
-    barrierStyle: 'stone_wall',
-    label: 'Mountain',
+    bgColor: 0xE8E8F0, roadColor: 0xB0B0A8, edgeColor: 0x8a8a80,
+    roadType: 'rocky', trackWidth: 100, barrierColor: 0x8a8a80,
+    barrierStyle: 'stone_wall', label: 'Mountain',
   },
   trans_mountain_sprint: {
-    bgColor: 0xA0A0A8,
-    roadColor: 0x606060,
-    edgeColor: 0x888888,
-    roadType: 'paved',
-    trackWidth: 100,
-    barrierColor: 0x888888,
-    barrierStyle: 'stone_wall',
-    label: 'Transition',
+    bgColor: 0xA0A0A8, roadColor: 0x606060, edgeColor: 0x888888,
+    roadType: 'paved', trackWidth: 100, barrierColor: 0x888888,
+    barrierStyle: 'stone_wall', label: 'Transition',
     transition: { from: 'mountain', to: 'sprint' },
   },
   sprint: {
-    bgColor: 0x3A3A42,
-    roadColor: 0x2A2A2A,
-    edgeColor: 0x888888,
-    roadType: 'paved',
-    trackWidth: 100,
-    barrierColor: 0x888888,
-    barrierStyle: 'jersey_barrier',
-    label: 'Sprint',
+    bgColor: 0x3A3A42, roadColor: 0x2A2A2A, edgeColor: 0x888888,
+    roadType: 'paved', trackWidth: 100, barrierColor: 0x888888,
+    barrierStyle: 'jersey_barrier', label: 'Sprint',
   },
 };
 
-// ---- Parts Definition (single desert stage) ----
-const parts = [
-  // === 섹션 1: 오프닝 직선 가속 ===
-  { type: 'straight',   zone: 'desert' },   // #1  START
-  { type: 'straight',   zone: 'desert' },   // #2  가속
-  { type: 'straight',   zone: 'desert' },   // #3  풀 스피드
-
-  // === 섹션 2: 첫 90도 코너 세트 (워밍업) ===
-  { type: 'turn_90_r',  zone: 'desert' },   // #4  우로 꺾임
-  { type: 'straight_h', zone: 'desert' },   // #5  동쪽 직선
-  { type: 'turn_90_l',  zone: 'desert' },   // #6  북쪽 복귀
-
-  // === 섹션 3: 직선 후 Z자 패턴 ===
-  { type: 'straight',   zone: 'desert' },   // #7  재가속
-  { type: 'straight',   zone: 'desert' },   // #8  풀 스피드
-  { type: 'turn_90_l',  zone: 'desert' },   // #9  Z시작: 좌로 꺾임
-  { type: 'straight_h', zone: 'desert' },   // #10 서쪽 직선
-  { type: 'turn_90_r',  zone: 'desert' },   // #11 북쪽 복귀
-  { type: 'turn_90_r',  zone: 'desert' },   // #12 바로 우로 (180도!)
-  { type: 'straight_h', zone: 'desert' },   // #13 동쪽 직선
-  { type: 'turn_90_l',  zone: 'desert' },   // #14 북쪽 복귀
-
-  // === CP1 ===
-  { type: 'straight',   zone: 'desert' },   // #15 체크포인트 1
-
-  // === 섹션 4: 직선 가속 후 헤어핀 연속 ===
-  { type: 'straight',   zone: 'desert' },   // #16 가속
-  { type: 'straight',   zone: 'desert' },   // #17 풀 스피드
-  { type: 'hairpin_r',  zone: 'desert' },   // #18 우측 U턴
-  { type: 'straight',   zone: 'desert' },   // #19 짧은 회복
-  { type: 'hairpin_l',  zone: 'desert' },   // #20 좌측 U턴
-
-  // === CP2 ===
-  { type: 'straight',   zone: 'desert' },   // #21 체크포인트 2
-
-  // === 섹션 5: 반대 방향 90도 코너 세트 ===
-  { type: 'straight',   zone: 'desert' },   // #22 가속
-  { type: 'turn_90_l',  zone: 'desert' },   // #23 좌로 꺾임
-  { type: 'straight_h', zone: 'desert' },   // #24 서쪽 직선
-  { type: 'straight_h', zone: 'desert' },   // #25 서쪽 계속 (긴 수평)
-  { type: 'turn_90_r',  zone: 'desert' },   // #26 북쪽 복귀
-
-  // === 섹션 6: 두 번째 Z자 패턴 ===
-  { type: 'straight',   zone: 'desert' },   // #27 가속
-  { type: 'turn_90_r',  zone: 'desert' },   // #28 우로 꺾임
-  { type: 'straight_h', zone: 'desert' },   // #29 동쪽 직선
-  { type: 'turn_90_l',  zone: 'desert' },   // #30 북쪽 복귀
-  { type: 'turn_90_l',  zone: 'desert' },   // #31 바로 좌로 (180도!)
-  { type: 'straight_h', zone: 'desert' },   // #32 서쪽 직선
-  { type: 'turn_90_r',  zone: 'desert' },   // #33 북쪽 복귀
-
-  // === CP3 ===
-  { type: 'straight',   zone: 'desert' },   // #34 체크포인트 3
-
-  // === 섹션 7: 클라이맥스 — 90도 + 헤어핀 혼합 ===
-  { type: 'straight',   zone: 'desert' },   // #35 가속
-  { type: 'turn_90_r',  zone: 'desert' },   // #36 우로 꺾임
-  { type: 'straight_h', zone: 'desert' },   // #37 동쪽 직선
-  { type: 'turn_90_l',  zone: 'desert' },   // #38 북쪽 복귀
-  { type: 'straight',   zone: 'desert' },   // #39 짧은 직선
-  { type: 'hairpin_r',  zone: 'desert' },   // #40 U턴!
-  { type: 'straight',   zone: 'desert' },   // #41 회복
-
-  // === CP4 ===
-  { type: 'straight',   zone: 'desert' },   // #42 체크포인트 4
-
-  // === 섹션 8: 피니시 직선 ===
-  { type: 'straight',   zone: 'desert' },   // #43 가속
-  { type: 'straight',   zone: 'desert' },   // #44 풀 스피드
-  { type: 'straight',   zone: 'desert' },   // #45 FINISH
-  { type: 'straight',   zone: 'desert' },   // #46 피니시 후 연장
-];
-
-// ---- Turn arc configurations (pre-computed for each direction) ----
+// ---- Turn arc computation (generalized for 8 directions) ----
 const R = 200; // turn radius
 
-// point on arc: (cx + R*cos(θ), cy - R*sin(θ))  [game coords, Y-down]
-const TURN_90_R_CFG = {
-  north: { cdx: +R, cdy: 0,  sa: Math.PI,     ea: Math.PI/2,       exitDir: 'east',  edx: +R, edy: -R },
-  east:  { cdx: 0,  cdy: +R, sa: Math.PI/2,   ea: 0,               exitDir: 'south', edx: +R, edy: +R },
-  south: { cdx: -R, cdy: 0,  sa: 0,           ea: -Math.PI/2,      exitDir: 'west',  edx: -R, edy: +R },
-  west:  { cdx: 0,  cdy: -R, sa: -Math.PI/2,  ea: -Math.PI,        exitDir: 'north', edx: -R, edy: -R },
-};
+function computeTurnArc(entryDir, turnAngle, turnDirection) {
+  const rv = DIR_RIGHT_VEC[entryDir];
+  if (turnDirection === 'right') {
+    const sa = Math.atan2(rv.dy, -rv.dx);
+    const ea = sa - turnAngle;
+    const cdx = R * rv.dx, cdy = R * rv.dy;
+    const edx = cdx + R * Math.cos(ea);
+    const edy = cdy - R * Math.sin(ea);
+    let exitDir;
+    if (turnAngle === Math.PI / 2) exitDir = DIR_RIGHT[entryDir];
+    else exitDir = DIR_45_RIGHT[entryDir];
+    return { cdx, cdy, sa, ea, exitDir, edx, edy };
+  } else {
+    const sa = Math.atan2(-rv.dy, rv.dx);
+    const ea = sa + turnAngle;
+    const cdx = -R * rv.dx, cdy = -R * rv.dy;
+    const edx = cdx + R * Math.cos(ea);
+    const edy = cdy - R * Math.sin(ea);
+    let exitDir;
+    if (turnAngle === Math.PI / 2) exitDir = DIR_LEFT[entryDir];
+    else exitDir = DIR_45_LEFT[entryDir];
+    return { cdx, cdy, sa, ea, exitDir, edx, edy };
+  }
+}
 
-const TURN_90_L_CFG = {
-  north: { cdx: -R, cdy: 0,  sa: 0,           ea: Math.PI/2,       exitDir: 'west',  edx: -R, edy: -R },
-  east:  { cdx: 0,  cdy: -R, sa: -Math.PI/2,  ea: 0,               exitDir: 'north', edx: +R, edy: -R },
-  south: { cdx: +R, cdy: 0,  sa: Math.PI,     ea: 3*Math.PI/2,     exitDir: 'east',  edx: +R, edy: +R },
-  west:  { cdx: 0,  cdy: +R, sa: Math.PI/2,   ea: Math.PI,         exitDir: 'south', edx: -R, edy: +R },
-};
+// ---- Parts Definition (single desert stage) ----
+const parts = [
+  // === 섹션 1: 오프닝 직선 ===
+  { type: 'straight',      zone: 'desert' },  // #1  START
+  { type: 'straight',      zone: 'desert' },  // #2  가속
+  { type: 'straight',      zone: 'desert' },  // #3  풀 스피드
+
+  // === 섹션 2: 45도 대각선 진입 ===
+  { type: 'turn_45_r',     zone: 'desert' },  // #4  45도 우 (→ NE)
+  { type: 'diag_straight', zone: 'desert' },  // #5  대각선 직선
+  { type: 'diag_straight', zone: 'desert' },  // #6  대각선 계속
+  { type: 'turn_45_l',     zone: 'desert' },  // #7  45도 좌 (→ N 복귀)
+
+  // === 섹션 3: 직선 후 정석 90도 코너 ===
+  { type: 'straight',      zone: 'desert' },  // #8  가속
+  { type: 'turn_90_r',     zone: 'desert' },  // #9  90도 우
+  { type: 'straight_h',    zone: 'desert' },  // #10 동쪽 직선
+  { type: 'turn_90_l',     zone: 'desert' },  // #11 N 복귀
+
+  // === CP1 ===
+  { type: 'straight',      zone: 'desert' },  // #12 체크포인트 1
+
+  // === 섹션 4: 변형 Z패턴 (45도) ===
+  { type: 'straight',      zone: 'desert' },  // #13 가속
+  { type: 'turn_45_l',     zone: 'desert' },  // #14 45도 좌 (→ NW)
+  { type: 'diag_straight', zone: 'desert' },  // #15 NW 대각선
+  { type: 'turn_45_r',     zone: 'desert' },  // #16 45도 우 (→ N 복귀)
+  { type: 'turn_45_r',     zone: 'desert' },  // #17 45도 우 (→ NE) 방향 전환!
+  { type: 'diag_straight', zone: 'desert' },  // #18 NE 대각선
+  { type: 'turn_45_l',     zone: 'desert' },  // #19 45도 좌 (→ N 복귀)
+
+  // === CP2 ===
+  { type: 'straight',      zone: 'desert' },  // #20 체크포인트 2
+
+  // === 섹션 5: 정석 Z패턴 (90도) ===
+  { type: 'straight',      zone: 'desert' },  // #21 가속
+  { type: 'turn_90_l',     zone: 'desert' },  // #22 90도 좌
+  { type: 'straight_h',    zone: 'desert' },  // #23 서쪽 직선
+  { type: 'turn_90_r',     zone: 'desert' },  // #24 N 복귀
+  { type: 'turn_90_r',     zone: 'desert' },  // #25 90도 우 (180도!)
+  { type: 'straight_h',    zone: 'desert' },  // #26 동쪽 직선
+  { type: 'turn_90_l',     zone: 'desert' },  // #27 N 복귀
+
+  // === CP3 ===
+  { type: 'straight',      zone: 'desert' },  // #28 체크포인트 3
+
+  // === 섹션 6: 헤어핀 연속 ===
+  { type: 'straight',      zone: 'desert' },  // #29 가속
+  { type: 'straight',      zone: 'desert' },  // #30 풀 스피드
+  { type: 'hairpin_r',     zone: 'desert' },  // #31 우 U턴
+  { type: 'straight',      zone: 'desert' },  // #32 회복
+  { type: 'hairpin_l',     zone: 'desert' },  // #33 좌 U턴
+
+  // === 섹션 7: 45도+90도 혼합 클라이맥스 ===
+  { type: 'straight',      zone: 'desert' },  // #34 가속
+  { type: 'turn_45_r',     zone: 'desert' },  // #35 45도 우 (NE)
+  { type: 'turn_45_r',     zone: 'desert' },  // #36 또 45도 우 (E) = 합쳐서 90도!
+  { type: 'straight_h',    zone: 'desert' },  // #37 동쪽 직선
+  { type: 'turn_45_l',     zone: 'desert' },  // #38 45도 좌 (NE)
+  { type: 'turn_45_l',     zone: 'desert' },  // #39 또 45도 좌 (N) = N 복귀
+
+  // === CP4 ===
+  { type: 'straight',      zone: 'desert' },  // #40 체크포인트 4
+
+  // === 섹션 8: 피니시 ===
+  { type: 'straight',      zone: 'desert' },  // #41 가속
+  { type: 'straight',      zone: 'desert' },  // #42 풀 스피드
+  { type: 'straight',      zone: 'desert' },  // #43 FINISH
+  { type: 'straight',      zone: 'desert' },  // #44 연장
+];
 
 // ---- Exit Direction ----
 function getExitDirection(type, entryDir) {
   switch (type) {
     case 'straight':
+    case 'straight_h':
+    case 'diag_straight':
     case 'hairpin_l':
     case 'hairpin_r':
-    case 'straight_h':
       return entryDir;
     case 'turn_90_r':
       return DIR_RIGHT[entryDir];
     case 'turn_90_l':
       return DIR_LEFT[entryDir];
+    case 'turn_45_r':
+      return DIR_45_RIGHT[entryDir];
+    case 'turn_45_l':
+      return DIR_45_LEFT[entryDir];
     default:
       return entryDir;
   }
@@ -247,13 +244,13 @@ function getPartExit(type, x, y, direction) {
   const pt = partTypes[type];
   const exitDir = getExitDirection(type, direction);
 
-  if (type === 'turn_90_r') {
-    const cfg = TURN_90_R_CFG[direction];
-    return { x: x + cfg.edx, y: y + cfg.edy, direction: exitDir };
+  if (type === 'turn_90_r' || type === 'turn_45_r') {
+    const arc = computeTurnArc(direction, pt.turnAngle, 'right');
+    return { x: x + arc.edx, y: y + arc.edy, direction: exitDir };
   }
-  if (type === 'turn_90_l') {
-    const cfg = TURN_90_L_CFG[direction];
-    return { x: x + cfg.edx, y: y + cfg.edy, direction: exitDir };
+  if (type === 'turn_90_l' || type === 'turn_45_l') {
+    const arc = computeTurnArc(direction, pt.turnAngle, 'left');
+    return { x: x + arc.edx, y: y + arc.edy, direction: exitDir };
   }
 
   // Linear parts: move forward by fwdDist, shift perpendicular by xShift
@@ -267,14 +264,6 @@ function getPartExit(type, x, y, direction) {
 }
 
 // ---- Bezier helpers ----
-function quadBezier(p0, p1, p2, t) {
-  const mt = 1 - t;
-  return [
-    mt*mt*p0[0] + 2*mt*t*p1[0] + t*t*p2[0],
-    mt*mt*p0[1] + 2*mt*t*p1[1] + t*t*p2[1],
-  ];
-}
-
 function cubicBezier(p0, p1, p2, p3, t) {
   const mt = 1 - t;
   return [
@@ -287,20 +276,18 @@ function cubicBezier(p0, p1, p2, p3, t) {
 function generatePartWaypoints(type, x, y, direction) {
   const fwd = DIR_VECTORS[direction];
   const right = DIR_RIGHT_VEC[direction];
+  const pt = partTypes[type];
   const pts = [];
 
-  if (type === 'straight' || type === 'straight_h') {
-    // 4 evenly spaced points over 512px
-    const dist = partTypes[type].fwdDist;
+  if (type === 'straight' || type === 'straight_h' || type === 'diag_straight') {
+    const dist = pt.fwdDist;
     for (let i = 0; i < 4; i++) {
       const t = i / 4;
       pts.push([x + fwd.dx * dist * t, y + fwd.dy * dist * t]);
     }
   } else if (type === 'hairpin_l' || type === 'hairpin_r') {
-    // U-shaped curve, 12 points via cubic bezier
-    const shift = partTypes[type].xShift;
-    const dist = partTypes[type].fwdDist;
-    // Swing out wide then come back
+    const shift = pt.xShift;
+    const dist = pt.fwdDist;
     const p0 = [x, y];
     const p1 = [x + right.dx * shift * 1.8 + fwd.dx * dist * 0.3,
                 y + right.dy * shift * 1.8 + fwd.dy * dist * 0.3];
@@ -312,20 +299,22 @@ function generatePartWaypoints(type, x, y, direction) {
       const t = i / 12;
       pts.push(cubicBezier(p0, p1, p2, p3, t));
     }
-  } else if (type === 'turn_90_r') {
-    const cfg = TURN_90_R_CFG[direction];
-    const cx = x + cfg.cdx, cy = y + cfg.cdy;
-    for (let i = 0; i < 8; i++) {
-      const t = i / 8;
-      const angle = cfg.sa + (cfg.ea - cfg.sa) * t;
+  } else if (type === 'turn_90_r' || type === 'turn_45_r') {
+    const arc = computeTurnArc(direction, pt.turnAngle, 'right');
+    const cx = x + arc.cdx, cy = y + arc.cdy;
+    const numPts = type === 'turn_90_r' ? 8 : 5;
+    for (let i = 0; i < numPts; i++) {
+      const t = i / numPts;
+      const angle = arc.sa + (arc.ea - arc.sa) * t;
       pts.push([cx + R * Math.cos(angle), cy - R * Math.sin(angle)]);
     }
-  } else if (type === 'turn_90_l') {
-    const cfg = TURN_90_L_CFG[direction];
-    const cx = x + cfg.cdx, cy = y + cfg.cdy;
-    for (let i = 0; i < 8; i++) {
-      const t = i / 8;
-      const angle = cfg.sa + (cfg.ea - cfg.sa) * t;
+  } else if (type === 'turn_90_l' || type === 'turn_45_l') {
+    const arc = computeTurnArc(direction, pt.turnAngle, 'left');
+    const cx = x + arc.cdx, cy = y + arc.cdy;
+    const numPts = type === 'turn_90_l' ? 8 : 5;
+    for (let i = 0; i < numPts; i++) {
+      const t = i / numPts;
+      const angle = arc.sa + (arc.ea - arc.sa) * t;
       pts.push([cx + R * Math.cos(angle), cy - R * Math.sin(angle)]);
     }
   }
@@ -336,7 +325,7 @@ function generatePartWaypoints(type, x, y, direction) {
 // ---- Full Waypoint Generation ----
 function generateWaypoints(partsList, startX, startY) {
   const waypoints = [];
-  const partBounds = []; // { partIndex, startWP, endWP, zone }
+  const partBounds = [];
   let x = startX, y = startY, direction = 'north';
 
   for (let pi = 0; pi < partsList.length; pi++) {
@@ -345,10 +334,8 @@ function generateWaypoints(partsList, startX, startY) {
     const startWP = waypoints.length;
 
     if (pi === 0) {
-      // Include all points for first part
       waypoints.push(...pts);
     } else {
-      // Skip first point (overlaps with previous exit)
       for (let i = 1; i < pts.length; i++) {
         waypoints.push(pts[i]);
       }
@@ -361,9 +348,7 @@ function generateWaypoints(partsList, startX, startY) {
     x = exit.x; y = exit.y; direction = exit.direction;
   }
 
-  // Add final exit point as last waypoint
   waypoints.push([x, y]);
-  // Also add a couple extra for visual continuity
   const lastFwd = DIR_VECTORS[direction];
   waypoints.push([x + lastFwd.dx * 250, y + lastFwd.dy * 250]);
   waypoints.push([x + lastFwd.dx * 500, y + lastFwd.dy * 500]);
@@ -371,7 +356,7 @@ function generateWaypoints(partsList, startX, startY) {
   return { waypoints, partBounds };
 }
 
-// ---- Generate zone array (backward compatible) ----
+// ---- Generate zone array ----
 function generateZones(partBounds) {
   const zones = [];
   let currentZone = null;
@@ -401,7 +386,7 @@ function generateZones(partBounds) {
     }
   }
   if (currentZone) {
-    currentZone.toWP = partBounds[partBounds.length - 1].endWP + 3; // +3 for continuation points
+    currentZone.toWP = partBounds[partBounds.length - 1].endWP + 3;
     zones.push(currentZone);
   }
 
@@ -410,12 +395,12 @@ function generateZones(partBounds) {
 
 // ---- Generate checkpoints at specific part indices ----
 function generateCheckpoints(partBounds) {
-  // CP parts (0-indexed): #15→idx14, #21→idx20, #34→idx33, #42→idx41
+  // CP parts: #12→idx11, #20→idx19, #28→idx27, #40→idx39
   const cpDefs = [
-    { partIdx: 14, name: 'CP1: Dune Ridge',      timeBonus: 15000 },
-    { partIdx: 20, name: 'CP2: Oasis Mirage',     timeBonus: 15000 },
-    { partIdx: 33, name: 'CP3: Sandstorm Pass',   timeBonus: 15000 },
-    { partIdx: 41, name: 'CP4: Final Dune',       timeBonus: 15000 },
+    { partIdx: 11, name: 'CP1: Dune Ridge',    timeBonus: 15000 },
+    { partIdx: 19, name: 'CP2: Oasis Mirage',   timeBonus: 15000 },
+    { partIdx: 27, name: 'CP3: Sandstorm Pass',  timeBonus: 15000 },
+    { partIdx: 39, name: 'CP4: Final Dune',      timeBonus: 15000 },
   ];
   const checkpoints = [];
   for (const cp of cpDefs) {
@@ -437,11 +422,6 @@ export function validateTrack(partsList) {
     const part = partsList[i];
     const type = part.type;
 
-    // Check entry compatibility
-    if (type === 'straight' && direction !== 'north' && direction !== 'south') {
-      // straight can technically work in any vertical direction
-      // but for safety, allow only north/south
-    }
     if (type === 'straight_h' && direction !== 'east' && direction !== 'west') {
       console.error(`Part ${i} (${type}): cannot accept ${direction} entry, needs east/west`);
       return false;
@@ -468,10 +448,8 @@ const { waypoints, partBounds } = generateWaypoints(parts, START_X, START_Y);
 const zones = generateZones(partBounds);
 const checkpoints = generateCheckpoints(partBounds);
 
-// Finish WP: 3 waypoints before the absolute end (last part's end)
 const finishWP = waypoints.length - 4;
 
-// Validate on load
 const trackValid = validateTrack(parts);
 console.log(`[Track] Parts: ${parts.length}, Waypoints: ${waypoints.length}, Zones: ${zones.length}, Valid: ${trackValid}`);
 console.log(`[Track] Zone breakdown:`, zones.map(z => `${z.name}(WP ${z.fromWP}-${z.toWP})`).join(', '));
@@ -479,15 +457,13 @@ console.log(`[Track] Checkpoints:`, checkpoints.map(cp => `${cp.name}@WP${cp.way
 console.log(`[Track] Finish WP: ${finishWP}, Total track length: ${Math.round(Math.sqrt((waypoints[waypoints.length-1][0]-waypoints[0][0])**2+(waypoints[waypoints.length-1][1]-waypoints[0][1])**2))}px`);
 
 export const TRACK_CONFIG = {
-  name: 'Stage 1: Sahara Crossing',
+  name: 'Desert Rally',
 
-  // Parts system (new)
   partTypes,
   parts,
   partBounds,
   zoneConfig,
 
-  // Auto-generated (backward compatible)
   waypoints,
   zones,
   checkpoints,
@@ -510,10 +486,9 @@ export const TRACK_CONFIG = {
   obstacleConfig: {},
 };
 
-// Export helper to get part exit (used by RaceScene for rendering)
-export { getPartExit, getExitDirection, generatePartWaypoints, zoneConfig, DIR_VECTORS, DIR_RIGHT_VEC, DIR_RIGHT, DIR_LEFT, R as TURN_RADIUS };
+export { getPartExit, getExitDirection, generatePartWaypoints, zoneConfig, DIR_VECTORS, DIR_RIGHT_VEC, DIR_RIGHT, DIR_LEFT, DIR_45_RIGHT, DIR_45_LEFT, R as TURN_RADIUS };
 
-// ---- Utility Functions (backward compatible) ----
+// ---- Utility Functions ----
 
 export function getZoneByIndex(wpIndex, zonesArr) {
   for (const z of zonesArr) {
