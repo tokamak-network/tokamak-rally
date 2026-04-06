@@ -557,19 +557,21 @@ const arrowHints = generateArrowHints(parts, waypoints, partBounds);
 
 const finishWP = waypoints.length - 4;
 
-// ---- Road overlap check ----
-const MIN_ROAD_GAP = 120; // road width(100) + barrier(20)
+// ---- Road overlap check (strict: every WP, gap>10, threshold 150px) ----
+const MIN_ROAD_GAP = 150; // road(100) + barrier(20) + margin(30)
 let overlapCount = 0;
-for (let i = 0; i < waypoints.length; i += 4) {
-  for (let j = i + 20; j < waypoints.length; j += 4) {
+for (let i = 0; i < waypoints.length; i++) {
+  for (let j = i + 10; j < waypoints.length; j++) {
     const dx = waypoints[i][0] - waypoints[j][0];
     const dy = waypoints[i][1] - waypoints[j][1];
-    const d = Math.sqrt(dx*dx + dy*dy);
-    if (d < MIN_ROAD_GAP) overlapCount++;
+    if (dx*dx + dy*dy < MIN_ROAD_GAP * MIN_ROAD_GAP) {
+      overlapCount++;
+      if (overlapCount <= 5) console.error(`[Track] OVERLAP: WP${i} ↔ WP${j} = ${Math.round(Math.sqrt(dx*dx+dy*dy))}px`);
+    }
   }
 }
-if (overlapCount > 0) console.warn(`[Track] WARNING: ${overlapCount} road overlap points (gap < ${MIN_ROAD_GAP}px)`);
-else console.log('[Track] No road overlaps detected');
+if (overlapCount > 0) console.error(`[Track] ERROR: ${overlapCount} road overlaps (gap < ${MIN_ROAD_GAP}px)`);
+else console.log('[Track] No road overlaps (150px threshold) ✓');
 
 const trackValid = validateTrack(parts);
 console.log(`[Track] Parts: ${parts.length}, Waypoints: ${waypoints.length}, Zones: ${zones.length}, Valid: ${trackValid}`);

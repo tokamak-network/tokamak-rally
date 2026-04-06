@@ -1074,49 +1074,42 @@ export class RaceScene extends Phaser.Scene {
   }
 
   setupCornerHUD() {
-    // HUD arrow — appears on screen when approaching a corner, disappears after passing
-    this._cornerHUD = this.add.text(400, 200, '', {
-      fontSize: '80px', color: '#CC0000', fontStyle: 'bold',
-      stroke: '#FFFFFF', strokeThickness: 6,
-    }).setOrigin(0.5).setScrollFactor(0).setDepth(200).setAlpha(0);
-    this._cornerHUDActive = false;
-    this._lastArrowIdx = -1;
-    console.log(`[HUD] Corner arrow HUD ready, ${(this.track.arrowHints || []).length} hints loaded`);
+    // Arrow indicator — follows car position, appears 0.5s before corner
+    this._cornerArrow = this.add.text(0, 0, '', {
+      fontSize: '32px', color: '#CC0000', fontStyle: 'bold',
+      stroke: '#FFFFFF', strokeThickness: 4,
+    }).setOrigin(0.5).setDepth(200).setAlpha(0);
+    console.log(`[HUD] Corner arrows ready, ${(this.track.arrowHints || []).length} hints`);
   }
 
   updateCornerHUD() {
     const hints = this.track.arrowHints;
-    if (!hints || hints.length === 0) return;
+    if (!hints || !this.carState) return;
     const car = this.carState;
-    if (!car) return;
 
-    let nearest = null, nearestDist = Infinity, nearestIdx = -1;
+    // Show distance = current speed × 0.5 seconds
+    const showDist = Math.max(200, Math.abs(car.speed) * 0.5);
+
+    let nearest = null, nearestDist = Infinity;
     for (let i = 0; i < hints.length; i++) {
       const dx = car.x - hints[i].x, dy = car.y - hints[i].y;
       const d = Math.sqrt(dx*dx + dy*dy);
-      // Only show arrows that are AHEAD (within 600px) and not yet passed
-      if (d < 600 && d < nearestDist) {
-        // Check if corner is ahead by comparing Y (track goes north = Y decreasing)
-        if (hints[i].y < car.y) { // corner is ahead (north)
-          nearestDist = d;
-          nearest = hints[i];
-          nearestIdx = i;
-        }
+      if (d < showDist && d < nearestDist && hints[i].y < car.y) {
+        nearestDist = d;
+        nearest = hints[i];
       }
     }
 
-    if (nearest && nearestDist < 600) {
-      const arrow = nearest.direction === 'right' ? '▶▶' : '◀◀';
-      const label = nearest.severity === 'hairpin' ? '⚠ ' + arrow : arrow;
-      this._cornerHUD.setText(label);
-      // Fade in as you approach (600→0 = 0→1 alpha)
-      const alpha = Math.min(1, (600 - nearestDist) / 300);
-      this._cornerHUD.setAlpha(alpha);
-      this._lastArrowIdx = nearestIdx;
+    if (nearest) {
+      const arrow = nearest.direction === 'right' ? '→' : '←';
+      this._cornerArrow.setText(arrow);
+      // Position above car in world space
+      this._cornerArrow.setPosition(car.x, car.y - 50);
+      const alpha = Math.min(1, (showDist - nearestDist) / (showDist * 0.5));
+      this._cornerArrow.setAlpha(alpha);
     } else {
-      // Fade out
-      if (this._cornerHUD.alpha > 0) {
-        this._cornerHUD.setAlpha(Math.max(0, this._cornerHUD.alpha - 0.05));
+      if (this._cornerArrow.alpha > 0) {
+        this._cornerArrow.setAlpha(Math.max(0, this._cornerArrow.alpha - 0.1));
       }
     }
   }
