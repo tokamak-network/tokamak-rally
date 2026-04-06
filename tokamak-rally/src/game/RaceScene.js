@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TRACK_CONFIG, isOnTrack, getTrackProgress, getZoneByIndex, checkCheckpoint, checkFinish } from './Track.js';
+import { TRACK_CONFIG, isOnTrack, getTrackProgress, getZoneByIndex, checkCheckpoint, checkFinish, zoneConfig } from './Track.js';
 import { CARS } from './Cars.js';
 import { wallet } from '../web3/wallet.js';
 import { soundEngine } from './SoundEngine.js';
@@ -21,12 +21,7 @@ export class RaceScene extends Phaser.Scene {
     this._animals = [];
     this._birdTimer = 5000 + Math.random() * 8000;
 
-    this.renderDesertParts();
-    this.drawBackground();
-    this.drawTrack();
-    this.drawSprintOverlay();
-    this.placeBarriers();
-    this.placeScenery();
+    this.renderTrackParts();
     this.placeCheckpoints();
     // this.placeRoadObstacles(); // obstacles removed — focus on racing
 
@@ -506,82 +501,64 @@ export class RaceScene extends Phaser.Scene {
   }
 
   // ---- Parts-based rendering: Desert zone ----
-  renderDesertParts() {
+  renderTrackParts() {
     const wp = this.track.waypoints;
-    const zones = this.track.zones;
+    const allZones = this.track.zones;
     this._desertBarrierSegments = [];
 
-    // Find desert + transition zone WP range
-    const desertZones = zones.filter(z => z.name === 'desert' || z.name === 'trans_desert_canyon');
-    if (desertZones.length === 0) return;
+    if (allZones.length === 0) return;
 
-    const startWP = desertZones[0].fromWP;
-    const endWP = Math.min(desertZones[desertZones.length - 1].toWP, wp.length);
+    const startWP = allZones[0].fromWP;
+    const endWP = Math.min(allZones[allZones.length - 1].toWP, wp.length);
     const halfW = 50; // roadWidth 100 / 2
     const bgHalfW = 350; // expanded for dramatic curves
 
-    // Compute normals for the full desert range
+    // Compute normals for the full track
     const normals = this.computeNormals(wp, startWP, endWP);
 
-    // Seeded RNG for deterministic sand detail
+    // Seeded RNG for deterministic terrain detail
     let detailSeed = 12345;
     const detailRng = () => {
       detailSeed = (detailSeed * 16807 + 0) % 2147483647;
       return detailSeed / 2147483647;
     };
 
-    // ===== 0. BASE FILL — covers curve inner gaps =====
-    // Compute bounding box of entire desert+transition area
-    let globalMinX = Infinity, globalMaxX = -Infinity;
-    let globalMinY = Infinity, globalMaxY = -Infinity;
-    for (let i = startWP; i < endWP; i++) {
-      const ni = normals[i - startWP];
-      for (const side of [-1, 1]) {
-        const px = wp[i][0] + ni[0] * side * (bgHalfW + 100);
-        const py = wp[i][1] + ni[1] * side * (bgHalfW + 100);
-        globalMinX = Math.min(globalMinX, px);
-        globalMaxX = Math.max(globalMaxX, px);
-        globalMinY = Math.min(globalMinY, py);
-        globalMaxY = Math.max(globalMaxY, py);
-      }
-      globalMinX = Math.min(globalMinX, wp[i][0]);
-      globalMaxX = Math.max(globalMaxX, wp[i][0]);
-      globalMinY = Math.min(globalMinY, wp[i][1]);
-      globalMaxY = Math.max(globalMaxY, wp[i][1]);
-    }
-    const pad = 200;
-    globalMinX -= pad; globalMaxX += pad;
-    globalMinY -= pad; globalMaxY += pad;
+    // Helper: extract RGB components from hex color
+    const hexRGB = (c) => [(c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF];
+    const rgbHex = (r, g, b) => (r << 16) | (g << 8) | b;
 
-    // Desert base: solid desert color
+    // ===== 0. BASE FILL per zone — covers curve inner gaps =====
     const gBase = this.add.graphics().setDepth(-1);
-    gBase.fillStyle(0xD2B48C, 1);
-    gBase.fillRect(globalMinX, globalMinY, globalMaxX - globalMinX, globalMaxY - globalMinY);
+    const pad = 200;
+    for (const zone of allZones) {
+      const s = zone.fromWP, e = Math.min(zone.toWP, wp.length);
+      const zc = zoneConfig[zone.name];
+      const baseBg = zc ? zc.bgColor : 0xD2B48C;
 
-    // Transition base: canyon color over transition WP range
-    const transZone = desertZones.find(z => z.name === 'trans_desert_canyon');
-    if (transZone) {
-      const ts = transZone.fromWP, te = Math.min(transZone.toWP, wp.length);
-      let tMinX = Infinity, tMaxX = -Infinity, tMinY = Infinity, tMaxY = -Infinity;
-      for (let i = ts; i < te; i++) {
+      let zMinX = Infinity, zMaxX = -Infinity, zMinY = Infinity, zMaxY = -Infinity;
+      for (let i = s; i < e; i++) {
         const ni = normals[i - startWP];
         for (const side of [-1, 1]) {
           const px = wp[i][0] + ni[0] * side * (bgHalfW + 100);
           const py = wp[i][1] + ni[1] * side * (bgHalfW + 100);
-          tMinX = Math.min(tMinX, px); tMaxX = Math.max(tMaxX, px);
-          tMinY = Math.min(tMinY, py); tMaxY = Math.max(tMaxY, py);
+          zMinX = Math.min(zMinX, px); zMaxX = Math.max(zMaxX, px);
+          zMinY = Math.min(zMinY, py); zMaxY = Math.max(zMaxY, py);
         }
+        zMinX = Math.min(zMinX, wp[i][0]); zMaxX = Math.max(zMaxX, wp[i][0]);
+        zMinY = Math.min(zMinY, wp[i][1]); zMaxY = Math.max(zMaxY, wp[i][1]);
       }
-      tMinX -= pad; tMaxX += pad; tMinY -= pad; tMaxY += pad;
-      gBase.fillStyle(0x8B6914, 1);
-      gBase.fillRect(tMinX, tMinY, tMaxX - tMinX, tMaxY - tMinY);
+      zMinX -= pad; zMaxX += pad; zMinY -= pad; zMaxY += pad;
+      gBase.fillStyle(baseBg, 1);
+      gBase.fillRect(zMinX, zMinY, zMaxX - zMinX, zMaxY - zMinY);
     }
 
     // ===== 1. BACKGROUND (depth 0) =====
-    for (const dz of desertZones) {
-      const s = dz.fromWP, e = Math.min(dz.toWP, wp.length);
-      const isTransition = dz.name === 'trans_desert_canyon';
+    for (const zone of allZones) {
+      const s = zone.fromWP, e = Math.min(zone.toWP, wp.length);
+      const zc = zoneConfig[zone.name];
+      const isTransition = zc && zc.transition;
       const totalWP = e - s;
+      const zoneBg = zc ? zc.bgColor : 0xD2B48C;
 
       const gBg = this.add.graphics().setDepth(0);
 
@@ -589,30 +566,29 @@ export class RaceScene extends Phaser.Scene {
         const ni = normals[i - startWP];
         const niNext = normals[Math.min(i + 1 - startWP, normals.length - 1)];
 
-        // Background color — transition blends desert→canyon
-        let bgColor = 0xD2B48C; // desert
+        let bgColor = zoneBg;
         if (isTransition && totalWP > 0) {
-          const p = (i - s) / totalWP;
-          const r1 = 0xD2, g1 = 0xB4, b1 = 0x8C; // desert
-          const r2 = 0x8B, g2 = 0x69, b2 = 0x14; // canyon
-          const r = Math.round(r1 + (r2 - r1) * p);
-          const g = Math.round(g1 + (g2 - g1) * p);
-          const b = Math.round(b1 + (b2 - b1) * p);
-          bgColor = (r << 16) | (g << 8) | b;
+          const fromZc = zoneConfig[zc.transition.from];
+          const toZc = zoneConfig[zc.transition.to];
+          if (fromZc && toZc) {
+            const p = (i - s) / totalWP;
+            const [r1, g1, b1] = hexRGB(fromZc.bgColor);
+            const [r2, g2, b2] = hexRGB(toZc.bgColor);
+            bgColor = rgbHex(
+              Math.round(r1 + (r2 - r1) * p),
+              Math.round(g1 + (g2 - g1) * p),
+              Math.round(b1 + (b2 - b1) * p)
+            );
+          }
         }
 
-        // Draw background quad on each side (left and right of road)
         for (const side of [-1, 1]) {
-          const innerOff = halfW + 2; // just outside road edge
+          const innerOff = halfW + 2;
           const outerOff = bgHalfW;
-
-          // Current point
           const ix = wp[i][0] + ni[0] * side * innerOff;
           const iy = wp[i][1] + ni[1] * side * innerOff;
           const ox = wp[i][0] + ni[0] * side * outerOff;
           const oy = wp[i][1] + ni[1] * side * outerOff;
-
-          // Next point
           const ixN = wp[i+1][0] + niNext[0] * side * innerOff;
           const iyN = wp[i+1][1] + niNext[1] * side * innerOff;
           const oxN = wp[i+1][0] + niNext[0] * side * outerOff;
@@ -620,16 +596,15 @@ export class RaceScene extends Phaser.Scene {
 
           gBg.fillStyle(bgColor, 1);
           gBg.beginPath();
-          gBg.moveTo(ix, iy);
-          gBg.lineTo(ox, oy);
-          gBg.lineTo(oxN, oyN);
-          gBg.lineTo(ixN, iyN);
-          gBg.closePath();
-          gBg.fillPath();
+          gBg.moveTo(ix, iy); gBg.lineTo(ox, oy);
+          gBg.lineTo(oxN, oyN); gBg.lineTo(ixN, iyN);
+          gBg.closePath(); gBg.fillPath();
         }
       }
 
-      // Sand detail: small grains and larger spots
+      // Terrain detail: small grains and spots
+      const detailColor1 = zoneBg > 0x808080 ? 0xA08850 : 0x606060;
+      const detailColor2 = zoneBg > 0x808080 ? 0xC4A06C : 0x808080;
       const gDetail = this.add.graphics().setDepth(0);
       for (let i = s; i < e; i += 2) {
         const ni = normals[i - startWP];
@@ -646,14 +621,12 @@ export class RaceScene extends Phaser.Scene {
           const py = dy + (fwd[1]/fLen) * along;
 
           if (detailRng() > 0.6) {
-            // Larger spot (bush/rock hint)
             const r = 8 + detailRng() * 4;
-            gDetail.fillStyle(0xA08850, 0.2);
+            gDetail.fillStyle(detailColor1, 0.2);
             gDetail.fillCircle(px, py, r);
           } else {
-            // Small grain
             const r = 3 + detailRng() * 2;
-            gDetail.fillStyle(0xC4A06C, 0.3);
+            gDetail.fillStyle(detailColor2, 0.3);
             gDetail.fillCircle(px, py, r);
           }
         }
@@ -662,14 +635,16 @@ export class RaceScene extends Phaser.Scene {
 
     // ===== 2. ROAD (depth 1) =====
     const gRoad = this.add.graphics().setDepth(1);
-    for (const dz of desertZones) {
-      const s = dz.fromWP, e = Math.min(dz.toWP, wp.length);
-      const isTransition = dz.name === 'trans_desert_canyon';
+    for (const zone of allZones) {
+      const s = zone.fromWP, e = Math.min(zone.toWP, wp.length);
+      const zc = zoneConfig[zone.name];
+      const isTransition = zc && zc.transition;
       const totalWP = e - s;
+      const roadColor = zc ? zc.roadColor : 0x9B7B4A;
+      const edgeColor = zc ? zc.edgeColor : 0x8a6a30;
 
-      // Road border (wider, subtler)
-      let borderColor = 0x8a6a30;
-      gRoad.lineStyle(120, borderColor, 0.4);
+      // Road border
+      gRoad.lineStyle(120, edgeColor, 0.4);
       gRoad.beginPath();
       gRoad.moveTo(wp[s][0], wp[s][1]);
       for (let i = s + 1; i < e; i++) gRoad.lineTo(wp[i][0], wp[i][1]);
@@ -677,23 +652,27 @@ export class RaceScene extends Phaser.Scene {
 
       // Road surface
       if (isTransition) {
-        // Draw segment by segment with blending color
-        for (let i = s; i < e - 1; i++) {
-          const p = totalWP > 0 ? (i - s) / totalWP : 0;
-          const r1 = 0x9B, g1 = 0x7B, b1 = 0x4A; // desert road
-          const r2 = 0x7B, g2 = 0x5B, b2 = 0x2A; // canyon road
-          const r = Math.round(r1 + (r2 - r1) * p);
-          const g = Math.round(g1 + (g2 - g1) * p);
-          const b = Math.round(b1 + (b2 - b1) * p);
-          const roadColor = (r << 16) | (g << 8) | b;
-          gRoad.lineStyle(100, roadColor, 1);
-          gRoad.beginPath();
-          gRoad.moveTo(wp[i][0], wp[i][1]);
-          gRoad.lineTo(wp[i+1][0], wp[i+1][1]);
-          gRoad.strokePath();
+        const fromZc = zoneConfig[zc.transition.from];
+        const toZc = zoneConfig[zc.transition.to];
+        if (fromZc && toZc) {
+          const [r1, g1, b1] = hexRGB(fromZc.roadColor);
+          const [r2, g2, b2] = hexRGB(toZc.roadColor);
+          for (let i = s; i < e - 1; i++) {
+            const p = totalWP > 0 ? (i - s) / totalWP : 0;
+            const blended = rgbHex(
+              Math.round(r1 + (r2 - r1) * p),
+              Math.round(g1 + (g2 - g1) * p),
+              Math.round(b1 + (b2 - b1) * p)
+            );
+            gRoad.lineStyle(100, blended, 1);
+            gRoad.beginPath();
+            gRoad.moveTo(wp[i][0], wp[i][1]);
+            gRoad.lineTo(wp[i+1][0], wp[i+1][1]);
+            gRoad.strokePath();
+          }
         }
       } else {
-        gRoad.lineStyle(100, 0x9B7B4A, 1);
+        gRoad.lineStyle(100, roadColor, 1);
         gRoad.beginPath();
         gRoad.moveTo(wp[s][0], wp[s][1]);
         for (let i = s + 1; i < e; i++) gRoad.lineTo(wp[i][0], wp[i][1]);
@@ -703,8 +682,8 @@ export class RaceScene extends Phaser.Scene {
 
     // ===== 3. CURB MARKERS (depth 2) =====
     const CURB_DASH = 10, CURB_W = 4;
-    for (const dz of desertZones) {
-      const s = dz.fromWP, e = Math.min(dz.toWP, wp.length);
+    for (const zone of allZones) {
+      const s = zone.fromWP, e = Math.min(zone.toWP, wp.length);
       const gCurb = this.add.graphics().setDepth(2);
 
       for (const side of [-1, 1]) {
@@ -736,8 +715,11 @@ export class RaceScene extends Phaser.Scene {
 
     // ===== 4. BARRIERS — wood fence (depth 3) =====
     const barrierDist = halfW + 8;
-    for (const dz of desertZones) {
-      const s = dz.fromWP, e = Math.min(dz.toWP, wp.length);
+    for (const zone of allZones) {
+      const s = zone.fromWP, e = Math.min(zone.toWP, wp.length);
+      const zc = zoneConfig[zone.name];
+      const barrierColor = zc ? zc.barrierColor : 0x8B6914;
+      const fenceColor = ((barrierColor >> 1) & 0x7F7F7F); // darker variant
 
       // Collect barrier collision data
       for (let i = s; i < e; i++) {
@@ -753,13 +735,13 @@ export class RaceScene extends Phaser.Scene {
       };
 
       for (const side of [-1, 1]) {
-        // Rails (2 horizontal lines offset ±2px from barrier center)
+        // Rails
         for (const railOff of [-2, 2]) {
           const gRail = this.add.graphics().setDepth(3);
-          gRail.lineStyle(2, 0x8B6914, 0.9);
+          gRail.lineStyle(2, barrierColor, 0.9);
           gRail.beginPath();
           const [sx, sy] = bPos(s, side);
-          const n0 = normals[0];
+          const n0 = normals[s - startWP];
           gRail.moveTo(sx + n0[0] * railOff, sy + n0[1] * railOff);
           for (let i = s + 1; i < e; i++) {
             const [px, py] = bPos(i, side);
@@ -771,7 +753,7 @@ export class RaceScene extends Phaser.Scene {
 
         // Main fence line
         const gFence = this.add.graphics().setDepth(3);
-        gFence.lineStyle(4, 0x6B4226, 0.9);
+        gFence.lineStyle(4, fenceColor, 0.9);
         gFence.beginPath();
         const [sx, sy] = bPos(s, side);
         gFence.moveTo(sx, sy);
@@ -783,7 +765,7 @@ export class RaceScene extends Phaser.Scene {
 
         // Posts every 30px
         const gPosts = this.add.graphics().setDepth(3);
-        gPosts.fillStyle(0x8B6914, 1);
+        gPosts.fillStyle(barrierColor, 1);
         let dist = 0;
         for (let i = s; i < e - 1; i++) {
           const dx = wp[i+1][0] - wp[i][0], dy = wp[i+1][1] - wp[i][1];

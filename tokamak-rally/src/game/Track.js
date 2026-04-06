@@ -174,7 +174,12 @@ const parts = [
   { type: 'straight', zone: 'canyon' },
   { type: 'hairpin_l', zone: 'canyon' },
   { type: 'straight', zone: 'canyon' },
-  { type: 's_curve', zone: 'canyon' },
+  { type: 'turn_90_l',  zone: 'canyon' },
+  { type: 'straight_h', zone: 'canyon' },
+  { type: 'turn_90_r',  zone: 'canyon' },
+  { type: 'turn_90_r',  zone: 'canyon' },
+  { type: 'straight_h', zone: 'canyon' },
+  { type: 'turn_90_l',  zone: 'canyon' },
   { type: 'straight', zone: 'canyon' },
 
   // === TRANSITION: CANYON → RIVERBED ===
@@ -550,11 +555,11 @@ export const TRACK_CONFIG = {
   roadWidth: 100,
 
   roadPhysics: {
-    paved:   { accel: 243, friction: 0.990, turn: 110, label: 'PAVED' },
-    dirt:    { accel: 188, friction: 0.978, turn: 130, label: 'DIRT' },
-    sand:    { accel: 141, friction: 0.965, turn: 115, label: 'SAND' },
-    rocky:   { accel: 122, friction: 0.960, turn: 140, label: 'ROCKY' },
-    offroad: { accel: 83,  friction: 0.945, turn: 85,  label: 'OFF-ROAD' },
+    paved:   { accel: 365, friction: 0.990, turn: 110, label: 'PAVED' },
+    dirt:    { accel: 282, friction: 0.978, turn: 130, label: 'DIRT' },
+    sand:    { accel: 212, friction: 0.965, turn: 115, label: 'SAND' },
+    rocky:   { accel: 183, friction: 0.960, turn: 140, label: 'ROCKY' },
+    offroad: { accel: 125, friction: 0.945, turn: 85,  label: 'OFF-ROAD' },
   },
 
   obstacleConfig: {},
