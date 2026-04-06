@@ -135,95 +135,77 @@ const zoneConfig = {
   },
 };
 
-// ---- Parts Definition ----
+// ---- Parts Definition (single desert stage) ----
 const parts = [
-  // === ZONE 1: DESERT — 90도 코너 + Z자 패턴 + 헤어핀 ===
-  // 오프닝: 긴 직선 가속
+  // === 섹션 1: 오프닝 직선 가속 ===
   { type: 'straight',   zone: 'desert' },   // #1  START
   { type: 'straight',   zone: 'desert' },   // #2  가속
   { type: 'straight',   zone: 'desert' },   // #3  풀 스피드
-  // 첫 90도 코너 세트: 우→수평→좌 (워밍업)
+
+  // === 섹션 2: 첫 90도 코너 세트 (워밍업) ===
   { type: 'turn_90_r',  zone: 'desert' },   // #4  우로 꺾임
   { type: 'straight_h', zone: 'desert' },   // #5  동쪽 직선
   { type: 'turn_90_l',  zone: 'desert' },   // #6  북쪽 복귀
-  // 직선 후 Z자 패턴 (S커브 대체 — 핵심 구간)
+
+  // === 섹션 3: 직선 후 Z자 패턴 ===
   { type: 'straight',   zone: 'desert' },   // #7  재가속
-  { type: 'turn_90_l',  zone: 'desert' },   // #8  Z자 시작: 좌로 꺾임
-  { type: 'straight_h', zone: 'desert' },   // #9  서쪽 직선
-  { type: 'turn_90_r',  zone: 'desert' },   // #10 북쪽 복귀
-  { type: 'turn_90_r',  zone: 'desert' },   // #11 바로 우로 꺾임 (180도 헤어핀 효과!)
-  { type: 'straight_h', zone: 'desert' },   // #12 동쪽 직선
-  { type: 'turn_90_l',  zone: 'desert' },   // #13 북쪽 복귀 — Z자 완료
-  // 직선으로 회복
-  { type: 'straight',   zone: 'desert' },   // #14 가속
-  // 헤어핀 연속 (클라이맥스)
-  { type: 'hairpin_r',  zone: 'desert' },   // #15 우측 U턴
-  { type: 'straight',   zone: 'desert' },   // #16 짧은 회복
-  { type: 'hairpin_l',  zone: 'desert' },   // #17 좌측 U턴 (연속!)
-  // 마무리: 직선으로 체크포인트
-  { type: 'straight',   zone: 'desert' },   // #18 가속
-  { type: 'straight',   zone: 'desert' },   // #19 CP1 체크포인트
+  { type: 'straight',   zone: 'desert' },   // #8  풀 스피드
+  { type: 'turn_90_l',  zone: 'desert' },   // #9  Z시작: 좌로 꺾임
+  { type: 'straight_h', zone: 'desert' },   // #10 서쪽 직선
+  { type: 'turn_90_r',  zone: 'desert' },   // #11 북쪽 복귀
+  { type: 'turn_90_r',  zone: 'desert' },   // #12 바로 우로 (180도!)
+  { type: 'straight_h', zone: 'desert' },   // #13 동쪽 직선
+  { type: 'turn_90_l',  zone: 'desert' },   // #14 북쪽 복귀
 
-  // === TRANSITION: DESERT → CANYON ===
-  { type: 'straight', zone: 'trans_desert_canyon' },
-  { type: 'straight', zone: 'trans_desert_canyon' },
+  // === CP1 ===
+  { type: 'straight',   zone: 'desert' },   // #15 체크포인트 1
 
-  // === ZONE 2: CANYON (좁고 거친, 헤어핀+S커브) ===
-  { type: 'straight', zone: 'canyon' },
-  { type: 'curve_r', zone: 'canyon' },
-  { type: 'straight', zone: 'canyon' },
-  { type: 'hairpin_l', zone: 'canyon' },
-  { type: 'straight', zone: 'canyon' },
-  { type: 'turn_90_l',  zone: 'canyon' },
-  { type: 'straight_h', zone: 'canyon' },
-  { type: 'turn_90_r',  zone: 'canyon' },
-  { type: 'turn_90_r',  zone: 'canyon' },
-  { type: 'straight_h', zone: 'canyon' },
-  { type: 'turn_90_l',  zone: 'canyon' },
-  { type: 'straight', zone: 'canyon' },
+  // === 섹션 4: 직선 가속 후 헤어핀 연속 ===
+  { type: 'straight',   zone: 'desert' },   // #16 가속
+  { type: 'straight',   zone: 'desert' },   // #17 풀 스피드
+  { type: 'hairpin_r',  zone: 'desert' },   // #18 우측 U턴
+  { type: 'straight',   zone: 'desert' },   // #19 짧은 회복
+  { type: 'hairpin_l',  zone: 'desert' },   // #20 좌측 U턴
 
-  // === TRANSITION: CANYON → RIVERBED ===
-  { type: 'straight', zone: 'trans_canyon_riverbed' },
+  // === CP2 ===
+  { type: 'straight',   zone: 'desert' },   // #21 체크포인트 2
 
-  // === ZONE 3: RIVERBED (습지, 중간 난이도) ===
-  { type: 'straight', zone: 'riverbed' },
-  { type: 'curve_l', zone: 'riverbed' },
-  { type: 'curve_r', zone: 'riverbed' },
-  { type: 'straight', zone: 'riverbed' },
-  { type: 'hairpin_r', zone: 'riverbed' },
-  { type: 'straight', zone: 'riverbed' },
-  { type: 'curve_l', zone: 'riverbed' },
-  { type: 'straight', zone: 'riverbed' },
+  // === 섹션 5: 반대 방향 90도 코너 세트 ===
+  { type: 'straight',   zone: 'desert' },   // #22 가속
+  { type: 'turn_90_l',  zone: 'desert' },   // #23 좌로 꺾임
+  { type: 'straight_h', zone: 'desert' },   // #24 서쪽 직선
+  { type: 'straight_h', zone: 'desert' },   // #25 서쪽 계속 (긴 수평)
+  { type: 'turn_90_r',  zone: 'desert' },   // #26 북쪽 복귀
 
-  // === TRANSITION: RIVERBED → MOUNTAIN ===
-  { type: 'straight', zone: 'trans_riverbed_mountain' },
+  // === 섹션 6: 두 번째 Z자 패턴 ===
+  { type: 'straight',   zone: 'desert' },   // #27 가속
+  { type: 'turn_90_r',  zone: 'desert' },   // #28 우로 꺾임
+  { type: 'straight_h', zone: 'desert' },   // #29 동쪽 직선
+  { type: 'turn_90_l',  zone: 'desert' },   // #30 북쪽 복귀
+  { type: 'turn_90_l',  zone: 'desert' },   // #31 바로 좌로 (180도!)
+  { type: 'straight_h', zone: 'desert' },   // #32 서쪽 직선
+  { type: 'turn_90_r',  zone: 'desert' },   // #33 북쪽 복귀
 
-  // === ZONE 4: MOUNTAIN (산악, turn_90 사용 금지) ===
-  { type: 'straight', zone: 'mountain' },
-  { type: 'curve_l', zone: 'mountain' },
-  { type: 'straight', zone: 'mountain' },
-  { type: 'curve_r', zone: 'mountain' },
-  { type: 'straight', zone: 'mountain' },
-  { type: 'hairpin_l', zone: 'mountain' },
-  { type: 'straight', zone: 'mountain' },
+  // === CP3 ===
+  { type: 'straight',   zone: 'desert' },   // #34 체크포인트 3
 
-  // === TRANSITION: MOUNTAIN → SPRINT ===
-  { type: 'straight', zone: 'trans_mountain_sprint' },
+  // === 섹션 7: 클라이맥스 — 90도 + 헤어핀 혼합 ===
+  { type: 'straight',   zone: 'desert' },   // #35 가속
+  { type: 'turn_90_r',  zone: 'desert' },   // #36 우로 꺾임
+  { type: 'straight_h', zone: 'desert' },   // #37 동쪽 직선
+  { type: 'turn_90_l',  zone: 'desert' },   // #38 북쪽 복귀
+  { type: 'straight',   zone: 'desert' },   // #39 짧은 직선
+  { type: 'hairpin_r',  zone: 'desert' },   // #40 U턴!
+  { type: 'straight',   zone: 'desert' },   // #41 회복
 
-  // === ZONE 5: SPRINT (도심 격자, 직선+90도) ===
-  { type: 'straight', zone: 'sprint' },
-  { type: 'straight', zone: 'sprint' },
-  { type: 'turn_90_r', zone: 'sprint' },
-  { type: 'straight_h', zone: 'sprint' },
-  { type: 'turn_90_l', zone: 'sprint' },
-  { type: 'straight', zone: 'sprint' },
-  { type: 'straight', zone: 'sprint' },
-  { type: 'turn_90_l', zone: 'sprint' },
-  { type: 'straight_h', zone: 'sprint' },
-  { type: 'turn_90_r', zone: 'sprint' },
-  { type: 'straight', zone: 'sprint' },
-  { type: 'straight', zone: 'sprint' },  // FINISH
-  { type: 'straight', zone: 'sprint' },  // post-finish extension
+  // === CP4 ===
+  { type: 'straight',   zone: 'desert' },   // #42 체크포인트 4
+
+  // === 섹션 8: 피니시 직선 ===
+  { type: 'straight',   zone: 'desert' },   // #43 가속
+  { type: 'straight',   zone: 'desert' },   // #44 풀 스피드
+  { type: 'straight',   zone: 'desert' },   // #45 FINISH
+  { type: 'straight',   zone: 'desert' },   // #46 피니시 후 연장
 ];
 
 // ---- Turn arc configurations (pre-computed for each direction) ----
@@ -459,29 +441,25 @@ function generateZones(partBounds) {
   return zones;
 }
 
-// ---- Generate checkpoints at zone transitions ----
+// ---- Generate checkpoints at specific part indices ----
 function generateCheckpoints(partBounds) {
-  // CP at the boundary between each main zone and its transition zone
-  const mainZones = ['desert', 'canyon', 'riverbed', 'mountain'];
-  const cpNames = ['CP1: Dune Ridge', 'CP2: Canyon Exit', 'CP3: Riverbed Crossing', 'CP4: Summit'];
+  // CP parts (0-indexed): #15→idx14, #21→idx20, #34→idx33, #42→idx41
+  const cpDefs = [
+    { partIdx: 14, name: 'CP1: Dune Ridge',      timeBonus: 15000 },
+    { partIdx: 20, name: 'CP2: Oasis Mirage',     timeBonus: 15000 },
+    { partIdx: 33, name: 'CP3: Sandstorm Pass',   timeBonus: 15000 },
+    { partIdx: 41, name: 'CP4: Final Dune',       timeBonus: 15000 },
+  ];
   const checkpoints = [];
-
-  for (let z = 0; z < mainZones.length; z++) {
-    const zoneName = mainZones[z];
-    // Find last partBound of this zone
-    let lastPB = null;
-    for (const pb of partBounds) {
-      if (pb.zone === zoneName) lastPB = pb;
-    }
-    if (lastPB) {
+  for (const cp of cpDefs) {
+    if (cp.partIdx < partBounds.length) {
       checkpoints.push({
-        waypointIndex: lastPB.endWP,
-        timeBonus: 15000,
-        name: cpNames[z],
+        waypointIndex: partBounds[cp.partIdx].endWP,
+        timeBonus: cp.timeBonus,
+        name: cp.name,
       });
     }
   }
-
   return checkpoints;
 }
 
@@ -557,7 +535,7 @@ export const TRACK_CONFIG = {
   roadPhysics: {
     paved:   { accel: 365, friction: 0.990, turn: 110, label: 'PAVED' },
     dirt:    { accel: 282, friction: 0.978, turn: 130, label: 'DIRT' },
-    sand:    { accel: 212, friction: 0.965, turn: 115, label: 'SAND' },
+    sand:    { accel: 212, friction: 0.965, turn: 115, label: 'DESERT' },
     rocky:   { accel: 183, friction: 0.960, turn: 140, label: 'ROCKY' },
     offroad: { accel: 125, friction: 0.945, turn: 85,  label: 'OFF-ROAD' },
   },
