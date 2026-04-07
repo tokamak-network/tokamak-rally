@@ -185,7 +185,7 @@ function generateSafeLayout() {
     'turn_90_r', 'straight_h', 'straight_h', 'straight_h', 'turn_90_l',
     'straight',
     'turn_90_r', 'straight_h', 'straight_h',
-    'turn_45_l', 'diag_straight', 'turn_90_l', 'turn_45_l',
+    'turn_45_l', 'diag_straight', 'turn_90_l', 'diag_straight', 'turn_45_l',
     'straight_h', 'straight_h', 'turn_90_r',
     'CP3',
     // SS4: hairpin + C7 diagonal finish
@@ -583,6 +583,106 @@ const zones = generateZones(partBounds);
 const checkpoints = generateCheckpoints(partBounds);
 const arrowHints = generateArrowHints(parts, waypoints, partBounds);
 
+// ---- Dynamic road width per waypoint ----
+// Thrash Rally: corners are wider (drift invitation), straights are standard
+function generateRoadWidthMap(partsList, partBoundsArr, totalWP) {
+  const widths = new Float32Array(totalWP).fill(100); // default 100px
+  const CORNER_WIDTH = 140;   // wider at corners for drift room
+  const HAIRPIN_WIDTH = 160;  // hairpins extra wide
+  const BLEND_WP = 4;         // transition waypoints
+
+  for (let i = 0; i < partsList.length; i++) {
+    const type = partsList[i].type;
+    const pb = partBoundsArr[i];
+    if (!type.startsWith('turn_') && !type.startsWith('hairpin')) continue;
+
+    const w = type.startsWith('hairpin') ? HAIRPIN_WIDTH : CORNER_WIDTH;
+    // Set corner waypoints to wider width
+    for (let wi = pb.startWP; wi <= pb.endWP && wi < totalWP; wi++) {
+      widths[wi] = Math.max(widths[wi], w);
+    }
+    // Blend in (before corner)
+    for (let b = 1; b <= BLEND_WP; b++) {
+      const wi = pb.startWP - b;
+      if (wi >= 0) {
+        const t = b / (BLEND_WP + 1);
+        widths[wi] = Math.max(widths[wi], 100 + (w - 100) * (1 - t));
+      }
+    }
+    // Blend out (after corner)
+    for (let b = 1; b <= BLEND_WP; b++) {
+      const wi = pb.endWP + b;
+      if (wi < totalWP) {
+        const t = b / (BLEND_WP + 1);
+        widths[wi] = Math.max(widths[wi], 100 + (w - 100) * (1 - t));
+      }
+    }
+  }
+  return widths;
+}
+
+const roadWidthMap = generateRoadWidthMap(parts, partBounds, waypoints.length);
+
+// ---- Open-field segments (no barriers) ----
+// Thrash Rally: some straights are open desert, no fences
+// Format: [startWP, endWP] — barriers hidden in these ranges
+function generateOpenFieldSegments(partsList, partBoundsArr) {
+  const segments = [];
+  // Long diagonal straights and some horizontal straights = open field
+  let runStart = -1;
+  let runCount = 0;
+  for (let i = 0; i < partsList.length; i++) {
+    const type = partsList[i].type;
+    if (type === 'diag_straight' || (type === 'straight' && i > 0 && i < partsList.length - 3)) {
+      if (runStart < 0) runStart = i;
+      runCount++;
+    } else {
+      // End of straight run — mark as open if 3+ consecutive straights
+      if (runCount >= 3 && runStart >= 0) {
+        segments.push([
+          partBoundsArr[runStart].startWP,
+          partBoundsArr[runStart + runCount - 1].endWP
+        ]);
+      }
+      runStart = -1;
+      runCount = 0;
+    }
+  }
+  if (runCount >= 3 && runStart >= 0) {
+    segments.push([
+      partBoundsArr[runStart].startWP,
+      partBoundsArr[runStart + runCount - 1].endWP
+    ]);
+  }
+  return segments;
+}
+
+const openFieldSegments = generateOpenFieldSegments(parts, partBounds);
+console.log(`[Track] Open field segments: ${openFieldSegments.length}`, openFieldSegments.map(s => `WP${s[0]}-${s[1]}`).join(', '));
+
+// ---- Tire wall positions (corner outsides) ----
+function generateTireWalls(partsList, partBoundsArr, waypointsArr) {
+  const walls = [];
+  for (let i = 0; i < partsList.length; i++) {
+    const type = partsList[i].type;
+    if (!type.startsWith('turn_90') && !type.startsWith('turn_135') && !type.startsWith('hairpin')) continue;
+    const pb = partBoundsArr[i];
+    const isRight = type.includes('_r');
+    // Place tire wall at corner apex (midpoint of corner waypoints)
+    const midWP = Math.floor((pb.startWP + pb.endWP) / 2);
+    if (midWP < waypointsArr.length) {
+      walls.push({
+        wpIndex: midWP,
+        side: isRight ? 1 : -1, // outside of turn
+        type: type.startsWith('hairpin') ? 'large' : 'small',
+      });
+    }
+  }
+  return walls;
+}
+
+const tireWalls = generateTireWalls(parts, partBounds, waypoints);
+
 const finishWP = waypoints.length - 4;
 
 // ---- Road overlap check (part-based, 250px threshold) ----
@@ -627,6 +727,9 @@ export const TRACK_CONFIG = {
   zones,
   checkpoints,
   arrowHints,
+  roadWidthMap,
+  openFieldSegments,
+  tireWalls,
   finishWP,
 
   startX: START_X,
@@ -657,10 +760,10 @@ export function getZoneByIndex(wpIndex, zonesArr) {
   return zonesArr[zonesArr.length - 1];
 }
 
-export function isOnTrack(x, y, waypointsArr, zonesArr) {
+export function isOnTrack(x, y, waypointsArr, zonesArr, rwMap) {
   for (let i = 0; i < waypointsArr.length - 1; i++) {
     const zone = getZoneByIndex(i, zonesArr);
-    const halfW = (zone.trackWidth || 100) / 2;
+    const halfW = rwMap ? (rwMap[i] || 100) / 2 : (zone.trackWidth || 100) / 2;
     const dist = distToSeg(x, y, waypointsArr[i][0], waypointsArr[i][1], waypointsArr[i+1][0], waypointsArr[i+1][1]);
     if (dist < halfW) return { onTrack: true, zone };
   }

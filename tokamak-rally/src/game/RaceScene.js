@@ -511,8 +511,21 @@ export class RaceScene extends Phaser.Scene {
 
     const startWP = allZones[0].fromWP;
     const endWP = Math.min(allZones[allZones.length - 1].toWP, wp.length);
-    const halfW = 50; // roadWidth 100 / 2
+    const baseHalfW = 50; // default roadWidth 100 / 2
     const bgHalfW = 350; // expanded for dramatic curves
+
+    // Dynamic road width map (wider at corners)
+    const rwMap = this.track.roadWidthMap;
+    const halfWAt = (i) => rwMap ? (rwMap[i] || 100) / 2 : baseHalfW;
+
+    // Open field segments (no barriers)
+    const openSegs = this.track.openFieldSegments || [];
+    const isOpenField = (wpIdx) => {
+      for (const seg of openSegs) {
+        if (wpIdx >= seg[0] && wpIdx <= seg[1]) return true;
+      }
+      return false;
+    };
 
     // Compute normals for the full track
     const normals = this.computeNormals(wp, startWP, endWP);
@@ -584,14 +597,15 @@ export class RaceScene extends Phaser.Scene {
         }
 
         for (const side of [-1, 1]) {
-          const innerOff = halfW + 2;
+          const innerOff = halfWAt(i) + 2;
+          const innerOffN = halfWAt(i+1) + 2;
           const outerOff = bgHalfW;
           const ix = wp[i][0] + ni[0] * side * innerOff;
           const iy = wp[i][1] + ni[1] * side * innerOff;
           const ox = wp[i][0] + ni[0] * side * outerOff;
           const oy = wp[i][1] + ni[1] * side * outerOff;
-          const ixN = wp[i+1][0] + niNext[0] * side * innerOff;
-          const iyN = wp[i+1][1] + niNext[1] * side * innerOff;
+          const ixN = wp[i+1][0] + niNext[0] * side * innerOffN;
+          const iyN = wp[i+1][1] + niNext[1] * side * innerOffN;
           const oxN = wp[i+1][0] + niNext[0] * side * outerOff;
           const oyN = wp[i+1][1] + niNext[1] * side * outerOff;
 
@@ -610,10 +624,10 @@ export class RaceScene extends Phaser.Scene {
         gEdge.lineStyle(5, edgeStripColor, 0.35);
         gEdge.beginPath();
         const ni0 = normals[s - startWP];
-        gEdge.moveTo(wp[s][0] + ni0[0] * side * (halfW + 4), wp[s][1] + ni0[1] * side * (halfW + 4));
+        gEdge.moveTo(wp[s][0] + ni0[0] * side * (halfWAt(s) + 4), wp[s][1] + ni0[1] * side * (halfWAt(s) + 4));
         for (let i = s + 1; i < e; i++) {
           const ni = normals[i - startWP];
-          gEdge.lineTo(wp[i][0] + ni[0] * side * (halfW + 4), wp[i][1] + ni[1] * side * (halfW + 4));
+          gEdge.lineTo(wp[i][0] + ni[0] * side * (halfWAt(i) + 4), wp[i][1] + ni[1] * side * (halfWAt(i) + 4));
         }
         gEdge.strokePath();
       }
@@ -628,7 +642,7 @@ export class RaceScene extends Phaser.Scene {
         // 10 details per segment (denser than before)
         for (let d = 0; d < 10; d++) {
           const side = detailRng() > 0.5 ? 1 : -1;
-          const offset = halfW + 4 + detailRng() * (bgHalfW - halfW - 8);
+          const offset = halfWAt(i) + 4 + detailRng() * (bgHalfW - halfWAt(i) - 8);
           const along = (detailRng() - 0.5) * 60;
           const dx = wp[i][0] + ni[0] * side * offset;
           const dy = wp[i][1] + ni[1] * side * offset;
@@ -666,7 +680,7 @@ export class RaceScene extends Phaser.Scene {
         const ni = normals[i - startWP];
         for (const side of [-1, 1]) {
           if (detailRng() > 0.4) continue;
-          const bOff = halfW + 10 + detailRng() * 8;
+          const bOff = halfWAt(i) + 10 + detailRng() * 8;
           const bx = wp[i][0] + ni[0] * side * bOff;
           const by = wp[i][1] + ni[1] * side * bOff;
           const r = 2 + detailRng() * 3;
@@ -686,12 +700,16 @@ export class RaceScene extends Phaser.Scene {
       const roadColor = zc ? zc.roadColor : 0x9B7B4A;
       const edgeColor = zc ? zc.edgeColor : 0x8a6a30;
 
-      // Road border
-      gRoad.lineStyle(120, edgeColor, 0.4);
-      gRoad.beginPath();
-      gRoad.moveTo(wp[s][0], wp[s][1]);
-      for (let i = s + 1; i < e; i++) gRoad.lineTo(wp[i][0], wp[i][1]);
-      gRoad.strokePath();
+      // Road border + surface: per-segment for dynamic width
+      for (let i = s; i < e - 1; i++) {
+        const w = Math.max(halfWAt(i), halfWAt(i + 1)) * 2;
+        // Border
+        gRoad.lineStyle(w + 20, edgeColor, 0.4);
+        gRoad.beginPath();
+        gRoad.moveTo(wp[i][0], wp[i][1]);
+        gRoad.lineTo(wp[i+1][0], wp[i+1][1]);
+        gRoad.strokePath();
+      }
 
       // Road surface
       if (isTransition) {
@@ -701,13 +719,14 @@ export class RaceScene extends Phaser.Scene {
           const [r1, g1, b1] = hexRGB(fromZc.roadColor);
           const [r2, g2, b2] = hexRGB(toZc.roadColor);
           for (let i = s; i < e - 1; i++) {
+            const w = Math.max(halfWAt(i), halfWAt(i + 1)) * 2;
             const p = totalWP > 0 ? (i - s) / totalWP : 0;
             const blended = rgbHex(
               Math.round(r1 + (r2 - r1) * p),
               Math.round(g1 + (g2 - g1) * p),
               Math.round(b1 + (b2 - b1) * p)
             );
-            gRoad.lineStyle(100, blended, 1);
+            gRoad.lineStyle(w, blended, 1);
             gRoad.beginPath();
             gRoad.moveTo(wp[i][0], wp[i][1]);
             gRoad.lineTo(wp[i+1][0], wp[i+1][1]);
@@ -715,11 +734,14 @@ export class RaceScene extends Phaser.Scene {
           }
         }
       } else {
-        gRoad.lineStyle(100, roadColor, 1);
-        gRoad.beginPath();
-        gRoad.moveTo(wp[s][0], wp[s][1]);
-        for (let i = s + 1; i < e; i++) gRoad.lineTo(wp[i][0], wp[i][1]);
-        gRoad.strokePath();
+        for (let i = s; i < e - 1; i++) {
+          const w = Math.max(halfWAt(i), halfWAt(i + 1)) * 2;
+          gRoad.lineStyle(w, roadColor, 1);
+          gRoad.beginPath();
+          gRoad.moveTo(wp[i][0], wp[i][1]);
+          gRoad.lineTo(wp[i+1][0], wp[i+1][1]);
+          gRoad.strokePath();
+        }
       }
     }
 
@@ -733,7 +755,7 @@ export class RaceScene extends Phaser.Scene {
         const edgePts = [];
         for (let i = s; i < e; i++) {
           const ni = normals[i - startWP];
-          edgePts.push([wp[i][0] + ni[0] * side * (halfW + 2), wp[i][1] + ni[1] * side * (halfW + 2)]);
+          edgePts.push([wp[i][0] + ni[0] * side * (halfWAt(i) + 2), wp[i][1] + ni[1] * side * (halfWAt(i) + 2)]);
         }
         let curbDist = 0;
         for (let i = 0; i < edgePts.length - 1; i++) {
@@ -756,69 +778,121 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // ===== 4. BARRIERS — wood fence (depth 3) =====
-    const barrierDist = halfW + 8;
+    // ===== 4. BARRIERS — wood fence with open-field toggle (depth 3) =====
     for (const zone of allZones) {
       const s = zone.fromWP, e = Math.min(zone.toWP, wp.length);
       const zc = zoneConfig[zone.name];
       const barrierColor = zc ? zc.barrierColor : 0x8B6914;
-      const fenceColor = ((barrierColor >> 1) & 0x7F7F7F); // darker variant
+      const fenceColor = ((barrierColor >> 1) & 0x7F7F7F);
 
-      // Collect barrier collision data
+      // Collect barrier collision data (with dynamic width)
       for (let i = s; i < e; i++) {
+        if (isOpenField(i)) continue; // no collision in open field
         const ni = normals[i - startWP];
+        const bDist = halfWAt(i) + 8;
         this._desertBarrierSegments.push({
-          x: wp[i][0], y: wp[i][1], nx: ni[0], ny: ni[1], dist: barrierDist
+          x: wp[i][0], y: wp[i][1], nx: ni[0], ny: ni[1], dist: bDist
         });
       }
 
       const bPos = (i, side) => {
         const ni = normals[i - startWP];
-        return [wp[i][0] + ni[0] * side * barrierDist, wp[i][1] + ni[1] * side * barrierDist];
+        const bDist = halfWAt(i) + 8;
+        return [wp[i][0] + ni[0] * side * bDist, wp[i][1] + ni[1] * side * bDist];
       };
 
+      // Draw barriers in segments, skipping open-field waypoints
       for (const side of [-1, 1]) {
-        // Rails
-        for (const railOff of [-2, 2]) {
-          const gRail = this.add.graphics().setDepth(3);
-          gRail.lineStyle(2, barrierColor, 0.9);
-          gRail.beginPath();
-          const [sx, sy] = bPos(s, side);
-          const n0 = normals[s - startWP];
-          gRail.moveTo(sx + n0[0] * railOff, sy + n0[1] * railOff);
-          for (let i = s + 1; i < e; i++) {
-            const [px, py] = bPos(i, side);
-            const ni = normals[i - startWP];
-            gRail.lineTo(px + ni[0] * railOff, py + ni[1] * railOff);
-          }
-          gRail.strokePath();
-        }
+        // Build runs of non-open-field waypoints
+        let runStart = -1;
+        for (let i = s; i <= e; i++) {
+          const open = (i >= e) || isOpenField(i);
+          if (!open && runStart < 0) { runStart = i; continue; }
+          if (open && runStart >= 0) {
+            // Draw fence for this run [runStart, i)
+            const rs = runStart, re = i;
 
-        // Main fence line
-        const gFence = this.add.graphics().setDepth(3);
-        gFence.lineStyle(4, fenceColor, 0.9);
-        gFence.beginPath();
-        const [sx, sy] = bPos(s, side);
-        gFence.moveTo(sx, sy);
-        for (let i = s + 1; i < e; i++) {
-          const [px, py] = bPos(i, side);
-          gFence.lineTo(px, py);
-        }
-        gFence.strokePath();
+            // Rails
+            for (const railOff of [-2, 2]) {
+              const gRail = this.add.graphics().setDepth(3);
+              gRail.lineStyle(2, barrierColor, 0.9);
+              gRail.beginPath();
+              const [sx, sy] = bPos(rs, side);
+              const n0 = normals[rs - startWP];
+              gRail.moveTo(sx + n0[0] * railOff, sy + n0[1] * railOff);
+              for (let j = rs + 1; j < re; j++) {
+                const [px, py] = bPos(j, side);
+                const ni = normals[j - startWP];
+                gRail.lineTo(px + ni[0] * railOff, py + ni[1] * railOff);
+              }
+              gRail.strokePath();
+            }
 
-        // Posts every 30px
-        const gPosts = this.add.graphics().setDepth(3);
-        gPosts.fillStyle(barrierColor, 1);
-        let dist = 0;
-        for (let i = s; i < e - 1; i++) {
-          const dx = wp[i+1][0] - wp[i][0], dy = wp[i+1][1] - wp[i][1];
-          dist += Math.sqrt(dx*dx + dy*dy);
-          if (dist >= 30) {
-            dist = 0;
-            const [px, py] = bPos(i + 1, side);
-            gPosts.fillCircle(px, py, 3);
+            // Main fence line
+            const gFence = this.add.graphics().setDepth(3);
+            gFence.lineStyle(4, fenceColor, 0.9);
+            gFence.beginPath();
+            const [fsx, fsy] = bPos(rs, side);
+            gFence.moveTo(fsx, fsy);
+            for (let j = rs + 1; j < re; j++) {
+              const [px, py] = bPos(j, side);
+              gFence.lineTo(px, py);
+            }
+            gFence.strokePath();
+
+            // Posts every 30px
+            const gPosts = this.add.graphics().setDepth(3);
+            gPosts.fillStyle(barrierColor, 1);
+            let dist = 0;
+            for (let j = rs; j < re - 1; j++) {
+              const dx = wp[j+1][0] - wp[j][0], dy = wp[j+1][1] - wp[j][1];
+              dist += Math.sqrt(dx*dx + dy*dy);
+              if (dist >= 30) {
+                dist = 0;
+                const [px, py] = bPos(j + 1, side);
+                gPosts.fillCircle(px, py, 3);
+              }
+            }
+
+            runStart = -1;
           }
         }
+      }
+    }
+
+    // ===== 4b. TIRE WALLS at corners (depth 4) =====
+    const tireWalls = this.track.tireWalls || [];
+    for (const tw of tireWalls) {
+      const wi = tw.wpIndex;
+      if (wi >= wp.length) continue;
+      const ni = normals[wi - startWP];
+      if (!ni) continue;
+      const bDist = halfWAt(wi) + 12;
+      const tx = wp[wi][0] + ni[0] * tw.side * bDist;
+      const ty = wp[wi][1] + ni[1] * tw.side * bDist;
+      const numTires = tw.type === 'large' ? 5 : 3;
+      const tireR = 8;
+      const gTire = this.add.graphics().setDepth(4);
+
+      // Stack tires perpendicular to road
+      for (let t = 0; t < numTires; t++) {
+        const offset = (t - (numTires - 1) / 2) * tireR * 1.6;
+        // Get road direction for perpendicular stacking
+        const prevWP = Math.max(0, wi - 1);
+        const nextWP = Math.min(wp.length - 1, wi + 1);
+        const rdx = wp[nextWP][0] - wp[prevWP][0];
+        const rdy = wp[nextWP][1] - wp[prevWP][1];
+        const rlen = Math.sqrt(rdx * rdx + rdy * rdy) || 1;
+        const px = tx + (rdx / rlen) * offset;
+        const py = ty + (rdy / rlen) * offset;
+
+        // White tire with red stripe
+        gTire.fillStyle(0xFFFFFF, 0.9);
+        gTire.fillCircle(px, py, tireR);
+        gTire.fillStyle(0xCC0000, 0.9);
+        gTire.fillCircle(px, py, tireR * 0.6);
+        gTire.fillStyle(0x333333, 0.8);
+        gTire.fillCircle(px, py, tireR * 0.3);
       }
     }
   }
@@ -1084,8 +1158,8 @@ export class RaceScene extends Phaser.Scene {
     if (!hints || !this.carState) return;
     const car = this.carState;
 
-    // Show distance = speed × 0.3s, minimum 50px
-    const showDist = Math.max(50, Math.abs(car.speed) * 0.3);
+    // Show distance = speed × 0.5s, minimum 120px (more lead time for braking)
+    const showDist = Math.max(120, Math.abs(car.speed) * 0.5);
 
     let showHint = null, showDst = Infinity;
     for (const h of hints) {
@@ -1323,7 +1397,7 @@ export class RaceScene extends Phaser.Scene {
     // obstacles removed — no rotation needed
 
     // Sound updates
-    const result = isOnTrack(this.carState.x, this.carState.y, this.track.waypoints, this.track.zones);
+    const result = isOnTrack(this.carState.x, this.carState.y, this.track.waypoints, this.track.zones, this.track.roadWidthMap);
     const cp = this.selectedCar.physics;
     const sRoadType = this._currentRoadType || 'offroad';
     soundEngine.updateEngine(this.carState.speed, cp.roadMaxSpeed[sRoadType] || 400);
@@ -1336,7 +1410,7 @@ export class RaceScene extends Phaser.Scene {
 
   handleInput(dt) {
     const car=this.carState;
-    const result=isOnTrack(car.x,car.y,this.track.waypoints,this.track.zones);
+    const result=isOnTrack(car.x,car.y,this.track.waypoints,this.track.zones,this.track.roadWidthMap);
     let phys;
     const cp = this.selectedCar.physics;
     let roadType = 'offroad';
