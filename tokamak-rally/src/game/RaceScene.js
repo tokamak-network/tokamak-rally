@@ -17,7 +17,7 @@ export class RaceScene extends Phaser.Scene {
 
   create() {
     this.track = TRACK_CONFIG;
-    this.cameras.main.setBackgroundColor(0xe8b84b);
+    this.cameras.main.setBackgroundColor(0xD2B48C);
     this._animals = [];
     this._birdTimer = 5000 + Math.random() * 8000;
 
