@@ -515,8 +515,7 @@ export class RaceScene extends Phaser.Scene {
     const bgHalfW = 350; // expanded for dramatic curves
 
     // Dynamic road width map (wider at corners)
-    const rwMap = this.track.roadWidthMap;
-    const halfWAt = (i) => rwMap ? (rwMap[i] || 100) / 2 : baseHalfW;
+    const halfWAt = () => baseHalfW; // fixed road width
 
     // Open field segments (no barriers)
     const openSegs = this.track.openFieldSegments || [];
@@ -1393,7 +1392,7 @@ export class RaceScene extends Phaser.Scene {
     // obstacles removed — no rotation needed
 
     // Sound updates
-    const result = isOnTrack(this.carState.x, this.carState.y, this.track.waypoints, this.track.zones, this.track.roadWidthMap);
+    const result = isOnTrack(this.carState.x, this.carState.y, this.track.waypoints, this.track.zones);
     const cp = this.selectedCar.physics;
     const sRoadType = this._currentRoadType || 'offroad';
     soundEngine.updateEngine(this.carState.speed, cp.roadMaxSpeed[sRoadType] || 400);
@@ -1406,7 +1405,7 @@ export class RaceScene extends Phaser.Scene {
 
   handleInput(dt) {
     const car=this.carState;
-    const result=isOnTrack(car.x,car.y,this.track.waypoints,this.track.zones,this.track.roadWidthMap);
+    const result=isOnTrack(car.x,car.y,this.track.waypoints,this.track.zones);
     let phys;
     const cp = this.selectedCar.physics;
     let roadType = 'offroad';

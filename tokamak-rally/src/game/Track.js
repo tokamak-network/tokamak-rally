@@ -180,15 +180,9 @@ function generateSafeLayout() {
     'straight', 'straight',
     'turn_45_l', 'diag_straight', 'diag_straight', 'diag_straight', 'turn_45_r',
     'CP2',
-    // SS3: C5 C6 consecutive 90° corners
+    // SS3: simple 90° pair
     'straight', 'straight',
-    'turn_90_r', 'straight_h', 'straight_h', 'straight_h', 'turn_90_l',
-    'straight',
-    'turn_90_r', 'straight_h', 'straight_h', 'straight_h',
-    'turn_90_l',
-    'straight', 'straight',
-    'turn_90_l',
-    'straight_h', 'straight_h', 'turn_90_r',
+    'turn_90_r', 'straight_h', 'straight_h', 'straight_h', 'straight_h', 'turn_90_l',
     'CP3',
     // SS4: hairpin + C7 diagonal finish
     'straight', 'straight', 'straight',
@@ -585,45 +579,7 @@ const zones = generateZones(partBounds);
 const checkpoints = generateCheckpoints(partBounds);
 const arrowHints = generateArrowHints(parts, waypoints, partBounds);
 
-// ---- Dynamic road width per waypoint ----
-// Thrash Rally: corners are wider (drift invitation), straights are standard
-function generateRoadWidthMap(partsList, partBoundsArr, totalWP) {
-  const widths = new Float32Array(totalWP).fill(100); // default 100px
-  const CORNER_WIDTH = 140;   // wider at corners for drift room
-  const HAIRPIN_WIDTH = 160;  // hairpins extra wide
-  const BLEND_WP = 4;         // transition waypoints
 
-  for (let i = 0; i < partsList.length; i++) {
-    const type = partsList[i].type;
-    const pb = partBoundsArr[i];
-    if (!type.startsWith('turn_') && !type.startsWith('hairpin')) continue;
-
-    const w = type.startsWith('hairpin') ? HAIRPIN_WIDTH : CORNER_WIDTH;
-    // Set corner waypoints to wider width
-    for (let wi = pb.startWP; wi <= pb.endWP && wi < totalWP; wi++) {
-      widths[wi] = Math.max(widths[wi], w);
-    }
-    // Blend in (before corner)
-    for (let b = 1; b <= BLEND_WP; b++) {
-      const wi = pb.startWP - b;
-      if (wi >= 0) {
-        const t = b / (BLEND_WP + 1);
-        widths[wi] = Math.max(widths[wi], 100 + (w - 100) * (1 - t));
-      }
-    }
-    // Blend out (after corner)
-    for (let b = 1; b <= BLEND_WP; b++) {
-      const wi = pb.endWP + b;
-      if (wi < totalWP) {
-        const t = b / (BLEND_WP + 1);
-        widths[wi] = Math.max(widths[wi], 100 + (w - 100) * (1 - t));
-      }
-    }
-  }
-  return widths;
-}
-
-const roadWidthMap = generateRoadWidthMap(parts, partBounds, waypoints.length);
 
 // ---- Open-field segments (no barriers) ----
 // Thrash Rally: some straights are open desert, no fences
@@ -729,7 +685,6 @@ export const TRACK_CONFIG = {
   zones,
   checkpoints,
   arrowHints,
-  roadWidthMap,
   openFieldSegments,
   tireWalls,
   finishWP,
@@ -762,10 +717,10 @@ export function getZoneByIndex(wpIndex, zonesArr) {
   return zonesArr[zonesArr.length - 1];
 }
 
-export function isOnTrack(x, y, waypointsArr, zonesArr, rwMap) {
+export function isOnTrack(x, y, waypointsArr, zonesArr) {
   for (let i = 0; i < waypointsArr.length - 1; i++) {
     const zone = getZoneByIndex(i, zonesArr);
-    const halfW = rwMap ? (rwMap[i] || 100) / 2 : (zone.trackWidth || 100) / 2;
+    const halfW = (zone.trackWidth || 100) / 2;
     const dist = distToSeg(x, y, waypointsArr[i][0], waypointsArr[i][1], waypointsArr[i+1][0], waypointsArr[i+1][1]);
     if (dist < halfW) return { onTrack: true, zone };
   }
