@@ -180,12 +180,14 @@ function generateSafeLayout() {
     'straight', 'straight',
     'turn_45_l', 'diag_straight', 'diag_straight', 'diag_straight', 'turn_45_r',
     'CP2',
-    // SS3: C5 C6 consecutive 90° + 135° sharp
+    // SS3: C5 C6 consecutive 90° corners
     'straight', 'straight',
     'turn_90_r', 'straight_h', 'straight_h', 'straight_h', 'turn_90_l',
     'straight',
-    'turn_90_r', 'straight_h', 'straight_h',
-    'turn_45_l', 'diag_straight', 'turn_90_l', 'diag_straight', 'turn_45_l',
+    'turn_90_r', 'straight_h', 'straight_h', 'straight_h',
+    'turn_90_l',
+    'straight', 'straight',
+    'turn_90_l',
     'straight_h', 'straight_h', 'turn_90_r',
     'CP3',
     // SS4: hairpin + C7 diagonal finish

@@ -1179,7 +1179,7 @@ export class RaceScene extends Phaser.Scene {
     if (showHint) {
       this._navGfx.setVisible(true);
       const cx = 400, cy = 260;
-      const sz = 45;
+      const sz = 22;
 
       const ea = showHint.entryAngle;
       const xa = showHint.exitAngle;
@@ -1190,12 +1190,8 @@ export class RaceScene extends Phaser.Scene {
       const headX = cx + Math.cos(xa) * sz;
       const headY = cy + Math.sin(xa) * sz;
 
-      // Dark background circle
-      this._navGfx.fillStyle(0x000000, 0.3);
-      this._navGfx.fillCircle(cx, cy, 55);
-
       // White outline (thick)
-      this._navGfx.lineStyle(14, 0xFFFFFF, 0.9);
+      this._navGfx.lineStyle(10, 0xFFFFFF, 0.9);
       this._navGfx.beginPath();
       this._navGfx.moveTo(tailX, tailY);
       this._navGfx.lineTo(midX, midY);
@@ -1203,23 +1199,23 @@ export class RaceScene extends Phaser.Scene {
       this._navGfx.strokePath();
 
       // Red body (thick)
-      this._navGfx.lineStyle(10, 0xCC0000, 0.95);
+      this._navGfx.lineStyle(6, 0xCC0000, 0.95);
       this._navGfx.beginPath();
       this._navGfx.moveTo(tailX, tailY);
       this._navGfx.lineTo(midX, midY);
       this._navGfx.lineTo(headX, headY);
       this._navGfx.strokePath();
 
-      // Large arrowhead triangle
-      const triSz = 20;
+      // Arrowhead triangle
+      const triSz = 12;
       const tipX = headX + Math.cos(xa) * triSz;
       const tipY = headY + Math.sin(xa) * triSz;
       const px = -Math.sin(xa) * triSz * 0.6;
       const py = Math.cos(xa) * triSz * 0.6;
       this._navGfx.fillStyle(0xFFFFFF, 0.9);
-      this._navGfx.fillTriangle(tipX + Math.cos(xa)*3, tipY + Math.sin(xa)*3,
-        headX + px + Math.cos(xa)*3, headY + py + Math.sin(xa)*3,
-        headX - px + Math.cos(xa)*3, headY - py + Math.sin(xa)*3);
+      this._navGfx.fillTriangle(tipX + Math.cos(xa)*2, tipY + Math.sin(xa)*2,
+        headX + px + Math.cos(xa)*2, headY + py + Math.sin(xa)*2,
+        headX - px + Math.cos(xa)*2, headY - py + Math.sin(xa)*2);
       this._navGfx.fillStyle(0xCC0000, 0.95);
       this._navGfx.fillTriangle(tipX, tipY, headX + px, headY + py, headX - px, headY - py);
     } else {
