@@ -559,6 +559,19 @@ function generateArrowHints(partsList, waypointsArr, partBoundsArr) {
       waypointsArr[exitEnd][0] - waypointsArr[exitStart][0]
     );
 
+    // Hairpin special case: entry/exit angle are the same (U-turn)
+    if (type.startsWith('hairpin')) {
+      const offset = isRight ? Math.PI / 2 : -Math.PI / 2;
+      hints.push({
+        x: waypointsArr[arrowWP][0],
+        y: waypointsArr[arrowWP][1],
+        direction: isRight ? 'right' : 'left',
+        entryAngle,
+        exitAngle: entryAngle + offset,
+      });
+      continue;
+    }
+
     hints.push({
       x: waypointsArr[arrowWP][0],
       y: waypointsArr[arrowWP][1],
