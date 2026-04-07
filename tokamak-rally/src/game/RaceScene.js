@@ -540,30 +540,10 @@ export class RaceScene extends Phaser.Scene {
     const hexRGB = (c) => [(c >> 16) & 0xFF, (c >> 8) & 0xFF, c & 0xFF];
     const rgbHex = (r, g, b) => (r << 16) | (g << 8) | b;
 
-    // ===== 0. BASE FILL per zone — covers curve inner gaps =====
+    // ===== 0. BASE FILL — cover entire world with desert bg =====
     const gBase = this.add.graphics().setDepth(-1);
-    const pad = 200;
-    for (const zone of allZones) {
-      const s = zone.fromWP, e = Math.min(zone.toWP, wp.length);
-      const zc = zoneConfig[zone.name];
-      const baseBg = zc ? zc.bgColor : 0xD2B48C;
-
-      let zMinX = Infinity, zMaxX = -Infinity, zMinY = Infinity, zMaxY = -Infinity;
-      for (let i = s; i < e; i++) {
-        const ni = normals[i - startWP];
-        for (const side of [-1, 1]) {
-          const px = wp[i][0] + ni[0] * side * (bgHalfW + 100);
-          const py = wp[i][1] + ni[1] * side * (bgHalfW + 100);
-          zMinX = Math.min(zMinX, px); zMaxX = Math.max(zMaxX, px);
-          zMinY = Math.min(zMinY, py); zMaxY = Math.max(zMaxY, py);
-        }
-        zMinX = Math.min(zMinX, wp[i][0]); zMaxX = Math.max(zMaxX, wp[i][0]);
-        zMinY = Math.min(zMinY, wp[i][1]); zMaxY = Math.max(zMaxY, wp[i][1]);
-      }
-      zMinX -= pad; zMaxX += pad; zMinY -= pad; zMaxY += pad;
-      gBase.fillStyle(baseBg, 1);
-      gBase.fillRect(zMinX, zMinY, zMaxX - zMinX, zMaxY - zMinY);
-    }
+    gBase.fillStyle(0xD2B48C, 1);
+    gBase.fillRect(-5000, -15000, 25000, 35000);
 
     // ===== 1. BACKGROUND (depth 0) =====
     for (const zone of allZones) {

@@ -375,16 +375,16 @@ function generatePartWaypoints(type, x, y, direction) {
       ]);
     }
 
-    // Phase 4: second 90° arc (side → fwd direction, continues forward)
-    const a2cx = hStartX + right.dx * side * horizLen + fwd.dx * (-arcR);
-    const a2cy = hStartY + right.dy * side * horizLen + fwd.dy * (-arcR);
+    // Phase 4: second 90° arc (side → fwd direction, U-turn back)
+    const a2cx = hStartX + right.dx * side * horizLen + fwd.dx * arcR;
+    const a2cy = hStartY + right.dy * side * horizLen + fwd.dy * arcR;
     for (let i = 0; i <= 4; i++) {
       const t = i / 4;
       const cos_t = Math.cos(t * Math.PI / 2);
       const sin_t = Math.sin(t * Math.PI / 2);
       pts.push([
-        a2cx + (fwd.dx * arcR) * cos_t + (right.dx * side * arcR) * sin_t,
-        a2cy + (fwd.dy * arcR) * cos_t + (right.dy * side * arcR) * sin_t
+        a2cx + (-fwd.dx * arcR) * cos_t + (right.dx * side * arcR) * sin_t,
+        a2cy + (-fwd.dy * arcR) * cos_t + (right.dy * side * arcR) * sin_t
       ]);
     }
 
