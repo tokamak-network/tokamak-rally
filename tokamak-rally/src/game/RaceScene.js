@@ -679,16 +679,12 @@ export class RaceScene extends Phaser.Scene {
       const roadColor = zc ? zc.roadColor : 0x9B7B4A;
       const edgeColor = zc ? zc.edgeColor : 0x8a6a30;
 
-      // Road border + surface: per-segment for dynamic width
-      for (let i = s; i < e - 1; i++) {
-        const w = Math.max(halfWAt(i), halfWAt(i + 1)) * 2;
-        // Border
-        gRoad.lineStyle(w + 20, edgeColor, 0.4);
-        gRoad.beginPath();
-        gRoad.moveTo(wp[i][0], wp[i][1]);
-        gRoad.lineTo(wp[i+1][0], wp[i+1][1]);
-        gRoad.strokePath();
-      }
+      // Road border (single polyline — Phaser auto-joins corners)
+      gRoad.lineStyle(120, edgeColor, 0.4);
+      gRoad.beginPath();
+      gRoad.moveTo(wp[s][0], wp[s][1]);
+      for (let i = s + 1; i < e; i++) gRoad.lineTo(wp[i][0], wp[i][1]);
+      gRoad.strokePath();
 
       // Road surface
       if (isTransition) {
@@ -698,14 +694,13 @@ export class RaceScene extends Phaser.Scene {
           const [r1, g1, b1] = hexRGB(fromZc.roadColor);
           const [r2, g2, b2] = hexRGB(toZc.roadColor);
           for (let i = s; i < e - 1; i++) {
-            const w = Math.max(halfWAt(i), halfWAt(i + 1)) * 2;
             const p = totalWP > 0 ? (i - s) / totalWP : 0;
             const blended = rgbHex(
               Math.round(r1 + (r2 - r1) * p),
               Math.round(g1 + (g2 - g1) * p),
               Math.round(b1 + (b2 - b1) * p)
             );
-            gRoad.lineStyle(w, blended, 1);
+            gRoad.lineStyle(100, blended, 1);
             gRoad.beginPath();
             gRoad.moveTo(wp[i][0], wp[i][1]);
             gRoad.lineTo(wp[i+1][0], wp[i+1][1]);
@@ -713,14 +708,11 @@ export class RaceScene extends Phaser.Scene {
           }
         }
       } else {
-        for (let i = s; i < e - 1; i++) {
-          const w = Math.max(halfWAt(i), halfWAt(i + 1)) * 2;
-          gRoad.lineStyle(w, roadColor, 1);
-          gRoad.beginPath();
-          gRoad.moveTo(wp[i][0], wp[i][1]);
-          gRoad.lineTo(wp[i+1][0], wp[i+1][1]);
-          gRoad.strokePath();
-        }
+        gRoad.lineStyle(100, roadColor, 1);
+        gRoad.beginPath();
+        gRoad.moveTo(wp[s][0], wp[s][1]);
+        for (let i = s + 1; i < e; i++) gRoad.lineTo(wp[i][0], wp[i][1]);
+        gRoad.strokePath();
       }
     }
 
