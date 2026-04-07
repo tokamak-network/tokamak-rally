@@ -165,35 +165,8 @@ const SAFE_GAP = 250; // minimum distance between non-adjacent road segments
 
 function generateSafeLayout() {
   const d = 'desert';
-  // Skeleton: ONE-WAY spiral — only go east, never come back west.
-  // Each east detour goes FURTHER east than the previous one.
-  // This makes X-band overlap structurally impossible.
+  // Empty skeleton — layout will be designed manually
   const skeleton = [
-    // S1: opening + first east detour (east→stay east)
-    'straight', 'straight', 'straight',
-    'turn_90_r', 'straight_h', 'straight_h', 'straight_h', 'turn_90_l', // →E far, →N
-    'straight', 'straight',
-    'hairpin_r', // U-turn right (now at x+800)
-    'CP1',
-    // S2: continue north + second east detour (goes even further east)
-    'straight', 'straight',
-    'turn_90_r', 'straight_h', 'straight_h', 'straight_h', 'turn_90_l', // →E far, →N
-    'straight',
-    'turn_45_r', 'diag_straight', 'diag_straight', 'turn_45_l', // NE diagonal excursion
-    'CP2',
-    // S3: continue north + third east detour
-    'straight', 'straight', 'straight',
-    'turn_90_r', 'straight_h', 'straight_h', 'turn_90_l', // →E, →N
-    'straight', 'straight',
-    'hairpin_l', // U-turn left (shifts x-800, still further east than start)
-    'CP3',
-    // S4: continue north + diagonal
-    'straight', 'straight',
-    'turn_45_l', 'diag_straight', 'turn_90_r', 'diag_straight', 'turn_45_l', // NW-NE zigzag
-    'straight',
-    'turn_90_r', 'straight_h', 'straight_h', 'turn_90_l', // →E, →N
-    'CP4',
-    // S5: finish
     'straight', 'straight', 'straight', 'straight',
   ];
 
