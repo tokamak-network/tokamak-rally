@@ -60,14 +60,14 @@ const partTypes = {
   straight:      { fwdDist: 512, xShift: 0 },
   straight_h:    { fwdDist: 512, xShift: 0 },
   diag_straight: { fwdDist: 512, xShift: 0 },
-  hairpin_l:     { fwdDist: 800, xShift: -800 },
-  hairpin_r:     { fwdDist: 800, xShift: 800 },
-  turn_45_l:     { turnRadius: 400, turnAngle: Math.PI / 4 },
-  turn_45_r:     { turnRadius: 400, turnAngle: Math.PI / 4 },
-  turn_90_l:     { turnRadius: 400, turnAngle: Math.PI / 2 },
-  turn_90_r:     { turnRadius: 400, turnAngle: Math.PI / 2 },
-  turn_135_l:    { turnRadius: 400, turnAngle: Math.PI * 3 / 4 },
-  turn_135_r:    { turnRadius: 400, turnAngle: Math.PI * 3 / 4 },
+  hairpin_l:     { fwdDist: 800, xShift: -600 },
+  hairpin_r:     { fwdDist: 800, xShift: 600 },
+  turn_45_l:     { turnRadius: 200, turnAngle: Math.PI / 4 },
+  turn_45_r:     { turnRadius: 200, turnAngle: Math.PI / 4 },
+  turn_90_l:     { turnRadius: 200, turnAngle: Math.PI / 2 },
+  turn_90_r:     { turnRadius: 200, turnAngle: Math.PI / 2 },
+  turn_135_l:    { turnRadius: 200, turnAngle: Math.PI * 3 / 4 },
+  turn_135_r:    { turnRadius: 200, turnAngle: Math.PI * 3 / 4 },
 };
 
 // ---- Zone Configuration ----
@@ -129,7 +129,7 @@ const zoneConfig = {
 };
 
 // ---- Turn arc computation (generalized for 8 directions) ----
-const R = 400; // turn radius — sharp corners that force drifting
+const R = 200; // turn radius — sharp corners, drift required
 
 function computeTurnArc(entryDir, turnAngle, turnDirection) {
   const rv = DIR_RIGHT_VEC[entryDir];
@@ -161,13 +161,41 @@ function computeTurnArc(entryDir, turnAngle, turnDirection) {
 // ---- Safe Layout Generator ----
 // Builds layout part-by-part, checking overlap at each step.
 // If a part would cause overlap, inserts straights until safe.
-const SAFE_GAP = 250; // minimum distance between non-adjacent road segments
+const SAFE_GAP = 200; // minimum distance between non-adjacent road segments
 
 function generateSafeLayout() {
   const d = 'desert';
-  // Empty skeleton — layout will be designed manually
+  // Thrash Rally Stage1 reference-based layout (C1-C7 corners)
   const skeleton = [
-    'straight', 'straight', 'straight', 'straight',
+    // SS1: diagonal high-speed + C1 90° right
+    'straight', 'straight',
+    'turn_45_r', 'diag_straight', 'diag_straight', 'diag_straight', 'diag_straight', 'turn_45_l',
+    'straight', 'straight',
+    'turn_90_r', 'straight_h', 'straight_h', 'straight_h', 'straight_h', 'turn_90_l',
+    'CP1',
+    // SS2: C2 90°R + C3 135°L + diagonal
+    'straight', 'straight',
+    'turn_90_r', 'straight_h', 'turn_90_l',
+    'straight', 'turn_45_l', 'diag_straight', 'diag_straight', 'turn_45_r',
+    'straight', 'straight',
+    'turn_45_l', 'diag_straight', 'diag_straight', 'diag_straight', 'turn_45_r',
+    'CP2',
+    // SS3: C5 C6 consecutive 90° + 135° sharp
+    'straight', 'straight',
+    'turn_90_r', 'straight_h', 'straight_h', 'straight_h', 'turn_90_l',
+    'straight',
+    'turn_90_r', 'straight_h', 'straight_h',
+    'turn_45_l', 'diag_straight', 'turn_90_l', 'turn_45_l',
+    'straight_h', 'straight_h', 'turn_90_r',
+    'CP3',
+    // SS4: hairpin + C7 diagonal finish
+    'straight', 'straight', 'straight',
+    'hairpin_r',
+    'straight',
+    'turn_45_l', 'diag_straight', 'diag_straight', 'diag_straight', 'turn_45_r',
+    'CP4',
+    // FINISH
+    'straight', 'straight', 'straight',
   ];
 
   const result = [];
@@ -558,7 +586,7 @@ const arrowHints = generateArrowHints(parts, waypoints, partBounds);
 const finishWP = waypoints.length - 4;
 
 // ---- Road overlap check (part-based, 250px threshold) ----
-const MIN_ROAD_GAP = 250; // road(100)+curb(20)+barrier(20)+bg(90)=230, round up
+const MIN_ROAD_GAP = 200; // road(100) + margin(100)
 function checkOverlaps(wp) {
   const errors = [];
   for (let i = 0; i < wp.length; i++) {
