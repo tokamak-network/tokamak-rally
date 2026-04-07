@@ -60,8 +60,8 @@ const partTypes = {
   straight:      { fwdDist: 512, xShift: 0 },
   straight_h:    { fwdDist: 512, xShift: 0 },
   diag_straight: { fwdDist: 512, xShift: 0 },
-  hairpin_l:     { fwdDist: 512, xShift: -600 },
-  hairpin_r:     { fwdDist: 512, xShift: 600 },
+  hairpin_l:     { fwdDist: 800, xShift: -800 },
+  hairpin_r:     { fwdDist: 800, xShift: 800 },
   turn_45_l:     { turnRadius: 400, turnAngle: Math.PI / 4 },
   turn_45_r:     { turnRadius: 400, turnAngle: Math.PI / 4 },
   turn_90_l:     { turnRadius: 400, turnAngle: Math.PI / 2 },
@@ -205,10 +205,12 @@ function generateSafeLayout() {
     const part = { type, zone: d };
     // Generate waypoints for this part
     const pts = generatePartWaypoints(type, x, y, dir);
-    // Check overlap against all existing waypoints (skip last 8 = current part's neighbors)
-    const safeStart = Math.max(0, allWaypoints.length - 8);
+    // Check overlap: new WPs vs all existing WPs with index gap >= 8
+    const newStartIdx = allWaypoints.length;
     for (let ni = 0; ni < pts.length; ni++) {
-      for (let ei = 0; ei < safeStart; ei++) {
+      const newIdx = newStartIdx + ni;
+      for (let ei = 0; ei < allWaypoints.length; ei++) {
+        if (Math.abs(newIdx - ei) < 8) continue; // skip neighbors
         const dx = pts[ni][0] - allWaypoints[ei][0];
         const dy = pts[ni][1] - allWaypoints[ei][1];
         if (dx*dx + dy*dy < SAFE_GAP * SAFE_GAP) {
@@ -340,7 +342,7 @@ function generatePartWaypoints(type, x, y, direction) {
     const shift = pt.xShift; // ±200
     const dist = pt.fwdDist; // 512
     const side = type === 'hairpin_r' ? 1 : -1;
-    const arcR = 100; // 90° arc radius for hairpin corners
+    const arcR = 200; // 90° arc radius — large enough for safe gap
     const legLen = (dist - 2 * arcR) / 2; // straight leg length before/after arcs
     const horizLen = Math.abs(shift) - 2 * arcR; // horizontal section length
 
@@ -583,27 +585,23 @@ const finishWP = waypoints.length - 4;
 
 // ---- Road overlap check (part-based, 250px threshold) ----
 const MIN_ROAD_GAP = 250; // road(100)+curb(20)+barrier(20)+bg(90)=230, round up
-function checkOverlaps(wp, pb) {
+function checkOverlaps(wp) {
   const errors = [];
-  for (let i = 0; i < pb.length; i++) {
-    for (let j = i + 3; j < pb.length; j++) { // skip adjacent 2 parts
-      for (let wi = pb[i].startWP; wi <= pb[i].endWP; wi++) {
-        for (let wj = pb[j].startWP; wj <= pb[j].endWP; wj++) {
-          const dx = wp[wi][0] - wp[wj][0], dy = wp[wi][1] - wp[wj][1];
-          if (dx*dx + dy*dy < MIN_ROAD_GAP * MIN_ROAD_GAP) {
-            errors.push({ pi: i, pj: j, wi, wj, dist: Math.round(Math.sqrt(dx*dx+dy*dy)) });
-          }
-        }
+  for (let i = 0; i < wp.length; i++) {
+    for (let j = i + 8; j < wp.length; j++) { // WP index gap >= 8
+      const dx = wp[i][0] - wp[j][0], dy = wp[i][1] - wp[j][1];
+      if (dx*dx + dy*dy < MIN_ROAD_GAP * MIN_ROAD_GAP) {
+        errors.push({ wi: i, wj: j, dist: Math.round(Math.sqrt(dx*dx+dy*dy)) });
       }
     }
   }
   return errors;
 }
-const overlapErrors = checkOverlaps(waypoints, partBounds);
+const overlapErrors = checkOverlaps(waypoints);
 if (overlapErrors.length > 0) {
   console.error(`[Overlap] ERROR: ${overlapErrors.length} conflicts found (< ${MIN_ROAD_GAP}px)`);
   overlapErrors.slice(0, 5).forEach(e =>
-    console.error(`  part ${e.pi} WP${e.wi} ↔ part ${e.pj} WP${e.wj} = ${e.dist}px`)
+    console.error(`  WP${e.wi} ↔ WP${e.wj} = ${e.dist}px`)
   );
 } else {
   console.log(`[Overlap] 0 conflicts found (${MIN_ROAD_GAP}px threshold) ✓`);
