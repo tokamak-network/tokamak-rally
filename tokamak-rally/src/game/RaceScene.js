@@ -608,8 +608,10 @@ export class RaceScene extends Phaser.Scene {
     gBase.fillRect(-5000, -15000, 25000, 35000);
 
     // ===== 0.5 UV-MAPPED TEXTURE for all parts =====
+    if (this.textures.exists('tile_desert_bg')) {
+      this._renderBgTextures(wp, normals, startWP, baseHalfW, 'tile_desert_bg');
+    }
     if (this.textures.exists('tile_dalle_straight')) {
-      this._renderBgTextures(wp, normals, startWP, baseHalfW, 'tile_dalle_straight');
       this._renderTrackTextures(wp, normals, startWP, baseHalfW, 'tile_dalle_straight');
     }
 

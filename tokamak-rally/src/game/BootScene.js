@@ -20,8 +20,9 @@ export class BootScene extends Phaser.Scene {
     this.load.image('v5_road_snow', '/assets/v5/roads/road_snow.png');
     this.load.image('v5_road_asphalt', '/assets/v5/roads/road_asphalt.png');
 
-    // v6 UV texture
+    // v6 UV textures
     this.load.image('tile_dalle_straight', '/assets/v6/parts/dalle_400_seamless.png');
+    this.load.image('tile_desert_bg', '/assets/v6/parts/dalle_desert_bg.png');
 
     // 유지 에셋 — cow, bird (애니메이션용)
     this.load.image('v4_desert_cow', '/assets/v4/objects/desert/cow_lying1.png');
