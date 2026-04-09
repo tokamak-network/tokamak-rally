@@ -1,5 +1,5 @@
 import Phaser from 'phaser';
-import { TRACK_CONFIG, isOnTrack, getTrackProgress, getZoneByIndex, checkCheckpoint, checkFinish, zoneConfig, DIR_VECTORS } from './Track.js';
+import { TRACK_CONFIG, buildTrackConfig, isOnTrack, getTrackProgress, getZoneByIndex, checkCheckpoint, checkFinish, zoneConfig, DIR_VECTORS } from './Track.js';
 import { CARS } from './Cars.js';
 import { wallet } from '../web3/wallet.js';
 import { soundEngine } from './SoundEngine.js';
@@ -12,11 +12,12 @@ export class RaceScene extends Phaser.Scene {
     this.raceState = null;
     this.obstacles = [];
     this.selectedCarId = (data && data.carId) || 'alpine_white';
+    this.selectedTrackId = (data && data.trackId) || 'easy';
     this.selectedCar = CARS.find(c => c.id === this.selectedCarId) || CARS[0];
   }
 
   create() {
-    this.track = TRACK_CONFIG;
+    this.track = buildTrackConfig(this.selectedTrackId);
     this.cameras.main.setBackgroundColor(0xD2B48C);
     this._animals = [];
     this._birdTimer = 5000 + Math.random() * 8000;
@@ -73,7 +74,7 @@ export class RaceScene extends Phaser.Scene {
     };
 
     this.raceState = {
-      started: false, finished: false, timedOut: false,
+      started: false, finished: false, finishing: false, timedOut: false,
       timeRemaining: this.track.initialTime,
       elapsedTime: 0,
       checkpointsPassed: 0,
@@ -423,16 +424,77 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // START/FINISH — rotate banners perpendicular to road direction, scale to track width
+    // --- START ZONE: extend road behind start + start line ---
     const wp0 = wp[0], wp1 = wp[1];
     const startAngle = Math.atan2(wp1[1]-wp0[1], wp1[0]-wp0[0]) * 180 / Math.PI + 90;
     const startZone = this.track.zones[0];
-    const startBanner = this.add.sprite(wp0[0], wp0[1], 'finish_banner').setDepth(3).setAngle(startAngle);
-    startBanner.displayWidth = (startZone.trackWidth || 110) + 20; // match road width + curb margin
-    startBanner.scaleY = startBanner.scaleX; // maintain aspect ratio
-    this.add.text(wp0[0], wp0[1]-40, '▶ START', {
-      fontSize:'16px',fontFamily:'monospace',color:'#f4d35e',fontStyle:'bold',stroke:'#000',strokeThickness:2,
-    }).setOrigin(0.5).setDepth(3);
+    const startRoadLen = 600;
+    const startDir = { dx: wp1[0]-wp0[0], dy: wp1[1]-wp0[1] };
+    const startDirLen = Math.sqrt(startDir.dx**2 + startDir.dy**2) || 1;
+    const startUx = startDir.dx/startDirLen, startUy = startDir.dy/startDirLen;
+    const startNx = -startUy, startNy = startUx;
+    const startW = startZone.trackWidth || 100;
+
+    // Road extension behind start
+    const gStartRoad = this.add.graphics().setDepth(1);
+    const startRoadColor = zoneConfig[startZone.name]?.roadColor || 0x9B7B4A;
+    const startEdgeColor = zoneConfig[startZone.name]?.edgeColor || 0x8a6a30;
+    const behindX = wp0[0] - startUx * startRoadLen;
+    const behindY = wp0[1] - startUy * startRoadLen;
+    gStartRoad.lineStyle(startW + 20, startEdgeColor, 0.4);
+    gStartRoad.beginPath();
+    gStartRoad.moveTo(behindX, behindY);
+    gStartRoad.lineTo(wp0[0], wp0[1]);
+    gStartRoad.strokePath();
+    gStartRoad.lineStyle(startW, startRoadColor, 1);
+    gStartRoad.beginPath();
+    gStartRoad.moveTo(behindX, behindY);
+    gStartRoad.lineTo(wp0[0], wp0[1]);
+    gStartRoad.strokePath();
+
+    // Curbs on extended road
+    const gStartCurb = this.add.graphics().setDepth(2);
+    for (const side of [-1, 1]) {
+      let curbDist = 0;
+      const CURB_DASH = 10;
+      const steps = 30;
+      for (let i = 0; i < steps; i++) {
+        const t = i / steps;
+        const cx = behindX + (wp0[0]-behindX)*t + startNx*side*(startW/2+2);
+        const cy = behindY + (wp0[1]-behindY)*t + startNy*side*(startW/2+2);
+        const nx = behindX + (wp0[0]-behindX)*(i+1)/steps + startNx*side*(startW/2+2);
+        const ny = behindY + (wp0[1]-behindY)*(i+1)/steps + startNy*side*(startW/2+2);
+        const isRed = (Math.floor(curbDist / CURB_DASH) % 2 === 0);
+        gStartCurb.lineStyle(4, isRed ? 0xCC0000 : 0xFFFFFF, 0.7);
+        gStartCurb.beginPath(); gStartCurb.moveTo(cx, cy); gStartCurb.lineTo(nx, ny); gStartCurb.strokePath();
+        curbDist += startRoadLen / steps;
+      }
+    }
+
+    // Start line: checkered pattern
+    const gStartLine = this.add.graphics().setDepth(3);
+    const SQ_S = 10;
+    const startRows = 3;
+    const startCols = Math.ceil(startW / SQ_S);
+    for (let r = 0; r < startRows; r++) {
+      for (let c = 0; c < startCols; c++) {
+        const isBlack = (r + c) % 2 === 0;
+        gStartLine.fillStyle(isBlack ? 0x222222 : 0xFFFFFF, 0.85);
+        const sx = wp0[0] + startNx * (c * SQ_S - startW/2 + SQ_S/2) + startUx * (r * SQ_S - (startRows*SQ_S)/2 + SQ_S/2);
+        const sy = wp0[1] + startNy * (c * SQ_S - startW/2 + SQ_S/2) + startUy * (r * SQ_S - (startRows*SQ_S)/2 + SQ_S/2);
+        gStartLine.fillRect(sx - SQ_S/2, sy - SQ_S/2, SQ_S, SQ_S);
+      }
+    }
+
+    // Start banner
+    const startBanner = this.add.sprite(wp0[0], wp0[1], 'finish_banner').setDepth(4).setAngle(startAngle);
+    startBanner.displayWidth = startW + 20;
+    startBanner.scaleY = startBanner.scaleX;
+
+    this.add.text(wp0[0], wp0[1] - 30, 'START', {
+      fontSize:'14px', fontFamily:'monospace', color:'#FFFFFF', fontStyle:'bold',
+      stroke:'#000000', strokeThickness:3,
+    }).setOrigin(0.5).setDepth(5);
 
     // FINISH LINE at WP 159 (actual finish detection point)
     const finIdx = 157;
@@ -544,6 +606,11 @@ export class RaceScene extends Phaser.Scene {
     const gBase = this.add.graphics().setDepth(-1);
     gBase.fillStyle(0xD2B48C, 1);
     gBase.fillRect(-5000, -15000, 25000, 35000);
+
+    // ===== 0.5 UV-MAPPED TEXTURE for all parts =====
+    if (this.textures.exists('tile_dalle_straight')) {
+      this._renderTrackTextures(wp, normals, startWP, baseHalfW, 'tile_dalle_straight');
+    }
 
     // ===== 1. BACKGROUND (depth 0) =====
     for (const zone of allZones) {
@@ -669,50 +736,51 @@ export class RaceScene extends Phaser.Scene {
       }
     }
 
-    // ===== 2. ROAD (depth 1) =====
-    const gRoad = this.add.graphics().setDepth(1);
-    for (const zone of allZones) {
-      const s = zone.fromWP, e = Math.min(zone.toWP, wp.length);
-      const zc = zoneConfig[zone.name];
-      const isTransition = zc && zc.transition;
-      const totalWP = e - s;
-      const roadColor = zc ? zc.roadColor : 0x9B7B4A;
-      const edgeColor = zc ? zc.edgeColor : 0x8a6a30;
+    // ===== 2. ROAD (depth 1) — disabled: UV texture covers road =====
+    const USE_VECTOR_ROAD = false;
+    if (USE_VECTOR_ROAD) {
+      const gRoad = this.add.graphics().setDepth(1);
+      for (const zone of allZones) {
+        const s = zone.fromWP, e = Math.min(zone.toWP, wp.length);
+        const zc = zoneConfig[zone.name];
+        const isTransition = zc && zc.transition;
+        const totalWP = e - s;
+        const roadColor = zc ? zc.roadColor : 0x9B7B4A;
+        const edgeColor = zc ? zc.edgeColor : 0x8a6a30;
 
-      // Road border (single polyline — Phaser auto-joins corners)
-      gRoad.lineStyle(120, edgeColor, 0.4);
-      gRoad.beginPath();
-      gRoad.moveTo(wp[s][0], wp[s][1]);
-      for (let i = s + 1; i < e; i++) gRoad.lineTo(wp[i][0], wp[i][1]);
-      gRoad.strokePath();
-
-      // Road surface
-      if (isTransition) {
-        const fromZc = zoneConfig[zc.transition.from];
-        const toZc = zoneConfig[zc.transition.to];
-        if (fromZc && toZc) {
-          const [r1, g1, b1] = hexRGB(fromZc.roadColor);
-          const [r2, g2, b2] = hexRGB(toZc.roadColor);
-          for (let i = s; i < e - 1; i++) {
-            const p = totalWP > 0 ? (i - s) / totalWP : 0;
-            const blended = rgbHex(
-              Math.round(r1 + (r2 - r1) * p),
-              Math.round(g1 + (g2 - g1) * p),
-              Math.round(b1 + (b2 - b1) * p)
-            );
-            gRoad.lineStyle(100, blended, 1);
-            gRoad.beginPath();
-            gRoad.moveTo(wp[i][0], wp[i][1]);
-            gRoad.lineTo(wp[i+1][0], wp[i+1][1]);
-            gRoad.strokePath();
-          }
-        }
-      } else {
-        gRoad.lineStyle(100, roadColor, 1);
+        gRoad.lineStyle(120, edgeColor, 0.4);
         gRoad.beginPath();
         gRoad.moveTo(wp[s][0], wp[s][1]);
         for (let i = s + 1; i < e; i++) gRoad.lineTo(wp[i][0], wp[i][1]);
         gRoad.strokePath();
+
+        if (isTransition) {
+          const fromZc = zoneConfig[zc.transition.from];
+          const toZc = zoneConfig[zc.transition.to];
+          if (fromZc && toZc) {
+            const [r1, g1, b1] = hexRGB(fromZc.roadColor);
+            const [r2, g2, b2] = hexRGB(toZc.roadColor);
+            for (let i = s; i < e - 1; i++) {
+              const p = totalWP > 0 ? (i - s) / totalWP : 0;
+              const blended = rgbHex(
+                Math.round(r1 + (r2 - r1) * p),
+                Math.round(g1 + (g2 - g1) * p),
+                Math.round(b1 + (b2 - b1) * p)
+              );
+              gRoad.lineStyle(100, blended, 1);
+              gRoad.beginPath();
+              gRoad.moveTo(wp[i][0], wp[i][1]);
+              gRoad.lineTo(wp[i+1][0], wp[i+1][1]);
+              gRoad.strokePath();
+            }
+          }
+        } else {
+          gRoad.lineStyle(100, roadColor, 1);
+          gRoad.beginPath();
+          gRoad.moveTo(wp[s][0], wp[s][1]);
+          for (let i = s + 1; i < e; i++) gRoad.lineTo(wp[i][0], wp[i][1]);
+          gRoad.strokePath();
+        }
       }
     }
 
@@ -866,6 +934,240 @@ export class RaceScene extends Phaser.Scene {
         gTire.fillCircle(px, py, tireR * 0.3);
       }
     }
+
+    // --- START ZONE: extend road behind start + start line ---
+    const wp0s = wp[0], wp1s = wp[1];
+    const sAngle = Math.atan2(wp1s[1]-wp0s[1], wp1s[0]-wp0s[0]) * 180 / Math.PI + 90;
+    const sZone = this.track.zones[0];
+    const sRoadLen = 600;
+    const sDir = { dx: wp1s[0]-wp0s[0], dy: wp1s[1]-wp0s[1] };
+    const sDirLen = Math.sqrt(sDir.dx**2 + sDir.dy**2) || 1;
+    const sUx = sDir.dx/sDirLen, sUy = sDir.dy/sDirLen;
+    const sNx = -sUy, sNy = sUx;
+    const sW = sZone.trackWidth || 100;
+
+    const gStartRoad = this.add.graphics().setDepth(1);
+    const sRoadColor = zoneConfig[sZone.name]?.roadColor || 0x9B7B4A;
+    const sEdgeColor = zoneConfig[sZone.name]?.edgeColor || 0x8a6a30;
+    const behindX = wp0s[0] - sUx * sRoadLen;
+    const behindY = wp0s[1] - sUy * sRoadLen;
+    gStartRoad.lineStyle(sW + 20, sEdgeColor, 0.4);
+    gStartRoad.beginPath(); gStartRoad.moveTo(behindX, behindY); gStartRoad.lineTo(wp0s[0], wp0s[1]); gStartRoad.strokePath();
+    gStartRoad.lineStyle(sW, sRoadColor, 1);
+    gStartRoad.beginPath(); gStartRoad.moveTo(behindX, behindY); gStartRoad.lineTo(wp0s[0], wp0s[1]); gStartRoad.strokePath();
+
+    // Curbs on extended road
+    const gStartCurb = this.add.graphics().setDepth(2);
+    for (const side of [-1, 1]) {
+      let cDist = 0;
+      const CDASH = 10, cSteps = 30;
+      for (let ci = 0; ci < cSteps; ci++) {
+        const t0 = ci / cSteps, t1 = (ci+1) / cSteps;
+        const cx0 = behindX + (wp0s[0]-behindX)*t0 + sNx*side*(sW/2+2);
+        const cy0 = behindY + (wp0s[1]-behindY)*t0 + sNy*side*(sW/2+2);
+        const cx1 = behindX + (wp0s[0]-behindX)*t1 + sNx*side*(sW/2+2);
+        const cy1 = behindY + (wp0s[1]-behindY)*t1 + sNy*side*(sW/2+2);
+        gStartCurb.lineStyle(4, (Math.floor(cDist / CDASH) % 2 === 0) ? 0xCC0000 : 0xFFFFFF, 0.7);
+        gStartCurb.beginPath(); gStartCurb.moveTo(cx0, cy0); gStartCurb.lineTo(cx1, cy1); gStartCurb.strokePath();
+        cDist += sRoadLen / cSteps;
+      }
+    }
+
+    // Start line: checkered pattern
+    const gStartLine = this.add.graphics().setDepth(3);
+    const sSQ = 10, sRows = 3, sCols = Math.ceil(sW / sSQ);
+    for (let r = 0; r < sRows; r++) {
+      for (let c = 0; c < sCols; c++) {
+        gStartLine.fillStyle((r + c) % 2 === 0 ? 0x222222 : 0xFFFFFF, 0.85);
+        const sx = wp0s[0] + sNx * (c * sSQ - sW/2 + sSQ/2) + sUx * (r * sSQ - (sRows*sSQ)/2 + sSQ/2);
+        const sy = wp0s[1] + sNy * (c * sSQ - sW/2 + sSQ/2) + sUy * (r * sSQ - (sRows*sSQ)/2 + sSQ/2);
+        gStartLine.fillRect(sx - sSQ/2, sy - sSQ/2, sSQ, sSQ);
+      }
+    }
+
+    // Start banner + text
+    const startBnr = this.add.sprite(wp0s[0], wp0s[1], 'finish_banner').setDepth(4).setAngle(sAngle);
+    startBnr.displayWidth = sW + 20; startBnr.scaleY = startBnr.scaleX;
+    this.add.text(wp0s[0], wp0s[1] - 30, 'START', {
+      fontSize:'14px', fontFamily:'monospace', color:'#FFFFFF', fontStyle:'bold',
+      stroke:'#000000', strokeThickness:3,
+    }).setOrigin(0.5).setDepth(5);
+
+    // --- FINISH LINE ---
+    const finWP = this.track.finishWP;
+    const wFin = wp[finWP], wFinPrev = wp[finWP - 1];
+    const fAngle = Math.atan2(wFin[1]-wFinPrev[1], wFin[0]-wFinPrev[0]) * 180 / Math.PI + 90;
+    const fZone = this.track.zones[this.track.zones.length - 1];
+    const fW = fZone.trackWidth || 100;
+    const fDx = wFin[0]-wFinPrev[0], fDy = wFin[1]-wFinPrev[1];
+    const fLen = Math.sqrt(fDx*fDx+fDy*fDy) || 1;
+    const fNx = -fDy/fLen, fNy = fDx/fLen;
+    const fUx = fDx/fLen, fUy = fDy/fLen;
+
+    const checkerG = this.add.graphics().setDepth(3);
+    const fSQ = 10, fRows = 3, fCols = Math.ceil(fW / fSQ);
+    for (let r = 0; r < fRows; r++) {
+      for (let c = 0; c < fCols; c++) {
+        checkerG.fillStyle((r + c) % 2 === 0 ? 0x000000 : 0xFFFFFF, 0.9);
+        const fx = wFin[0] + fNx * (c * fSQ - fW/2 + fSQ/2) + fUx * (r * fSQ - (fRows*fSQ)/2 + fSQ/2);
+        const fy = wFin[1] + fNy * (c * fSQ - fW/2 + fSQ/2) + fUy * (r * fSQ - (fRows*fSQ)/2 + fSQ/2);
+        checkerG.fillRect(fx - fSQ/2, fy - fSQ/2, fSQ, fSQ);
+      }
+    }
+
+    const finBnr = this.add.sprite(wFin[0], wFin[1], 'finish_banner').setDepth(4).setAngle(fAngle);
+    finBnr.displayWidth = fW + 20; finBnr.scaleY = finBnr.scaleX;
+    this.add.text(wFin[0], wFin[1] + 20, 'FINISH', {
+      fontSize:'18px', fontFamily:'monospace', color:'#e63946', fontStyle:'bold',
+      stroke:'#000', strokeThickness:3,
+    }).setOrigin(0.5).setDepth(5);
+  }
+
+  // ---- Canvas 2D affine triangle texture mapping for all parts ----
+  _renderTrackTextures(wp, normals, startWP, halfW, tileKey) {
+    const texFrame = this.textures.getFrame(tileKey);
+    if (!texFrame) return;
+    const texImg = texFrame.source.image;
+    const texW = texFrame.width;
+    const texH = texFrame.height;
+
+    // drawTriangle: affine map 3 UV points to 3 screen points
+    function drawTri(ctx, img, u0, v0, u1, v1, u2, v2, x0, y0, x1, y1, x2, y2) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x2, y2);
+      ctx.closePath();
+      ctx.clip();
+
+      const du1 = u1 - u0, dv1 = v1 - v0;
+      const du2 = u2 - u0, dv2 = v2 - v0;
+      const dx1 = x1 - x0, dy1 = y1 - y0;
+      const dx2 = x2 - x0, dy2 = y2 - y0;
+      const det = du1 * dv2 - du2 * dv1;
+      if (Math.abs(det) < 0.001) { ctx.restore(); return; }
+
+      const a = (dx1 * dv2 - dx2 * dv1) / det;
+      const c = (du1 * dx2 - du2 * dx1) / det;
+      const b = (dy1 * dv2 - dy2 * dv1) / det;
+      const d = (du1 * dy2 - du2 * dy1) / det;
+      const e = x0 - a * u0 - c * v0;
+      const f = y0 - b * u0 - d * v0;
+
+      ctx.setTransform(a, b, c, d, e, f);
+      ctx.drawImage(img, 0, 0);
+      ctx.restore();
+    }
+
+    // Create vertically tiled texture (hairpin can be ~800px long)
+    const maxPartLen = 1000;
+    const tilesNeeded = Math.ceil(maxPartLen / texH) + 1;
+    const tiledCanvas = document.createElement('canvas');
+    tiledCanvas.width = texW;
+    tiledCanvas.height = texH * tilesNeeded;
+    const tiledCtx = tiledCanvas.getContext('2d');
+    for (let t = 0; t < tilesNeeded; t++) {
+      tiledCtx.drawImage(texImg, 0, t * texH);
+    }
+
+    let partIdx = 0;
+    for (const pb of this.track.partBounds) {
+      // Include next WP to bridge gap between parts
+      const drawEnd = Math.min(pb.endWP + 1, wp.length - 1);
+
+      // Compute bounds for this part
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (let i = pb.startWP; i <= drawEnd; i++) {
+        const ni = normals[i - startWP];
+        if (!ni) continue;
+        for (const side of [-1, 1]) {
+          const px = wp[i][0] + ni[0] * side * (halfW + 5);
+          const py = wp[i][1] + ni[1] * side * (halfW + 5);
+          if (px < minX) minX = px; if (px > maxX) maxX = px;
+          if (py < minY) minY = py; if (py > maxY) maxY = py;
+        }
+      }
+      const pad = 4;
+      minX -= pad; minY -= pad; maxX += pad; maxY += pad;
+      const cw = Math.ceil(maxX - minX);
+      const ch = Math.ceil(maxY - minY);
+      if (cw < 1 || ch < 1 || cw > 4096 || ch > 4096) continue;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = cw;
+      canvas.height = ch;
+      const ctx = canvas.getContext('2d');
+
+      // Method 3: fill with road average color as safety net
+      ctx.fillStyle = '#8B7B4A';
+      ctx.fillRect(0, 0, cw, ch);
+      ctx.globalCompositeOperation = 'source-over';
+
+      const OD = 1.0; // overDraw pixels to eliminate seams
+      let vAccum = 0;
+      for (let i = pb.startWP; i <= drawEnd - 1 && i + 1 < wp.length; i++) {
+        const ni = normals[i - startWP];
+        const niNext = normals[i + 1 - startWP];
+        if (!ni || !niNext) continue;
+
+        const segDx = wp[i+1][0] - wp[i][0];
+        const segDy = wp[i+1][1] - wp[i][1];
+        const segLen = Math.sqrt(segDx * segDx + segDy * segDy);
+        if (segLen < 0.5) { vAccum += segLen; continue; }
+
+        // Road direction unit vector
+        const ux = segDx / segLen, uy = segDy / segLen;
+
+        // Method 1: overDraw — extend quad by OD pixels in road direction
+        const tlx = wp[i][0] + ni[0] * halfW - ux * OD - minX;
+        const tly = wp[i][1] + ni[1] * halfW - uy * OD - minY;
+        const trx = wp[i][0] - ni[0] * halfW - ux * OD - minX;
+        const try_ = wp[i][1] - ni[1] * halfW - uy * OD - minY;
+        const blx = wp[i+1][0] + niNext[0] * halfW + ux * OD - minX;
+        const bly = wp[i+1][1] + niNext[1] * halfW + uy * OD - minY;
+        const brx = wp[i+1][0] - niNext[0] * halfW + ux * OD - minX;
+        const bry = wp[i+1][1] - niNext[1] * halfW + uy * OD - minY;
+
+        const v0 = vAccum - OD;
+        const v1 = vAccum + segLen + OD;
+
+        // Triangle A: TL→TR→BL
+        drawTri(ctx, tiledCanvas, 0,v0, texW,v0, 0,v1, tlx,tly, trx,try_, blx,bly);
+        // Triangle B: TR→BR→BL
+        drawTri(ctx, tiledCanvas, texW,v0, texW,v1, 0,v1, trx,try_, brx,bry, blx,bly);
+        vAccum += segLen;
+      }
+
+      // Clip canvas to actual road shape to remove background fill outside road
+      const clipCanvas = document.createElement('canvas');
+      clipCanvas.width = cw;
+      clipCanvas.height = ch;
+      const clipCtx = clipCanvas.getContext('2d');
+
+      // Draw road mask
+      clipCtx.beginPath();
+      for (let i = pb.startWP; i <= drawEnd; i++) {
+        const ni = normals[i - startWP];
+        if (!ni) continue;
+        const px = wp[i][0] + ni[0] * (halfW + 1) - minX;
+        const py = wp[i][1] + ni[1] * (halfW + 1) - minY;
+        if (i === pb.startWP) clipCtx.moveTo(px, py); else clipCtx.lineTo(px, py);
+      }
+      for (let i = drawEnd; i >= pb.startWP; i--) {
+        const ni = normals[i - startWP];
+        if (!ni) continue;
+        const px = wp[i][0] - ni[0] * (halfW + 1) - minX;
+        const py = wp[i][1] - ni[1] * (halfW + 1) - minY;
+        clipCtx.lineTo(px, py);
+      }
+      clipCtx.closePath();
+      clipCtx.clip();
+      clipCtx.drawImage(canvas, 0, 0);
+
+      const texKey2 = '__uv_part_' + (partIdx++) + '_' + Date.now();
+      this.textures.addCanvas(texKey2, clipCanvas);
+      this.add.image(minX, minY, texKey2).setOrigin(0, 0).setDepth(1.5);
+    }
+    console.log('[UV] rendered', partIdx, 'parts (all types) with per-part canvas');
   }
 
   placeBarriers() {
@@ -1254,6 +1556,21 @@ export class RaceScene extends Phaser.Scene {
 
   update(time, delta) {
     if(!this.raceState||!this.raceState.started||this.raceState.finished||this.raceState.timedOut) return;
+
+    // Finishing: car auto-drives forward off screen
+    if (this.raceState.finishing) {
+      const dt = delta / 1000;
+      const car = this.carState;
+      car.speed = Math.min(car.speed + 300 * dt, 250);
+      const moveRad = Phaser.Math.DegToRad(car.moveAngle);
+      car.x += Math.cos(moveRad) * car.speed * dt;
+      car.y += Math.sin(moveRad) * car.speed * dt;
+      this.player.x = car.x;
+      this.player.y = car.y;
+      this.player.angle = car.angle - 90;
+      return;
+    }
+
     const dt=delta/1000;
     this.raceState.elapsedTime+=delta;
     this.raceState.timeRemaining-=delta;
@@ -1529,8 +1846,17 @@ export class RaceScene extends Phaser.Scene {
       }
     }
     // Finish: must cross the finish line (perpendicular to road at last waypoint)
-    if(!rs.finished && this._checkLineCross(car.prevX, car.prevY, car.x, car.y, this.track.waypoints)){
-      rs.finished=true;soundEngine.stopAll();soundEngine.stopBGM();soundEngine.playFinish();this.showFinish();
+    if(!rs.finished && !rs.finishing && this._checkLineCross(car.prevX, car.prevY, car.x, car.y, this.track.waypoints)){
+      rs.finishing = true;
+      rs.finishTime = rs.elapsedTime;
+      this.cameras.main.stopFollow();
+      soundEngine.playFinish();
+      this.time.delayedCall(2000, () => {
+        rs.finished = true;
+        soundEngine.stopAll();
+        soundEngine.stopBGM();
+        this.showFinish();
+      });
     }
   }
 
@@ -1640,7 +1966,7 @@ export class RaceScene extends Phaser.Scene {
     this.input.keyboard.once('keydown-ENTER', () => {
       soundEngine.stopAll(); soundEngine.stopBGM();
       this.scene.stop('UI');
-      this.scene.restart({ carId: this.selectedCarId });
+      this.scene.restart({ carId: this.selectedCarId, trackId: this.selectedTrackId });
     });
     this.input.keyboard.once('keydown-ESC', () => {
       soundEngine.stopAll(); soundEngine.stopBGM();

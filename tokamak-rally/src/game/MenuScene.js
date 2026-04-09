@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import { CARS } from './Cars.js';
+import { getTrackIds, getTrackInfo } from './Track.js';
 import { wallet } from '../web3/wallet.js';
 
 export class MenuScene extends Phaser.Scene {
@@ -7,6 +8,8 @@ export class MenuScene extends Phaser.Scene {
 
   create() {
     this.selectedCar = 0;
+    this.trackIds = getTrackIds();
+    this.selectedTrackIdx = 0;
     const cx = 400;
 
     const bg = this.add.graphics();
@@ -100,18 +103,34 @@ export class MenuScene extends Phaser.Scene {
 
     // switch hint removed
 
-    // === STAGE INFO (compact) ===
+    // === TRACK SELECTION ===
     const infoBox = this.add.graphics();
     infoBox.fillStyle(0x2a1a08,0.7);
     infoBox.fillRoundedRect(40,455,720,80,8);
 
-    this.add.text(cx,470,'DESERT RALLY  ·  4 Checkpoints',{
-      fontSize:'13px',fontFamily:'monospace',color:'#f1faee',
+    this.add.text(cx,465,'◈ SELECT TRACK   [ T: cycle ]',{
+      fontSize:'12px',fontFamily:'monospace',color:'#d4a76a',
     }).setOrigin(0.5);
 
-    this.add.text(cx,495,'CPs extend time  |  20s initial',{
-      fontSize:'10px',fontFamily:'monospace',color:'#d4a76a',
+    const trackLabels = {
+      easy:   'EASY   — Gentle Desert',
+      normal: 'NORMAL — Sharp Corners',
+      hard:   'HARD   — Extreme Rally',
+    };
+    this.trackText = this.add.text(cx, 488, trackLabels[this.trackIds[0]], {
+      fontSize: '18px', fontFamily: 'monospace', color: '#f4d35e', fontStyle: 'bold',
     }).setOrigin(0.5);
+
+    this.trackDetailText = this.add.text(cx, 512, '4 Checkpoints  |  CPs extend time', {
+      fontSize: '10px', fontFamily: 'monospace', color: '#a89070',
+    }).setOrigin(0.5);
+
+    this._trackLabels = trackLabels;
+    this.input.keyboard.on('keydown-T', () => {
+      this.selectedTrackIdx = (this.selectedTrackIdx + 1) % this.trackIds.length;
+      const id = this.trackIds[this.selectedTrackIdx];
+      this.trackText.setText(this._trackLabels[id]);
+    });
 
     // Controls
     this.add.text(cx,540,'↑Accel  ↓Brake  ←→Steer  SPACE Drift',{
@@ -206,7 +225,8 @@ export class MenuScene extends Phaser.Scene {
   }
 
   startRace() {
-    this.scene.start('Race', { carId: CARS[this.selectedCar].id });
+    const trackId = this.trackIds[this.selectedTrackIdx];
+    this.scene.start('Race', { carId: CARS[this.selectedCar].id, trackId });
     this.scene.start('UI');
   }
 }

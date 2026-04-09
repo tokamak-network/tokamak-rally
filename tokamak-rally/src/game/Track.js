@@ -34,16 +34,6 @@ const DIR_45_LEFT = {
   south: 'southeast', southeast: 'east', east: 'northeast', northeast: 'north',
 };
 
-// 135° = 90° + 45° (three 45° steps)
-const DIR_135_RIGHT = {
-  north: 'southwest', northeast: 'west', east: 'northwest', southeast: 'north',
-  south: 'northeast', southwest: 'east', west: 'southeast', northwest: 'south',
-};
-const DIR_135_LEFT = {
-  north: 'southeast', northeast: 'south', east: 'southwest', southeast: 'west',
-  south: 'northwest', southwest: 'north', west: 'northeast', northwest: 'east',
-};
-
 const DIR_RIGHT_VEC = {
   north:     { dx: 1,     dy: 0 },
   northeast: { dx: 0.707, dy: 0.707 },
@@ -66,8 +56,6 @@ const partTypes = {
   turn_45_r:     { turnRadius: 200, turnAngle: Math.PI / 4 },
   turn_90_l:     { turnRadius: 200, turnAngle: Math.PI / 2 },
   turn_90_r:     { turnRadius: 200, turnAngle: Math.PI / 2 },
-  turn_135_l:    { turnRadius: 200, turnAngle: Math.PI * 3 / 4 },
-  turn_135_r:    { turnRadius: 200, turnAngle: Math.PI * 3 / 4 },
 };
 
 // ---- Zone Configuration ----
@@ -140,8 +128,7 @@ function computeTurnArc(entryDir, turnAngle, turnDirection) {
     const edx = cdx + R * Math.cos(ea);
     const edy = cdy - R * Math.sin(ea);
     let exitDir;
-    if (turnAngle > Math.PI / 2 + 0.1) exitDir = DIR_135_RIGHT[entryDir];
-    else if (turnAngle > Math.PI / 4 + 0.1) exitDir = DIR_RIGHT[entryDir];
+    if (turnAngle > Math.PI / 4 + 0.1) exitDir = DIR_RIGHT[entryDir];
     else exitDir = DIR_45_RIGHT[entryDir];
     return { cdx, cdy, sa, ea, exitDir, edx, edy };
   } else {
@@ -151,21 +138,78 @@ function computeTurnArc(entryDir, turnAngle, turnDirection) {
     const edx = cdx + R * Math.cos(ea);
     const edy = cdy - R * Math.sin(ea);
     let exitDir;
-    if (turnAngle > Math.PI / 2 + 0.1) exitDir = DIR_135_LEFT[entryDir];
-    else if (turnAngle > Math.PI / 4 + 0.1) exitDir = DIR_LEFT[entryDir];
+    if (turnAngle > Math.PI / 4 + 0.1) exitDir = DIR_LEFT[entryDir];
     else exitDir = DIR_45_LEFT[entryDir];
     return { cdx, cdy, sa, ea, exitDir, edx, edy };
   }
 }
 
-// ---- Safe Layout Generator ----
-// Builds layout part-by-part, checking overlap at each step.
-// If a part would cause overlap, inserts straights until safe.
+// ---- Layout Builder (common logic) ----
 const SAFE_GAP = 200; // minimum distance between non-adjacent road segments
 
-function generateSafeLayout() {
+function buildFromSkeleton(skeleton, startX, startY) {
   const d = 'desert';
-  // Thrash Rally Stage1 reference-based layout (C1-C7 corners)
+  const result = [];
+  const allWaypoints = [];
+  let x = startX, y = startY, dir = 'north';
+  const cpIndices = [];
+
+  function addPart(type) {
+    const part = { type, zone: d };
+    const pts = generatePartWaypoints(type, x, y, dir);
+    const newStartIdx = allWaypoints.length;
+    for (let ni = 0; ni < pts.length; ni++) {
+      const newIdx = newStartIdx + ni;
+      for (let ei = 0; ei < allWaypoints.length; ei++) {
+        if (Math.abs(newIdx - ei) < 8) continue;
+        const dx = pts[ni][0] - allWaypoints[ei][0];
+        const dy = pts[ni][1] - allWaypoints[ei][1];
+        if (dx*dx + dy*dy < SAFE_GAP * SAFE_GAP) {
+          return false;
+        }
+      }
+    }
+    result.push(part);
+    if (result.length === 1) allWaypoints.push(...pts);
+    else for (let i = 1; i < pts.length; i++) allWaypoints.push(pts[i]);
+    const exit = getPartExit(type, x, y, dir);
+    x = exit.x; y = exit.y; dir = exit.direction;
+    return true;
+  }
+
+  function addStraightsUntilSafe(nextType, maxTries) {
+    if (addPart(nextType)) return true;
+    const straightType = (dir === 'east' || dir === 'west') ? 'straight_h' :
+                         (dir === 'northeast' || dir === 'northwest' || dir === 'southeast' || dir === 'southwest') ? 'diag_straight' :
+                         'straight';
+    for (let t = 0; t < (maxTries || 10); t++) {
+      addPart(straightType);
+      if (addPart(nextType)) return true;
+    }
+    console.error(`[Layout] Could not place ${nextType} after ${maxTries || 10} straights`);
+    return false;
+  }
+
+  for (const item of skeleton) {
+    if (item.startsWith('CP')) {
+      addPart('straight');
+      cpIndices.push(result.length - 1);
+      continue;
+    }
+    if (item === 'straight' || item === 'straight_h' || item === 'diag_straight') {
+      addPart(item);
+    } else {
+      addStraightsUntilSafe(item, 8);
+    }
+  }
+
+  console.log(`[Layout] Generated ${result.length} parts, ${cpIndices.length} CPs`);
+  return { parts: result, cpIndices };
+}
+
+// ---- Layout Generators ----
+
+function generateEasyLayout() {
   const skeleton = [
     // SS1: diagonal high-speed + C1 90° right
     'straight', 'straight',
@@ -173,7 +217,7 @@ function generateSafeLayout() {
     'straight', 'straight',
     'turn_90_r', 'straight_h', 'straight_h', 'straight_h', 'straight_h', 'turn_90_l',
     'CP1',
-    // SS2: C2 90°R + C3 135°L + diagonal
+    // SS2: C2 90°R + diagonal
     'straight', 'straight',
     'turn_90_r', 'straight_h', 'turn_90_l',
     'straight', 'turn_45_l', 'diag_straight', 'diag_straight', 'turn_45_r',
@@ -193,73 +237,124 @@ function generateSafeLayout() {
     // FINISH
     'straight', 'straight', 'straight',
   ];
-
-  const result = [];
-  const allWaypoints = []; // accumulated waypoints for overlap checking
-  let x = 2000, y = 14200, dir = 'north';
-  const cpIndices = []; // part indices for checkpoints
-
-  function addPart(type) {
-    const part = { type, zone: d };
-    // Generate waypoints for this part
-    const pts = generatePartWaypoints(type, x, y, dir);
-    // Check overlap: new WPs vs all existing WPs with index gap >= 8
-    const newStartIdx = allWaypoints.length;
-    for (let ni = 0; ni < pts.length; ni++) {
-      const newIdx = newStartIdx + ni;
-      for (let ei = 0; ei < allWaypoints.length; ei++) {
-        if (Math.abs(newIdx - ei) < 8) continue; // skip neighbors
-        const dx = pts[ni][0] - allWaypoints[ei][0];
-        const dy = pts[ni][1] - allWaypoints[ei][1];
-        if (dx*dx + dy*dy < SAFE_GAP * SAFE_GAP) {
-          return false; // overlap!
-        }
-      }
-    }
-    // Safe — commit this part
-    result.push(part);
-    if (result.length === 1) allWaypoints.push(...pts);
-    else for (let i = 1; i < pts.length; i++) allWaypoints.push(pts[i]);
-    const exit = getPartExit(type, x, y, dir);
-    x = exit.x; y = exit.y; dir = exit.direction;
-    return true;
-  }
-
-  function addStraightsUntilSafe(nextType, maxTries) {
-    // Try adding the nextType directly
-    if (addPart(nextType)) return true;
-    // If overlap, add straights to gain distance
-    const straightType = (dir === 'east' || dir === 'west') ? 'straight_h' :
-                         (dir === 'northeast' || dir === 'northwest' || dir === 'southeast' || dir === 'southwest') ? 'diag_straight' :
-                         'straight';
-    for (let t = 0; t < (maxTries || 10); t++) {
-      addPart(straightType); // straights always safe (moving forward)
-      if (addPart(nextType)) return true;
-    }
-    console.error(`[SafeLayout] Could not place ${nextType} after ${maxTries || 10} straights`);
-    return false;
-  }
-
-  for (const item of skeleton) {
-    if (item.startsWith('CP')) {
-      // Add a straight for the checkpoint
-      addPart('straight');
-      cpIndices.push(result.length - 1);
-      continue;
-    }
-    if (item === 'straight' || item === 'straight_h' || item === 'diag_straight') {
-      addPart(item);
-    } else {
-      // Turn/hairpin — try to add, insert straights if overlap
-      addStraightsUntilSafe(item, 8);
-    }
-  }
-
-  console.log(`[SafeLayout] Generated ${result.length} parts, ${cpIndices.length} CPs, 0 overlaps by construction`);
-  return { parts: result, cpIndices };
+  return buildFromSkeleton(skeleton, 2000, 14200);
 }
 
-const { parts: parts, cpIndices: _cpIdx } = generateSafeLayout();
+function generateNormalLayout() {
+  const skeleton = [
+    // SS1: diagonal → chicane → Z-corner
+    'straight', 'straight',
+    'turn_45_r', 'diag_straight', 'diag_straight', 'diag_straight', 'turn_45_l',
+    'straight', 'straight',
+    'turn_90_r', 'straight_h', 'straight_h', 'straight_h', 'turn_90_l',
+    'straight',
+    'turn_45_r', 'turn_90_l',  // Z-corner: N→NE→NW
+    'diag_straight', 'turn_45_r',  // NW recover to N
+    'CP1',
+
+    // SS2: chicane → NW weave → chicane → NW weave
+    'straight', 'straight',
+    'turn_90_r', 'straight_h', 'turn_90_l',
+    'straight',
+    'turn_45_l', 'diag_straight', 'diag_straight', 'turn_45_r',
+    'straight', 'straight',
+    'turn_90_r', 'straight_h', 'straight_h', 'turn_90_l',
+    'straight',
+    'turn_45_l', 'diag_straight', 'diag_straight', 'diag_straight', 'turn_45_r',
+    'CP2',
+
+    // SS3: chicane → violent S → Z-corner → chicane
+    'straight', 'straight',
+    'turn_90_r', 'straight_h', 'straight_h', 'straight_h', 'turn_90_l',
+    'straight', 'straight',
+    'turn_90_r', 'turn_90_l',  // violent S: N→E→N
+    'straight', 'straight',
+    'turn_45_r', 'turn_90_l',  // Z-corner
+    'diag_straight', 'turn_45_r',  // NW recover
+    'straight',
+    'turn_90_r', 'straight_h', 'straight_h', 'straight_h', 'turn_90_l',
+    'CP3',
+
+    // SS4: hairpin → diagonal → chicane
+    'straight', 'straight', 'straight',
+    'hairpin_r',
+    'straight',
+    'turn_45_l', 'diag_straight', 'diag_straight', 'turn_45_r',
+    'straight',
+    'turn_90_r', 'straight_h', 'straight_h', 'turn_90_l',
+    'CP4',
+    'straight', 'straight', 'straight',
+  ];
+  return buildFromSkeleton(skeleton, 2000, 16200);
+}
+
+function generateHardLayout() {
+  const skeleton = [
+    // SS1: fast start → Z-corner → chicane
+    'straight', 'straight',
+    'turn_45_r', 'diag_straight', 'diag_straight', 'turn_45_l',
+    'straight',
+    'turn_45_r', 'turn_90_l',  // Z-corner
+    'diag_straight', 'turn_45_r',  // NW recover
+    'straight',
+    'turn_90_r', 'straight_h', 'straight_h', 'turn_90_l',
+    'CP1',
+
+    // SS2: triple chicane → deep Z → diagonal
+    'straight', 'straight',
+    'turn_45_r', 'diag_straight', 'turn_45_l',
+    'straight',
+    'turn_45_r', 'diag_straight', 'turn_45_l',
+    'straight',
+    'turn_45_r', 'diag_straight', 'turn_45_l',
+    'straight', 'straight',
+    'turn_90_r', 'turn_45_l',  // deep Z: N→E→NE
+    'diag_straight', 'diag_straight', 'turn_45_l',  // NE recover to N
+    'straight',
+    'turn_45_l', 'diag_straight', 'diag_straight', 'diag_straight', 'turn_45_r',
+    'CP2',
+
+    // SS3: double violent S → Z-corner → diagonal
+    'straight', 'straight',
+    'turn_90_r', 'turn_90_l',  // violent S: N→E→N
+    'straight', 'straight',
+    'turn_90_l', 'turn_90_r',  // reverse violent S: N→W→N
+    'straight', 'straight',
+    'turn_45_r', 'turn_90_l',  // Z-corner
+    'diag_straight', 'turn_45_r',  // NW recover
+    'straight',
+    'turn_45_l', 'diag_straight', 'diag_straight', 'diag_straight', 'turn_45_r',
+    'CP3',
+
+    // SS4: dual hairpins → Z-corner → chicane
+    'straight', 'straight',
+    'hairpin_r',
+    'straight', 'straight',
+    'turn_90_r', 'straight_h', 'straight_h', 'turn_90_l',
+    'straight',
+    'hairpin_l',
+    'straight', 'straight',
+    'turn_45_l', 'diag_straight', 'diag_straight', 'turn_45_r',
+    'straight',
+    'turn_45_r', 'turn_90_l',  // final Z-corner
+    'diag_straight', 'turn_45_r',  // NW recover
+    'straight',
+    'turn_90_r', 'straight_h', 'straight_h', 'turn_90_l',
+    'CP4',
+    'straight', 'straight', 'straight',
+  ];
+  return buildFromSkeleton(skeleton, 2000, 18200);
+}
+
+// ---- Track Layouts ----
+const TRACK_LAYOUTS = {
+  easy:   { name: 'Desert Rally — Easy',   generator: generateEasyLayout,   initialTime: 120000 },
+  normal: { name: 'Desert Rally — Normal', generator: generateNormalLayout, initialTime: 130000 },
+  hard:   { name: 'Desert Rally — Hard',   generator: generateHardLayout,   initialTime: 140000 },
+};
+
+export function getTrackIds() { return Object.keys(TRACK_LAYOUTS); }
+export function getTrackInfo(id) { return TRACK_LAYOUTS[id]; }
 
 // ---- Exit Direction ----
 function getExitDirection(type, entryDir) {
@@ -278,10 +373,6 @@ function getExitDirection(type, entryDir) {
       return DIR_45_RIGHT[entryDir];
     case 'turn_45_l':
       return DIR_45_LEFT[entryDir];
-    case 'turn_135_r':
-      return DIR_135_RIGHT[entryDir];
-    case 'turn_135_l':
-      return DIR_135_LEFT[entryDir];
     default:
       return entryDir;
   }
@@ -490,8 +581,8 @@ function generateZones(partBounds) {
 }
 
 // ---- Generate checkpoints at specific part indices ----
-function generateCheckpoints(partBounds) {
-  const cpDefs = _cpIdx.map((idx, i) => ({
+function generateCheckpoints(partBounds, cpIndices) {
+  const cpDefs = cpIndices.map((idx, i) => ({
     partIdx: idx, name: `CP${i + 1}`, timeBonus: 15000,
   }));
   const checkpoints = [];
@@ -583,23 +674,9 @@ function generateArrowHints(partsList, waypointsArr, partBoundsArr) {
   return hints;
 }
 
-// ---- Build TRACK_CONFIG ----
-const START_X = 2000;
-const START_Y = 14200;
-
-const { waypoints, partBounds } = generateWaypoints(parts, START_X, START_Y);
-const zones = generateZones(partBounds);
-const checkpoints = generateCheckpoints(partBounds);
-const arrowHints = generateArrowHints(parts, waypoints, partBounds);
-
-
-
 // ---- Open-field segments (no barriers) ----
-// Thrash Rally: some straights are open desert, no fences
-// Format: [startWP, endWP] — barriers hidden in these ranges
 function generateOpenFieldSegments(partsList, partBoundsArr) {
   const segments = [];
-  // Long diagonal straights and some horizontal straights = open field
   let runStart = -1;
   let runCount = 0;
   for (let i = 0; i < partsList.length; i++) {
@@ -608,7 +685,6 @@ function generateOpenFieldSegments(partsList, partBoundsArr) {
       if (runStart < 0) runStart = i;
       runCount++;
     } else {
-      // End of straight run — mark as open if 3+ consecutive straights
       if (runCount >= 3 && runStart >= 0) {
         segments.push([
           partBoundsArr[runStart].startWP,
@@ -628,23 +704,19 @@ function generateOpenFieldSegments(partsList, partBoundsArr) {
   return segments;
 }
 
-const openFieldSegments = generateOpenFieldSegments(parts, partBounds);
-console.log(`[Track] Open field segments: ${openFieldSegments.length}`, openFieldSegments.map(s => `WP${s[0]}-${s[1]}`).join(', '));
-
 // ---- Tire wall positions (corner outsides) ----
 function generateTireWalls(partsList, partBoundsArr, waypointsArr) {
   const walls = [];
   for (let i = 0; i < partsList.length; i++) {
     const type = partsList[i].type;
-    if (!type.startsWith('turn_90') && !type.startsWith('turn_135') && !type.startsWith('hairpin')) continue;
+    if (!type.startsWith('turn_90') && !type.startsWith('hairpin')) continue;
     const pb = partBoundsArr[i];
     const isRight = type.includes('_r');
-    // Place tire wall at corner apex (midpoint of corner waypoints)
     const midWP = Math.floor((pb.startWP + pb.endWP) / 2);
     if (midWP < waypointsArr.length) {
       walls.push({
         wpIndex: midWP,
-        side: isRight ? 1 : -1, // outside of turn
+        side: isRight ? 1 : -1,
         type: type.startsWith('hairpin') ? 'large' : 'small',
       });
     }
@@ -652,16 +724,12 @@ function generateTireWalls(partsList, partBoundsArr, waypointsArr) {
   return walls;
 }
 
-const tireWalls = generateTireWalls(parts, partBounds, waypoints);
-
-const finishWP = waypoints.length - 4;
-
-// ---- Road overlap check (part-based, 250px threshold) ----
-const MIN_ROAD_GAP = 200; // road(100) + margin(100)
+// ---- Road overlap check ----
+const MIN_ROAD_GAP = 200;
 function checkOverlaps(wp) {
   const errors = [];
   for (let i = 0; i < wp.length; i++) {
-    for (let j = i + 8; j < wp.length; j++) { // WP index gap >= 8
+    for (let j = i + 8; j < wp.length; j++) {
       const dx = wp[i][0] - wp[j][0], dy = wp[i][1] - wp[j][1];
       if (dx*dx + dy*dy < MIN_ROAD_GAP * MIN_ROAD_GAP) {
         errors.push({ wi: i, wj: j, dist: Math.round(Math.sqrt(dx*dx+dy*dy)) });
@@ -670,56 +738,69 @@ function checkOverlaps(wp) {
   }
   return errors;
 }
-const overlapErrors = checkOverlaps(waypoints);
-if (overlapErrors.length > 0) {
-  console.error(`[Overlap] ERROR: ${overlapErrors.length} conflicts found (< ${MIN_ROAD_GAP}px)`);
-  overlapErrors.slice(0, 5).forEach(e =>
-    console.error(`  WP${e.wi} ↔ WP${e.wj} = ${e.dist}px`)
-  );
-} else {
-  console.log(`[Overlap] 0 conflicts found (${MIN_ROAD_GAP}px threshold) ✓`);
+
+// ---- Build TRACK_CONFIG dynamically ----
+export function buildTrackConfig(trackId) {
+  const layout = TRACK_LAYOUTS[trackId || 'easy'];
+  const { parts, cpIndices } = layout.generator();
+
+  const startX = parts.length > 0 ? 2000 : 2000;
+  const startY = trackId === 'hard' ? 18200 : trackId === 'normal' ? 16200 : 14200;
+
+  const { waypoints, partBounds } = generateWaypoints(parts, startX, startY);
+  const zones = generateZones(partBounds);
+  const checkpoints = generateCheckpoints(partBounds, cpIndices);
+  const arrowHints = generateArrowHints(parts, waypoints, partBounds);
+  const openFieldSegments = generateOpenFieldSegments(parts, partBounds);
+  const tireWalls = generateTireWalls(parts, partBounds, waypoints);
+  const finishWP = waypoints.length - 4;
+
+  const overlapErrors = checkOverlaps(waypoints);
+  if (overlapErrors.length > 0) {
+    console.error(`[Overlap] ERROR: ${overlapErrors.length} conflicts found (< ${MIN_ROAD_GAP}px)`);
+    overlapErrors.slice(0, 5).forEach(e =>
+      console.error(`  WP${e.wi} ↔ WP${e.wj} = ${e.dist}px`)
+    );
+  } else {
+    console.log(`[Overlap] 0 conflicts found (${MIN_ROAD_GAP}px threshold) ✓`);
+  }
+
+  const trackValid = validateTrack(parts);
+  console.log(`[Track:${trackId}] Parts: ${parts.length}, WPs: ${waypoints.length}, Zones: ${zones.length}, Valid: ${trackValid}`);
+
+  return {
+    name: layout.name,
+    partTypes,
+    parts,
+    partBounds,
+    zoneConfig,
+    waypoints,
+    zones,
+    checkpoints,
+    arrowHints,
+    openFieldSegments,
+    tireWalls,
+    finishWP,
+    startX,
+    startY,
+    startAngle: -90,
+    initialTime: layout.initialTime,
+    roadWidth: 100,
+    roadPhysics: {
+      paved:   { accel: 365, friction: 0.990, turn: 110, label: 'PAVED' },
+      dirt:    { accel: 282, friction: 0.978, turn: 130, label: 'DIRT' },
+      sand:    { accel: 212, friction: 0.965, turn: 115, label: 'DESERT' },
+      rocky:   { accel: 183, friction: 0.960, turn: 140, label: 'ROCKY' },
+      offroad: { accel: 125, friction: 0.945, turn: 85,  label: 'OFF-ROAD' },
+    },
+    obstacleConfig: {},
+  };
 }
 
-const trackValid = validateTrack(parts);
-console.log(`[Track] Parts: ${parts.length}, Waypoints: ${waypoints.length}, Zones: ${zones.length}, Valid: ${trackValid}`);
-console.log(`[Track] Zone breakdown:`, zones.map(z => `${z.name}(WP ${z.fromWP}-${z.toWP})`).join(', '));
-console.log(`[Track] Checkpoints:`, checkpoints.map(cp => `${cp.name}@WP${cp.waypointIndex}`).join(', '));
-console.log(`[Track] Finish WP: ${finishWP}, Total track length: ${Math.round(Math.sqrt((waypoints[waypoints.length-1][0]-waypoints[0][0])**2+(waypoints[waypoints.length-1][1]-waypoints[0][1])**2))}px`);
+// Default export for backward compatibility
+export const TRACK_CONFIG = buildTrackConfig('easy');
 
-export const TRACK_CONFIG = {
-  name: 'Desert Rally',
-
-  partTypes,
-  parts,
-  partBounds,
-  zoneConfig,
-
-  waypoints,
-  zones,
-  checkpoints,
-  arrowHints,
-  openFieldSegments,
-  tireWalls,
-  finishWP,
-
-  startX: START_X,
-  startY: START_Y,
-  startAngle: -90,
-  initialTime: 120000,
-  roadWidth: 100,
-
-  roadPhysics: {
-    paved:   { accel: 365, friction: 0.990, turn: 110, label: 'PAVED' },
-    dirt:    { accel: 282, friction: 0.978, turn: 130, label: 'DIRT' },
-    sand:    { accel: 212, friction: 0.965, turn: 115, label: 'DESERT' },
-    rocky:   { accel: 183, friction: 0.960, turn: 140, label: 'ROCKY' },
-    offroad: { accel: 125, friction: 0.945, turn: 85,  label: 'OFF-ROAD' },
-  },
-
-  obstacleConfig: {},
-};
-
-export { getPartExit, getExitDirection, generatePartWaypoints, zoneConfig, DIR_VECTORS, DIR_RIGHT_VEC, DIR_RIGHT, DIR_LEFT, DIR_45_RIGHT, DIR_45_LEFT, DIR_135_RIGHT, DIR_135_LEFT, R as TURN_RADIUS };
+export { getPartExit, getExitDirection, generatePartWaypoints, zoneConfig, DIR_VECTORS, DIR_RIGHT_VEC, DIR_RIGHT, DIR_LEFT, DIR_45_RIGHT, DIR_45_LEFT, R as TURN_RADIUS, TRACK_LAYOUTS };
 
 // ---- Utility Functions ----
 
