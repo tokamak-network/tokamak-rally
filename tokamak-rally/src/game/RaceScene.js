@@ -1651,78 +1651,157 @@ export class RaceScene extends Phaser.Scene {
   }
 
   setupCornerHUD() {
-    // Bent arrow drawn on a HUD graphics layer (screen-fixed, above car)
-    this._navGfx = this.add.graphics().setScrollFactor(0).setDepth(200).setVisible(false);
-    console.log(`[HUD] Nav arrows ready, ${(this.track.arrowHints || []).length} hints`);
+    // World-space arrow graphics (follows road, not screen-fixed)
+    this._arrowGfx = this.add.graphics().setDepth(50);
+    this._activeArrow = null;
+    console.log(`[HUD] Nav arrows ready, ${(this.track.arrowHints || []).length} events`);
   }
 
   updateCornerHUD() {
-    const hints = this.track.arrowHints;
-    if (!hints || !this.carState) return;
+    const events = this.track.arrowHints;
+    if (!events || !this.carState) return;
     const car = this.carState;
+    const wp = this.track.waypoints;
 
-    // Show distance = speed × 0.5s, minimum 120px (more lead time for braking)
-    const showDist = Math.max(120, Math.abs(car.speed) * 0.5);
+    // Find current car progress (closest WP)
+    let minD = Infinity, carWP = 0;
+    for (let i = 0; i < wp.length; i++) {
+      const d = (car.x - wp[i][0])**2 + (car.y - wp[i][1])**2;
+      if (d < minD) { minD = d; carWP = i; }
+    }
 
-    let showHint = null, showDst = Infinity;
-    for (const h of hints) {
-      const dx = h.x - car.x, dy = h.y - car.y;
-      const d = Math.sqrt(dx*dx + dy*dy);
-      if (d < showDist && d > 10 && d < showDst) {
-        const carRad = Phaser.Math.DegToRad(car.angle);
-        const dot = dx * Math.cos(carRad) + dy * Math.sin(carRad);
-        if (dot > 0) {
-          showDst = d;
-          showHint = h;
-        }
+    // Find active event: car is between showWP and endWP
+    let active = null;
+    for (const ev of events) {
+      if (carWP >= ev.showWP && carWP <= ev.endWP) {
+        active = ev;
+        break;
       }
     }
 
-    this._navGfx.clear();
-    if (showHint) {
-      this._navGfx.setVisible(true);
-      const cx = 400, cy = 260;
-      const sz = 22;
+    this._arrowGfx.clear();
+    if (active) {
+      this._arrowGfx.setVisible(true);
+      // Place arrow ~100px ahead of car along road direction
+      const aheadWP = Math.min(carWP + 6, active.startWP + 2);
+      const ax = wp[Math.min(aheadWP, wp.length-1)][0];
+      const ay = wp[Math.min(aheadWP, wp.length-1)][1];
+      // Road direction at arrow position
+      const nextWP = Math.min(aheadWP + 1, wp.length - 1);
+      const prevWP = Math.max(aheadWP - 1, 0);
+      const rdx = wp[nextWP][0] - wp[prevWP][0];
+      const rdy = wp[nextWP][1] - wp[prevWP][1];
+      const roadAngle = Math.atan2(rdy, rdx);
 
-      const ea = showHint.entryAngle;
-      const xa = showHint.exitAngle;
-
-      const tailX = cx - Math.cos(ea) * sz;
-      const tailY = cy - Math.sin(ea) * sz;
-      const midX = cx, midY = cy;
-      const headX = cx + Math.cos(xa) * sz;
-      const headY = cy + Math.sin(xa) * sz;
-
-      // White outline (thick)
-      this._navGfx.lineStyle(10, 0xFFFFFF, 0.9);
-      this._navGfx.beginPath();
-      this._navGfx.moveTo(tailX, tailY);
-      this._navGfx.lineTo(midX, midY);
-      this._navGfx.lineTo(headX, headY);
-      this._navGfx.strokePath();
-
-      // Red body (thick)
-      this._navGfx.lineStyle(6, 0xCC0000, 0.95);
-      this._navGfx.beginPath();
-      this._navGfx.moveTo(tailX, tailY);
-      this._navGfx.lineTo(midX, midY);
-      this._navGfx.lineTo(headX, headY);
-      this._navGfx.strokePath();
-
-      // Arrowhead triangle
-      const triSz = 12;
-      const tipX = headX + Math.cos(xa) * triSz;
-      const tipY = headY + Math.sin(xa) * triSz;
-      const px = -Math.sin(xa) * triSz * 0.6;
-      const py = Math.cos(xa) * triSz * 0.6;
-      this._navGfx.fillStyle(0xFFFFFF, 0.9);
-      this._navGfx.fillTriangle(tipX + Math.cos(xa)*2, tipY + Math.sin(xa)*2,
-        headX + px + Math.cos(xa)*2, headY + py + Math.sin(xa)*2,
-        headX - px + Math.cos(xa)*2, headY - py + Math.sin(xa)*2);
-      this._navGfx.fillStyle(0xCC0000, 0.95);
-      this._navGfx.fillTriangle(tipX, tipY, headX + px, headY + py, headX - px, headY - py);
+      this._drawArrow(this._arrowGfx, active.type, ax, ay, roadAngle, 1.0);
     } else {
-      this._navGfx.setVisible(false);
+      this._arrowGfx.setVisible(false);
+    }
+  }
+
+  _drawArrow(g, type, x, y, roadAngle, scale) {
+    const s = 18 * scale;
+    // Arrow paths defined relative to center, pointing "up" (forward along road)
+    // We'll rotate by roadAngle
+    const cos = Math.cos(roadAngle), sin = Math.sin(roadAngle);
+    const tx = (lx, ly) => [x + (lx * cos - ly * sin) * s, y + (lx * sin + ly * cos) * s];
+
+    // Helper: draw thick outlined path
+    const drawPath = (pts, closed) => {
+      // White outline
+      g.lineStyle(5 * scale, 0xFFFFFF, 0.95);
+      g.beginPath();
+      g.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+      if (closed) g.closePath();
+      g.strokePath();
+      // Black border
+      g.lineStyle(3.5 * scale, 0x000000, 0.9);
+      g.beginPath();
+      g.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+      if (closed) g.closePath();
+      g.strokePath();
+      // Red fill body
+      g.lineStyle(2 * scale, 0xFF0000, 1);
+      g.beginPath();
+      g.moveTo(pts[0][0], pts[0][1]);
+      for (let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+      if (closed) g.closePath();
+      g.strokePath();
+    };
+
+    // Arrowhead at end of path
+    const drawHead = (tipPt, dirX, dirY) => {
+      const hl = 0.6 * s, hw = 0.4 * s;
+      const tip = tipPt;
+      const l = [tip[0] - dirX*hl + dirY*hw, tip[1] - dirY*hl - dirX*hw];
+      const r = [tip[0] - dirX*hl - dirY*hw, tip[1] - dirY*hl + dirX*hw];
+      g.fillStyle(0xFFFFFF, 0.95);
+      g.fillTriangle(tip[0]+dirX*2, tip[1]+dirY*2, l[0]+dirX*2, l[1]+dirY*2, r[0]+dirX*2, r[1]+dirY*2);
+      g.fillStyle(0xFF0000, 1);
+      g.fillTriangle(tip[0], tip[1], l[0], l[1], r[0], r[1]);
+      g.lineStyle(1.5 * scale, 0x000000, 0.9);
+      g.beginPath();
+      g.moveTo(tip[0], tip[1]); g.lineTo(l[0], l[1]); g.lineTo(r[0], r[1]); g.closePath();
+      g.strokePath();
+    };
+
+    let pts, tipDir;
+    switch (type) {
+      case 'arrow_45_r':
+        pts = [tx(0, -1.2), tx(0, 0), tx(0.8, 0.8)];
+        tipDir = [cos*0.707+sin*0.707, sin*0.707-cos*0.707]; // normalized NE
+        drawPath(pts); drawHead(pts[2], tipDir[0], tipDir[1]);
+        break;
+      case 'arrow_45_l':
+        pts = [tx(0, -1.2), tx(0, 0), tx(-0.8, 0.8)];
+        tipDir = [-cos*0.707+sin*0.707, -sin*0.707-cos*0.707];
+        drawPath(pts); drawHead(pts[2], tipDir[0], tipDir[1]);
+        break;
+      case 'arrow_90_r':
+        pts = [tx(0, -1.2), tx(0, 0), tx(1.2, 0)];
+        tipDir = [cos, sin]; // pointing right relative to road
+        drawPath(pts); drawHead(pts[2], cos, sin);
+        break;
+      case 'arrow_90_l':
+        pts = [tx(0, -1.2), tx(0, 0), tx(-1.2, 0)];
+        drawPath(pts); drawHead(pts[2], -cos, -sin);
+        break;
+      case 'arrow_hairpin_r':
+        pts = [tx(0, -1.2), tx(0, 0), tx(0.8, 0), tx(0.8, -0.8), tx(0, -0.8)];
+        tipDir = [-sin, cos]; // pointing back
+        drawPath(pts); drawHead(pts[4], -sin, cos);
+        break;
+      case 'arrow_hairpin_l':
+        pts = [tx(0, -1.2), tx(0, 0), tx(-0.8, 0), tx(-0.8, -0.8), tx(0, -0.8)];
+        drawPath(pts); drawHead(pts[4], sin, -cos);
+        break;
+      case 'arrow_s_rl':
+        pts = [tx(0, -1.5), tx(0, -0.5), tx(0.6, 0), tx(0, 0.5), tx(-0.6, 1.0), tx(0, 1.5)];
+        tipDir = [sin*0.5-cos*0.5, -cos*0.5-sin*0.5];
+        drawPath(pts); drawHead(pts[5], sin, -cos);
+        break;
+      case 'arrow_s_lr':
+        pts = [tx(0, -1.5), tx(0, -0.5), tx(-0.6, 0), tx(0, 0.5), tx(0.6, 1.0), tx(0, 1.5)];
+        drawPath(pts); drawHead(pts[5], sin, -cos);
+        break;
+      case 'arrow_z_rl':
+        pts = [tx(0, -1.2), tx(0, -0.3), tx(0.8, 0.3), tx(0, 0.9), tx(-0.3, 1.2)];
+        drawPath(pts); drawHead(pts[4], -cos*0.5-sin*0.5, -sin*0.5+cos*0.5);
+        break;
+      case 'arrow_z_lr':
+        pts = [tx(0, -1.2), tx(0, -0.3), tx(-0.8, 0.3), tx(0, 0.9), tx(0.3, 1.2)];
+        drawPath(pts); drawHead(pts[4], cos*0.5-sin*0.5, sin*0.5+cos*0.5);
+        break;
+      case 'arrow_chicane':
+        pts = [tx(0, -1.5), tx(0.5, -0.8), tx(-0.5, 0), tx(0.5, 0.8), tx(0, 1.5)];
+        drawPath(pts); drawHead(pts[4], sin, -cos);
+        break;
+      default:
+        // Fallback: simple forward arrow
+        pts = [tx(0, -1), tx(0, 1)];
+        drawPath(pts); drawHead(pts[1], sin, -cos);
     }
   }
 

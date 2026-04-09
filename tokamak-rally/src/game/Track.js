@@ -623,55 +623,137 @@ export function validateTrack(partsList) {
   return true;
 }
 
-// ---- Generate corner arrow hints with entry/exit angles ----
+// ---- Generate arrow events with combination pattern detection ----
 function generateArrowHints(partsList, waypointsArr, partBoundsArr) {
-  const hints = [];
+  const events = [];
+  const isTurn = (t) => t && (t.startsWith('turn_') || t.startsWith('hairpin'));
+  const isStraightType = (t) => t === 'straight' || t === 'straight_h' || t === 'diag_straight';
+
+  // Collect turn indices
+  const turnIndices = [];
   for (let i = 0; i < partsList.length; i++) {
+    if (isTurn(partsList[i].type)) turnIndices.push(i);
+  }
+
+  const consumed = new Set();
+
+  // Pass 1: detect combinations (higher priority)
+  for (let ti = 0; ti < turnIndices.length; ti++) {
+    const i = turnIndices[ti];
+    if (consumed.has(i)) continue;
     const type = partsList[i].type;
-    if (!type.startsWith('turn_') && !type.startsWith('hairpin')) continue;
 
-    const isRight = type.includes('_r');
-    const bounds = partBoundsArr[i];
-    const arrowWP = Math.max(0, bounds.startWP - 3);
-
-    // Entry angle: road direction before corner
-    const entryNext = Math.min(bounds.startWP, waypointsArr.length - 1);
-    const entryPrev = Math.max(0, bounds.startWP - 1);
-    const entryAngle = Math.atan2(
-      waypointsArr[entryNext][1] - waypointsArr[entryPrev][1],
-      waypointsArr[entryNext][0] - waypointsArr[entryPrev][0]
-    );
-
-    // Exit angle: road direction after corner
-    const exitStart = Math.min(bounds.endWP, waypointsArr.length - 1);
-    const exitEnd = Math.min(bounds.endWP + 1, waypointsArr.length - 1);
-    const exitAngle = Math.atan2(
-      waypointsArr[exitEnd][1] - waypointsArr[exitStart][1],
-      waypointsArr[exitEnd][0] - waypointsArr[exitStart][0]
-    );
-
-    // Hairpin special case: entry/exit angle are the same (U-turn)
-    if (type.startsWith('hairpin')) {
-      const offset = isRight ? Math.PI / 2 : -Math.PI / 2;
-      hints.push({
-        x: waypointsArr[arrowWP][0],
-        y: waypointsArr[arrowWP][1],
-        direction: isRight ? 'right' : 'left',
-        entryAngle,
-        exitAngle: entryAngle + offset,
-      });
-      continue;
+    // Check for chicane: 3+ alternating turns with only diag_straight between
+    if (ti + 2 < turnIndices.length) {
+      const j = turnIndices[ti+1], k = turnIndices[ti+2];
+      const t1 = partsList[i].type, t2 = partsList[j].type, t3 = partsList[k].type;
+      const alt1 = t1.includes('_r') && t2.includes('_l') && t3.includes('_r');
+      const alt2 = t1.includes('_l') && t2.includes('_r') && t3.includes('_l');
+      if (alt1 || alt2) {
+        // Check only straights/diags between them
+        let allStraight = true;
+        for (let m = i+1; m < k; m++) {
+          if (!isStraightType(partsList[m].type) && !isTurn(partsList[m].type)) { allStraight = false; break; }
+        }
+        if (allStraight && k - i <= 8) {
+          consumed.add(i); consumed.add(j); consumed.add(k);
+          events.push({
+            type: 'arrow_chicane',
+            startWP: partBoundsArr[i].startWP,
+            endWP: partBoundsArr[k].endWP,
+          });
+          ti += 2; // skip consumed
+          continue;
+        }
+      }
     }
 
-    hints.push({
-      x: waypointsArr[arrowWP][0],
-      y: waypointsArr[arrowWP][1],
-      direction: isRight ? 'right' : 'left',
-      entryAngle,
-      exitAngle,
+    // Check for S-curve or Z-corner: 2 consecutive turns
+    if (ti + 1 < turnIndices.length) {
+      const j = turnIndices[ti+1];
+      if (consumed.has(j)) continue;
+      const t1 = partsList[i].type, t2 = partsList[j].type;
+      // Check no straight between (allow diag_straight for Z recovery)
+      let onlyDiagBetween = true;
+      for (let m = i+1; m < j; m++) {
+        if (!isStraightType(partsList[m].type)) { onlyDiagBetween = false; break; }
+      }
+      const gap = j - i;
+      const isR1 = t1.includes('_r'), isR2 = t2.includes('_r');
+
+      if (isR1 !== isR2 && gap <= 4) {
+        // Opposite directions = S or Z
+        const is90_1 = t1.includes('90'), is90_2 = t2.includes('90');
+        const is45_1 = t1.includes('45'), is45_2 = t2.includes('45');
+
+        let comboType;
+        if (is90_1 && is90_2 && gap <= 2) {
+          // Violent S: 90→90 opposite, no gap
+          comboType = isR1 ? 'arrow_s_rl' : 'arrow_s_lr';
+        } else if ((is45_1 && is90_2) || (is90_1 && is45_2)) {
+          // Z-corner: 45→90 or 90→45
+          comboType = isR1 ? 'arrow_z_rl' : 'arrow_z_lr';
+        } else if (is45_1 && is45_2 && gap <= 2) {
+          // Quick flick: 45→45 opposite
+          comboType = isR1 ? 'arrow_s_rl' : 'arrow_s_lr';
+        }
+
+        if (comboType) {
+          consumed.add(i); consumed.add(j);
+          events.push({
+            type: comboType,
+            startWP: partBoundsArr[i].startWP,
+            endWP: partBoundsArr[j].endWP,
+          });
+          ti++; // skip consumed
+          continue;
+        }
+      }
+    }
+  }
+
+  // Pass 2: individual turns not consumed by combos
+  for (const i of turnIndices) {
+    if (consumed.has(i)) continue;
+    const type = partsList[i].type;
+    let arrowType;
+    if (type === 'turn_45_r') arrowType = 'arrow_45_r';
+    else if (type === 'turn_45_l') arrowType = 'arrow_45_l';
+    else if (type === 'turn_90_r') arrowType = 'arrow_90_r';
+    else if (type === 'turn_90_l') arrowType = 'arrow_90_l';
+    else if (type === 'hairpin_r') arrowType = 'arrow_hairpin_r';
+    else if (type === 'hairpin_l') arrowType = 'arrow_hairpin_l';
+    else continue;
+
+    events.push({
+      type: arrowType,
+      startWP: partBoundsArr[i].startWP,
+      endWP: partBoundsArr[i].endWP,
     });
   }
-  return hints;
+
+  // Sort by startWP
+  events.sort((a, b) => a.startWP - b.startWP);
+
+  // Add world coordinates and show distance
+  const SHOW_AHEAD = 300; // show arrow 300px before corner
+  for (const ev of events) {
+    // Find WP that's ~300px before startWP along the track
+    let accumDist = 0;
+    let showWP = ev.startWP;
+    for (let w = ev.startWP; w > 0; w--) {
+      const dx = waypointsArr[w][0] - waypointsArr[w-1][0];
+      const dy = waypointsArr[w][1] - waypointsArr[w-1][1];
+      accumDist += Math.sqrt(dx*dx + dy*dy);
+      if (accumDist >= SHOW_AHEAD) { showWP = w-1; break; }
+    }
+    ev.showWP = showWP;
+    ev.x = waypointsArr[showWP][0];
+    ev.y = waypointsArr[showWP][1];
+  }
+
+  console.log('[Arrows]', events.length, 'events:', events.map(e => e.type).join(', '));
+  return events;
 }
 
 // ---- Open-field segments (no barriers) ----
