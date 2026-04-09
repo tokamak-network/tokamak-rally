@@ -609,6 +609,7 @@ export class RaceScene extends Phaser.Scene {
 
     // ===== 0.5 UV-MAPPED TEXTURE for all parts =====
     if (this.textures.exists('tile_dalle_straight')) {
+      this._renderBgTextures(wp, normals, startWP, baseHalfW, 'tile_dalle_straight');
       this._renderTrackTextures(wp, normals, startWP, baseHalfW, 'tile_dalle_straight');
     }
 
@@ -1021,6 +1022,122 @@ export class RaceScene extends Phaser.Scene {
       fontSize:'18px', fontFamily:'monospace', color:'#e63946', fontStyle:'bold',
       stroke:'#000', strokeThickness:3,
     }).setOrigin(0.5).setDepth(5);
+  }
+
+  // ---- Canvas 2D background UV texture mapping (both sides of road) ----
+  _renderBgTextures(wp, normals, startWP, halfW, tileKey) {
+    const texFrame = this.textures.getFrame(tileKey);
+    if (!texFrame) return;
+    const texImg = texFrame.source.image;
+    const texW = texFrame.width;
+    const texH = texFrame.height;
+
+    function drawTri(ctx, img, u0, v0, u1, v1, u2, v2, x0, y0, x1, y1, x2, y2) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.lineTo(x2, y2);
+      ctx.closePath();
+      ctx.clip();
+      const du1 = u1 - u0, dv1 = v1 - v0;
+      const du2 = u2 - u0, dv2 = v2 - v0;
+      const dx1 = x1 - x0, dy1 = y1 - y0;
+      const dx2 = x2 - x0, dy2 = y2 - y0;
+      const det = du1 * dv2 - du2 * dv1;
+      if (Math.abs(det) < 0.001) { ctx.restore(); return; }
+      const a = (dx1 * dv2 - dx2 * dv1) / det;
+      const c = (du1 * dx2 - du2 * dx1) / det;
+      const b = (dy1 * dv2 - dy2 * dv1) / det;
+      const d = (du1 * dy2 - du2 * dy1) / det;
+      const e = x0 - a * u0 - c * v0;
+      const f = y0 - b * u0 - d * v0;
+      ctx.setTransform(a, b, c, d, e, f);
+      ctx.drawImage(img, 0, 0);
+      ctx.restore();
+    }
+
+    // Tiled texture for V-repeat
+    const maxPartLen = 1000;
+    const tilesNeeded = Math.ceil(maxPartLen / texH) + 1;
+    const tiledCanvas = document.createElement('canvas');
+    tiledCanvas.width = texW;
+    tiledCanvas.height = texH * tilesNeeded;
+    const tiledCtx = tiledCanvas.getContext('2d');
+    for (let t = 0; t < tilesNeeded; t++) {
+      tiledCtx.drawImage(texImg, 0, t * texH);
+    }
+
+    const bgOuterW = 200; // background extends 200px beyond road edge
+    const OD = 1.0;
+
+    let partIdx = 0;
+    for (const pb of this.track.partBounds) {
+      const drawEnd = Math.min(pb.endWP + 1, wp.length - 1);
+
+      // Bounds including outer background
+      let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+      for (let i = pb.startWP; i <= drawEnd; i++) {
+        const ni = normals[i - startWP];
+        if (!ni) continue;
+        for (const side of [-1, 1]) {
+          const px = wp[i][0] + ni[0] * side * (halfW + bgOuterW + 10);
+          const py = wp[i][1] + ni[1] * side * (halfW + bgOuterW + 10);
+          if (px < minX) minX = px; if (px > maxX) maxX = px;
+          if (py < minY) minY = py; if (py > maxY) maxY = py;
+        }
+      }
+      const pad = 4;
+      minX -= pad; minY -= pad; maxX += pad; maxY += pad;
+      const cw = Math.ceil(maxX - minX);
+      const ch = Math.ceil(maxY - minY);
+      if (cw < 1 || ch < 1 || cw > 4096 || ch > 4096) continue;
+
+      const canvas = document.createElement('canvas');
+      canvas.width = cw;
+      canvas.height = ch;
+      const ctx = canvas.getContext('2d');
+
+      let vAccum = 0;
+      for (let i = pb.startWP; i <= drawEnd - 1 && i + 1 < wp.length; i++) {
+        const ni = normals[i - startWP];
+        const niNext = normals[i + 1 - startWP];
+        if (!ni || !niNext) continue;
+
+        const segDx = wp[i+1][0] - wp[i][0];
+        const segDy = wp[i+1][1] - wp[i][1];
+        const segLen = Math.sqrt(segDx * segDx + segDy * segDy);
+        if (segLen < 0.5) { vAccum += segLen; continue; }
+
+        const ux = segDx / segLen, uy = segDy / segLen;
+        const v0 = vAccum - OD;
+        const v1 = vAccum + segLen + OD;
+
+        // Draw left and right background strips
+        for (const side of [-1, 1]) {
+          // Inner edge (road boundary)
+          const iax = wp[i][0] + ni[0] * side * halfW - ux * OD - minX;
+          const iay = wp[i][1] + ni[1] * side * halfW - uy * OD - minY;
+          const ibx = wp[i+1][0] + niNext[0] * side * halfW + ux * OD - minX;
+          const iby = wp[i+1][1] + niNext[1] * side * halfW + uy * OD - minY;
+
+          // Outer edge (background boundary)
+          const oax = wp[i][0] + ni[0] * side * (halfW + bgOuterW) - ux * OD - minX;
+          const oay = wp[i][1] + ni[1] * side * (halfW + bgOuterW) - uy * OD - minY;
+          const obx = wp[i+1][0] + niNext[0] * side * (halfW + bgOuterW) + ux * OD - minX;
+          const oby = wp[i+1][1] + niNext[1] * side * (halfW + bgOuterW) + uy * OD - minY;
+
+          // Triangle A: inner-top → outer-top → inner-bottom
+          drawTri(ctx, tiledCanvas, 0,v0, texW,v0, 0,v1, iax,iay, oax,oay, ibx,iby);
+          // Triangle B: outer-top → outer-bottom → inner-bottom
+          drawTri(ctx, tiledCanvas, texW,v0, texW,v1, 0,v1, oax,oay, obx,oby, ibx,iby);
+        }
+        vAccum += segLen;
+      }
+
+      const texKey2 = '__bg_part_' + (partIdx++) + '_' + Date.now();
+      this.textures.addCanvas(texKey2, canvas);
+      this.add.image(minX, minY, texKey2).setOrigin(0, 0).setDepth(0.5);
+    }
+    console.log('[UV-BG] rendered', partIdx, 'background parts');
   }
 
   // ---- Canvas 2D affine triangle texture mapping for all parts ----
