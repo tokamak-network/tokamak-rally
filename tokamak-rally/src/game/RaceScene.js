@@ -949,15 +949,11 @@ export class RaceScene extends Phaser.Scene {
     const sNx = -sUy, sNy = sUx;
     const sW = sZone.trackWidth || 100;
 
-    const gStartRoad = this.add.graphics().setDepth(1);
-    const sRoadColor = zoneConfig[sZone.name]?.roadColor || 0x9B7B4A;
-    const sEdgeColor = zoneConfig[sZone.name]?.edgeColor || 0x8a6a30;
     const behindX = wp0s[0] - sUx * sRoadLen;
     const behindY = wp0s[1] - sUy * sRoadLen;
-    gStartRoad.lineStyle(sW + 20, sEdgeColor, 0.4);
-    gStartRoad.beginPath(); gStartRoad.moveTo(behindX, behindY); gStartRoad.lineTo(wp0s[0], wp0s[1]); gStartRoad.strokePath();
-    gStartRoad.lineStyle(sW, sRoadColor, 1);
-    gStartRoad.beginPath(); gStartRoad.moveTo(behindX, behindY); gStartRoad.lineTo(wp0s[0], wp0s[1]); gStartRoad.strokePath();
+
+    // UV texture for start extension (road + background)
+    this._renderExtensionTextures(behindX, behindY, wp0s[0], wp0s[1], sUx, sUy, sNx, sNy, sW/2);
 
     // Curbs on extended road
     const gStartCurb = this.add.graphics().setDepth(2);
@@ -1024,6 +1020,121 @@ export class RaceScene extends Phaser.Scene {
       fontSize:'18px', fontFamily:'monospace', color:'#e63946', fontStyle:'bold',
       stroke:'#000', strokeThickness:3,
     }).setOrigin(0.5).setDepth(5);
+
+    // UV texture for finish extension (last 3 WPs not in partBounds)
+    const lastPB = this.track.partBounds[this.track.partBounds.length - 1];
+    const finExtStart = lastPB.endWP;
+    const finExtEnd = wp.length - 1;
+    if (finExtEnd > finExtStart && finExtEnd < wp.length) {
+      const fExtDx = wp[finExtEnd][0] - wp[finExtStart][0];
+      const fExtDy = wp[finExtEnd][1] - wp[finExtStart][1];
+      const fExtLen = Math.sqrt(fExtDx*fExtDx + fExtDy*fExtDy) || 1;
+      const fExtUx = fExtDx/fExtLen, fExtUy = fExtDy/fExtLen;
+      const fExtNx = -fExtUy, fExtNy = fExtUx;
+      this._renderExtensionTextures(wp[finExtStart][0], wp[finExtStart][1],
+        wp[finExtEnd][0], wp[finExtEnd][1], fExtUx, fExtUy, fExtNx, fExtNy, baseHalfW);
+    }
+  }
+
+  // ---- UV texture for start/finish extension zones ----
+  _renderExtensionTextures(x0, y0, x1, y1, ux, uy, nx, ny, halfW) {
+    const bgOuterW = 200;
+    const segLen = 50; // subdivide into 50px segments
+    const totalLen = Math.sqrt((x1-x0)**2 + (y1-y0)**2);
+    if (totalLen < 1) return;
+    const numSegs = Math.ceil(totalLen / segLen);
+
+    // Road texture
+    const roadFrame = this.textures.getFrame('tile_dalle_straight');
+    const bgFrame = this.textures.getFrame('tile_desert_bg');
+    if (!roadFrame && !bgFrame) return;
+
+    // Canvas bounds
+    const allPts = [];
+    for (let s = 0; s <= numSegs; s++) {
+      const t = s / numSegs;
+      const px = x0 + (x1-x0)*t, py = y0 + (y1-y0)*t;
+      allPts.push(
+        [px + nx*(halfW+bgOuterW+10), py + ny*(halfW+bgOuterW+10)],
+        [px - nx*(halfW+bgOuterW+10), py - ny*(halfW+bgOuterW+10)]
+      );
+    }
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of allPts) {
+      if (p[0] < minX) minX = p[0]; if (p[0] > maxX) maxX = p[0];
+      if (p[1] < minY) minY = p[1]; if (p[1] > maxY) maxY = p[1];
+    }
+    minX -= 4; minY -= 4; maxX += 4; maxY += 4;
+    const cw = Math.ceil(maxX - minX), ch = Math.ceil(maxY - minY);
+    if (cw < 1 || ch < 1 || cw > 4096 || ch > 4096) return;
+
+    function drawTri(ctx, img, u0, v0, u1, v1, u2, v2, px0, py0, px1, py1, px2, py2) {
+      ctx.save();
+      ctx.beginPath();
+      ctx.moveTo(px0, py0); ctx.lineTo(px1, py1); ctx.lineTo(px2, py2);
+      ctx.closePath(); ctx.clip();
+      const du1 = u1-u0, dv1 = v1-v0, du2 = u2-u0, dv2 = v2-v0;
+      const dx1 = px1-px0, dy1 = py1-py0, dx2 = px2-px0, dy2 = py2-py0;
+      const det = du1*dv2 - du2*dv1;
+      if (Math.abs(det) < 0.001) { ctx.restore(); return; }
+      const a=(dx1*dv2-dx2*dv1)/det, c=(du1*dx2-du2*dx1)/det;
+      const b=(dy1*dv2-dy2*dv1)/det, d=(du1*dy2-du2*dy1)/det;
+      ctx.setTransform(a, b, c, d, px0-a*u0-c*v0, py0-b*u0-d*v0);
+      ctx.drawImage(img, 0, 0);
+      ctx.restore();
+    }
+
+    // Helper: render a strip (road or bg) on given canvas
+    const renderStrip = (texFrame, innerW, outerW, depth) => {
+      if (!texFrame) return;
+      const texImg = texFrame.source.image;
+      const texW = texFrame.width, texH = texFrame.height;
+      // Tiled texture
+      const tiles = Math.ceil(totalLen / texH) + 1;
+      const tiled = document.createElement('canvas');
+      tiled.width = texW; tiled.height = texH * tiles;
+      const tCtx = tiled.getContext('2d');
+      for (let t = 0; t < tiles; t++) tCtx.drawImage(texImg, 0, t * texH);
+
+      const cvs = document.createElement('canvas');
+      cvs.width = cw; cvs.height = ch;
+      const ctx = cvs.getContext('2d');
+
+      for (let s = 0; s < numSegs; s++) {
+        const t0 = s / numSegs, t1 = (s+1) / numSegs;
+        const ax = x0+(x1-x0)*t0, ay = y0+(y1-y0)*t0;
+        const bx = x0+(x1-x0)*t1, by = y0+(y1-y0)*t1;
+        const segD = totalLen / numSegs;
+        const vv0 = s * segD, vv1 = (s+1) * segD;
+
+        if (innerW === 0) {
+          // Road: centered strip -halfW to +halfW
+          const tlx=ax+nx*halfW-minX, tly=ay+ny*halfW-minY;
+          const trx=ax-nx*halfW-minX, try_=ay-ny*halfW-minY;
+          const blx=bx+nx*halfW-minX, bly=by+ny*halfW-minY;
+          const brx=bx-nx*halfW-minX, bry=by-ny*halfW-minY;
+          drawTri(ctx, tiled, 0,vv0, texW,vv0, 0,vv1, tlx,tly, trx,try_, blx,bly);
+          drawTri(ctx, tiled, texW,vv0, texW,vv1, 0,vv1, trx,try_, brx,bry, blx,bly);
+        } else {
+          // Background: side strips
+          for (const sd of [-1, 1]) {
+            const iax=ax+nx*sd*innerW-minX, iay=ay+ny*sd*innerW-minY;
+            const oax=ax+nx*sd*outerW-minX, oay=ay+ny*sd*outerW-minY;
+            const ibx=bx+nx*sd*innerW-minX, iby=by+ny*sd*innerW-minY;
+            const obx=bx+nx*sd*outerW-minX, oby=by+ny*sd*outerW-minY;
+            drawTri(ctx, tiled, 0,vv0, texW,vv0, 0,vv1, iax,iay, oax,oay, ibx,iby);
+            drawTri(ctx, tiled, texW,vv0, texW,vv1, 0,vv1, oax,oay, obx,oby, ibx,iby);
+          }
+        }
+      }
+      const key = '__ext_' + depth + '_' + Date.now() + '_' + Math.random();
+      this.textures.addCanvas(key, cvs);
+      this.add.image(minX, minY, key).setOrigin(0, 0).setDepth(depth);
+    };
+
+    // Render background (depth 0.5) then road (depth 1.5)
+    renderStrip(bgFrame, halfW, halfW + bgOuterW, 0.5);
+    renderStrip(roadFrame, 0, 0, 1.5); // innerW=0 signals centered road mode
   }
 
   // ---- Canvas 2D background UV texture mapping (both sides of road) ----
