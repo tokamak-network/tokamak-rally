@@ -752,7 +752,13 @@ function generateArrowHints(partsList, waypointsArr, partBoundsArr) {
     ev.y = waypointsArr[showWP][1];
   }
 
-  console.log('[Arrows]', events.length, 'events:', events.map(e => e.type).join(', '));
+  // Detailed diagnostics
+  const typeCounts = {};
+  for (const ev of events) { typeCounts[ev.type] = (typeCounts[ev.type] || 0) + 1; }
+  console.log('[Arrows] Total:', events.length, 'events');
+  console.log('[Arrows] Types:', JSON.stringify(typeCounts));
+  console.log('[Arrows] Detail:', events.map(e => `${e.type}(show:${e.showWP} start:${e.startWP} end:${e.endWP})`).join(', '));
+  console.log('[Arrows] Turn parts:', turnIndices.length, 'Consumed by combos:', consumed.size, 'Individual:', turnIndices.length - consumed.size);
   return events;
 }
 

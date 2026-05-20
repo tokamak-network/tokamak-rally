@@ -1654,6 +1654,7 @@ export class RaceScene extends Phaser.Scene {
     // HUD-fixed arrow (screen space, not world space)
     this._arrowGfx = this.add.graphics().setScrollFactor(0).setDepth(200);
     console.log(`[HUD] Nav arrows ready, ${(this.track.arrowHints || []).length} events`);
+    console.log(`[HUD] arrowGfx scrollFactor:`, this._arrowGfx.scrollFactorX, this._arrowGfx.scrollFactorY);
   }
 
   updateCornerHUD() {
